@@ -1,0 +1,6 @@
+@FYLA2_Backend_HostAddress = http://localhost:5224
+
+GET {{FYLA2_Backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
