@@ -16,6 +16,7 @@ namespace FYLA2_Backend.Data
     public DbSet<PostLike> PostLikes { get; set; }
     public DbSet<Comment> Comments { get; set; }
     public DbSet<UserFollow> UserFollows { get; set; }
+    public DbSet<PushToken> PushTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -101,6 +102,18 @@ namespace FYLA2_Backend.Data
       modelBuilder.Entity<Booking>()
           .Property(b => b.TotalPrice)
           .HasPrecision(10, 2);
+
+      // PushToken relationships and constraints
+      modelBuilder.Entity<PushToken>()
+          .HasOne(pt => pt.User)
+          .WithMany()
+          .HasForeignKey(pt => pt.UserId)
+          .OnDelete(DeleteBehavior.Cascade);
+
+      // Unique constraint for user-platform combination
+      modelBuilder.Entity<PushToken>()
+          .HasIndex(pt => new { pt.UserId, pt.Platform })
+          .IsUnique();
     }
   }
 }

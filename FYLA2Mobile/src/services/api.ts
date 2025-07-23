@@ -450,6 +450,28 @@ class ApiService {
       throw error;
     }
   }
+
+  // Push Notification Methods
+  async registerPushToken(pushToken: string): Promise<void> {
+    try {
+      await this.api.post('/notifications/register-token', {
+        pushToken,
+        platform: 'expo',
+      });
+    } catch (error) {
+      console.error('Error registering push token:', error);
+      throw error;
+    }
+  }
+
+  async unregisterPushToken(): Promise<void> {
+    try {
+      await this.api.delete('/notifications/unregister-token');
+    } catch (error) {
+      console.error('Error unregistering push token:', error);
+      throw error;
+    }
+  }
 }
 
 export default new ApiService();

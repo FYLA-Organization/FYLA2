@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SignalR;
 using FYLA2_Backend.Data;
 using FYLA2_Backend.Models;
 using FYLA2_Backend.Hubs;
+using FYLA2_Backend.Services;
 using System.Security.Claims;
 
 namespace FYLA2_Backend.Controllers
@@ -17,12 +18,18 @@ namespace FYLA2_Backend.Controllers
     private readonly ApplicationDbContext _context;
     private readonly ILogger<ChatController> _logger;
     private readonly IHubContext<ChatHub> _hubContext;
+    private readonly IPushNotificationService _pushNotificationService;
 
-    public ChatController(ApplicationDbContext context, ILogger<ChatController> logger, IHubContext<ChatHub> hubContext)
+    public ChatController(
+        ApplicationDbContext context, 
+        ILogger<ChatController> logger, 
+        IHubContext<ChatHub> hubContext,
+        IPushNotificationService pushNotificationService)
     {
       _context = context;
       _logger = logger;
       _hubContext = hubContext;
+      _pushNotificationService = pushNotificationService;
     }
 
     // GET: api/chat/rooms
@@ -178,6 +185,19 @@ namespace FYLA2_Backend.Controllers
       // Send real-time notification to receiver
       await _hubContext.Clients.Group($"user_{request.ReceiverId}")
           .SendAsync("ReceiveMessage", messageResponse);
+
+      // Send push notification to receiver
+      try
+      {
+        var sender = await _context.Users.FindAsync(senderId);
+        var senderName = sender != null ? $"{sender.FirstName} {sender.LastName}" : "Someone";
+        await _pushNotificationService.SendMessageNotificationAsync(request.ReceiverId, senderName, message.Content);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Failed to send push notification for message {MessageId}", message.Id);
+        // Don't fail the request if push notification fails
+      }
 
       return Ok(messageResponse);
     }

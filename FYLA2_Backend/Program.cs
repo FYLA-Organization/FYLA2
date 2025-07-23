@@ -62,8 +62,14 @@ builder.Services.AddAutoMapper(typeof(Program));
 // Add SignalR
 builder.Services.AddSignalR();
 
+// Add HttpClient for push notifications
+builder.Services.AddHttpClient();
+
 // Add Data Seeding Service
 builder.Services.AddScoped<DataSeedingService>();
+
+// Add Push Notification Service
+builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
