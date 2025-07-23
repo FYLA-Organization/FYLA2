@@ -11,7 +11,11 @@ using FYLA2_Backend.Hubs;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -62,8 +66,14 @@ builder.Services.AddAutoMapper(typeof(Program));
 // Add SignalR
 builder.Services.AddSignalR();
 
+// Add HttpClient for push notifications
+builder.Services.AddHttpClient();
+
 // Add Data Seeding Service
 builder.Services.AddScoped<DataSeedingService>();
+
+// Add Push Notification Service
+builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -86,6 +96,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Configure static files for file uploads
+app.UseStaticFiles();
+
 app.UseCors("AllowMobile");
 app.UseAuthentication();
 app.UseAuthorization();

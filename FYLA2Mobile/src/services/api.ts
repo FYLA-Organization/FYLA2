@@ -22,7 +22,7 @@ import {
 
 class ApiService {
   private api: AxiosInstance;
-  private baseURL = 'http://192.168.1.185:5224/api'; // Backend API URL
+  private baseURL = 'http://10.0.12.121:5224/api'; // Backend API URL
 
   constructor() {
     this.api = axios.create({
@@ -360,6 +360,24 @@ class ApiService {
     }
   }
 
+  async markMessageAsDelivered(messageId: string): Promise<void> {
+    try {
+      await this.api.put(`/chat/messages/${messageId}/delivered`);
+    } catch (error) {
+      console.error('Error marking message as delivered:', error);
+      throw error;
+    }
+  }
+
+  async markAllMessagesAsRead(userId: string): Promise<void> {
+    try {
+      await this.api.put(`/chat/conversations/${userId}/mark-all-read`);
+    } catch (error) {
+      console.error('Error marking all messages as read:', error);
+      throw error;
+    }
+  }
+
   async getUnreadCount(): Promise<number> {
     try {
       const response = await this.api.get('/chat/unread-count');
@@ -429,6 +447,102 @@ class ApiService {
       await this.api.delete(`/posts/${postId}/like`);
     } catch (error) {
       console.error('Error unliking post:', error);
+      throw error;
+    }
+  }
+
+  // Push Notification Methods
+  async registerPushToken(pushToken: string): Promise<void> {
+    try {
+      await this.api.post('/notifications/register-token', {
+        pushToken,
+        platform: 'expo',
+      });
+    } catch (error) {
+      console.error('Error registering push token:', error);
+      throw error;
+    }
+  }
+
+  async unregisterPushToken(): Promise<void> {
+    try {
+      await this.api.delete('/notifications/unregister-token');
+    } catch (error) {
+      console.error('Error unregistering push token:', error);
+      throw error;
+    }
+  }
+
+  // File Upload Methods
+  async uploadImage(imageUri: string, fileName: string): Promise<FileUploadResponse> {
+    try {
+      const formData = new FormData();
+      formData.append('file', {
+        uri: imageUri,
+        name: fileName,
+        type: 'image/jpeg',
+      } as any);
+
+      const response = await this.api.post('/fileupload/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
+  }
+
+  async uploadDocument(fileUri: string, fileName: string, mimeType: string): Promise<FileUploadResponse> {
+    try {
+      const formData = new FormData();
+      formData.append('file', {
+        uri: fileUri,
+        name: fileName,
+        type: mimeType,
+      } as any);
+
+      const response = await this.api.post('/fileupload/document', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      throw error;
+    }
+  }
+
+  // Analytics Methods
+  async getProviderDashboard(): Promise<ProviderDashboard> {
+    try {
+      const response = await this.api.get('/analytics/dashboard');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching provider dashboard:', error);
+      throw error;
+    }
+  }
+
+  async getRevenueAnalytics(period: 'week' | 'month' | 'year'): Promise<RevenueAnalytics> {
+    try {
+      const response = await this.api.get(`/analytics/revenue?period=${period}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching revenue analytics:', error);
+      throw error;
+    }
+  }
+
+  async getClientAnalytics(period: 'week' | 'month' | 'year'): Promise<ClientAnalytics> {
+    try {
+      const response = await this.api.get(`/analytics/clients?period=${period}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching client analytics:', error);
       throw error;
     }
   }

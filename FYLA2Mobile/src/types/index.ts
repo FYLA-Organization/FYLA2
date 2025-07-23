@@ -159,6 +159,21 @@ export interface ChatMessage {
   timestamp: string;
   isRead: boolean;
   messageType: 'text' | 'image' | 'file' | 'booking';
+  status: 'Sent' | 'Delivered' | 'Read';
+  deliveredAt?: string;
+  readAt?: string;
+  attachmentUrl?: string;
+  attachmentType?: string;
+  attachmentSize?: number;
+  attachmentName?: string;
+}
+
+export interface FileUploadResponse {
+  url: string;
+  fileName: string;
+  size: number;
+  type: string;
+  mimeType: string;
 }
 
 // Legacy interface for backward compatibility
@@ -342,6 +357,10 @@ export interface SendMessageRequest {
   receiverId: string;
   content: string;
   messageType?: 'text' | 'image' | 'file' | 'booking';
+  attachmentUrl?: string;
+  attachmentType?: string;
+  attachmentSize?: number;
+  attachmentName?: string;
 }
 
 export interface ChatContextType {
@@ -353,4 +372,90 @@ export interface ChatContextType {
   loadMessages: (userId: string) => Promise<void>;
   markAsRead: (messageId: string) => Promise<void>;
   unreadCount: number;
+}
+
+// Analytics Types
+export interface ProviderDashboard {
+  todayAppointments: number;
+  pendingAppointments: number;
+  weeklyRevenue: number;
+  monthlyRevenue: number;
+  totalClients: number;
+  averageRating: number;
+  nextAppointment?: NextAppointment;
+  recentBookings: RecentBooking[];
+}
+
+export interface NextAppointment {
+  id: number;
+  clientName: string;
+  serviceName: string;
+  scheduledDate: string;
+  duration: number;
+  totalAmount: number;
+}
+
+export interface RecentBooking {
+  id: number;
+  clientName: string;
+  serviceName: string;
+  scheduledDate: string;
+  status: string;
+  totalAmount: number;
+}
+
+export interface RevenueAnalytics {
+  period: string;
+  startDate: string;
+  endDate: string;
+  totalRevenue: number;
+  totalBookings: number;
+  averageBookingValue: number;
+  growthPercentage: number;
+  dailyRevenue: DailyRevenue[];
+  topServices: ServicePerformance[];
+}
+
+export interface DailyRevenue {
+  date: string;
+  revenue: number;
+  bookingCount: number;
+}
+
+export interface ServicePerformance {
+  serviceId: number;
+  serviceName: string;
+  bookingCount: number;
+  totalRevenue: number;
+  averagePrice: number;
+}
+
+export interface ClientAnalytics {
+  period: string;
+  totalClients: number;
+  newClients: number;
+  returningClients: number;
+  newClientPercentage: number;
+  topClients: TopClient[];
+  clientAcquisition: ClientAcquisition[];
+  popularTimeSlots: TimeSlot[];
+}
+
+export interface TopClient {
+  userId: string;
+  clientName: string;
+  bookingCount: number;
+  totalSpent: number;
+  lastBooking: string;
+}
+
+export interface ClientAcquisition {
+  date: string;
+  newClients: number;
+}
+
+export interface TimeSlot {
+  hour: number;
+  timeSlot: string;
+  bookingCount: number;
 }

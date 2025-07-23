@@ -5,108 +5,207 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../context/AuthContext';
-
-const { width } = Dimensions.get('window');
+import api from '../../services/api';
+import { ProviderDashboard } from '../../types';
 
 const DashboardScreen = () => {
-  const { user } = useAuth();
-  const [stats, setStats] = useState({
-    todayAppointments: 8,
-    weeklyRevenue: 1250,
-    monthlyRevenue: 4800,
-    totalClients: 127,
-    averageRating: 4.8,
-    pendingAppointments: 3,
-  });
+  const [dashboardData, setDashboardData] = useState<ProviderDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const quickActions = [
-    { icon: 'calendar-outline', title: 'View Schedule', color: '#FF6B6B' },
-    { icon: 'person-add-outline', title: 'Add Client', color: '#4ECDC4' },
-    { icon: 'time-outline', title: 'Set Availability', color: '#45B7D1' },
-    { icon: 'stats-chart-outline', title: 'View Analytics', color: '#96CEB4' },
-  ];
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getProviderDashboard();
+      setDashboardData(data);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      Alert.alert('Error', 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadDashboardData();
+    setRefreshing(false);
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const formatTime = (timeString: string) => {
+    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  if (loading && !dashboardData) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#667eea" />
+        <Text style={styles.loadingText}>Loading dashboard...</Text>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      {/* Header */}
       <LinearGradient
-        colors={['#FF6B6B', '#4ECDC4']}
+        colors={['#667eea', '#764ba2']}
         style={styles.header}
       >
-        <Text style={styles.welcomeText}>Welcome back!</Text>
-        <Text style={styles.nameText}>{user?.firstName}</Text>
-        <Text style={styles.businessText}>Beauty Expert Dashboard</Text>
+        <Text style={styles.headerTitle}>Dashboard</Text>
+        <Text style={styles.headerSubtitle}>
+          {new Date().toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}
+        </Text>
       </LinearGradient>
 
-      {/* Today's Overview */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Today's Overview</Text>
-        <View style={styles.statsRow}>
+      {/* Quick Stats */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Ionicons name="calendar" size={24} color="#FF6B6B" />
-            <Text style={styles.statNumber}>{stats.todayAppointments}</Text>
-            <Text style={styles.statLabel}>Appointments</Text>
+            <Ionicons name="calendar-outline" size={24} color="#4ECDC4" />
+            <Text style={styles.statNumber}>{dashboardData?.todayAppointments || 0}</Text>
+            <Text style={styles.statLabel}>Today's Appointments</Text>
           </View>
           <View style={styles.statCard}>
-            <Ionicons name="time" size={24} color="#4ECDC4" />
-            <Text style={styles.statNumber}>{stats.pendingAppointments}</Text>
-            <Text style={styles.statLabel}>Pending</Text>
+            <Ionicons name="time-outline" size={24} color="#FF6B6B" />
+            <Text style={styles.statNumber}>{dashboardData?.pendingAppointments || 0}</Text>
+            <Text style={styles.statLabel}>Pending Requests</Text>
+          </View>
+        </View>
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Ionicons name="trending-up-outline" size={24} color="#45B7D1" />
+            <Text style={styles.statNumber}>{formatCurrency(dashboardData?.weeklyRevenue || 0)}</Text>
+            <Text style={styles.statLabel}>This Week</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Ionicons name="cash-outline" size={24} color="#96CEB4" />
+            <Text style={styles.statNumber}>{formatCurrency(dashboardData?.monthlyRevenue || 0)}</Text>
+            <Text style={styles.statLabel}>This Month</Text>
           </View>
         </View>
       </View>
 
-      {/* Revenue Overview */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Revenue Overview</Text>
-        <View style={styles.revenueContainer}>
-          <View style={styles.revenueCard}>
-            <Text style={styles.revenueAmount}>${stats.weeklyRevenue}</Text>
-            <Text style={styles.revenueLabel}>This Week</Text>
-            <Text style={styles.revenueChange}>+12% from last week</Text>
-          </View>
-          <View style={styles.revenueCard}>
-            <Text style={styles.revenueAmount}>${stats.monthlyRevenue}</Text>
-            <Text style={styles.revenueLabel}>This Month</Text>
-            <Text style={styles.revenueChange}>+8% from last month</Text>
-          </View>
+      {/* Additional Stats Row */}
+      <View style={styles.additionalStats}>
+        <View style={styles.additionalStatCard}>
+          <Ionicons name="people-outline" size={20} color="#667eea" />
+          <Text style={styles.additionalStatNumber}>{dashboardData?.totalClients || 0}</Text>
+          <Text style={styles.additionalStatLabel}>Total Clients</Text>
+        </View>
+        <View style={styles.additionalStatCard}>
+          <Ionicons name="star-outline" size={20} color="#FFD93D" />
+          <Text style={styles.additionalStatNumber}>{dashboardData?.averageRating?.toFixed(1) || '0.0'}</Text>
+          <Text style={styles.additionalStatLabel}>Rating</Text>
         </View>
       </View>
+
+      {/* Next Appointment */}
+      {dashboardData?.nextAppointment && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Next Appointment</Text>
+          <View style={styles.appointmentCard}>
+            <View style={styles.appointmentHeader}>
+              <Text style={styles.appointmentClient}>
+                {dashboardData.nextAppointment.clientName}
+              </Text>
+              <Text style={styles.appointmentPrice}>
+                {formatCurrency(dashboardData.nextAppointment.totalAmount)}
+              </Text>
+            </View>
+            <Text style={styles.appointmentService}>
+              {dashboardData.nextAppointment.serviceName}
+            </Text>
+            <View style={styles.appointmentTime}>
+              <Ionicons name="calendar-outline" size={16} color="#666" />
+              <Text style={styles.appointmentTimeText}>
+                {formatDate(dashboardData.nextAppointment.scheduledDate)} • {dashboardData.nextAppointment.duration} min
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Recent Bookings */}
+      {dashboardData?.recentBookings && dashboardData.recentBookings.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Bookings</Text>
+          {dashboardData.recentBookings.slice(0, 5).map((booking) => (
+            <View key={booking.id} style={styles.appointmentItem}>
+              <View style={styles.appointmentInfo}>
+                <Text style={styles.appointmentItemClient}>{booking.clientName}</Text>
+                <Text style={styles.appointmentItemService}>{booking.serviceName}</Text>
+                <Text style={styles.appointmentItemTime}>
+                  {formatDate(booking.scheduledDate)} • {booking.status}
+                </Text>
+              </View>
+              <Text style={styles.appointmentItemPrice}>
+                {formatCurrency(booking.totalAmount)}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* Quick Actions */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.actionsGrid}>
-          {quickActions.map((action, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[styles.actionCard, { borderLeftColor: action.color }]}
-            >
-              <Ionicons name={action.icon as any} size={24} color={action.color} />
-              <Text style={styles.actionTitle}>{action.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Performance Stats */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Performance</Text>
-        <View style={styles.performanceContainer}>
-          <View style={styles.performanceItem}>
-            <Text style={styles.performanceNumber}>{stats.totalClients}</Text>
-            <Text style={styles.performanceLabel}>Total Clients</Text>
-          </View>
-          <View style={styles.performanceItem}>
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={20} color="#FFD700" />
-              <Text style={styles.performanceNumber}>{stats.averageRating}</Text>
-            </View>
-            <Text style={styles.performanceLabel}>Average Rating</Text>
-          </View>
+        <View style={styles.quickActions}>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="add-circle-outline" size={24} color="#4ECDC4" />
+            <Text style={styles.actionButtonText}>Add Service</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="calendar-outline" size={24} color="#45B7D1" />
+            <Text style={styles.actionButtonText}>View Schedule</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="chatbubble-outline" size={24} color="#FF6B6B" />
+            <Text style={styles.actionButtonText}>Messages</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="stats-chart-outline" size={24} color="#96CEB4" />
+            <Text style={styles.actionButtonText}>Analytics</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </ScrollView>
@@ -116,61 +215,57 @@ const DashboardScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f5f5f5',
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
   header: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 50,
     paddingBottom: 30,
   },
-  welcomeText: {
-    color: 'white',
-    fontSize: 16,
-    opacity: 0.9,
-  },
-  nameText: {
-    color: 'white',
+  headerTitle: {
+    color: '#fff',
     fontSize: 28,
     fontWeight: 'bold',
+  },
+  headerSubtitle: {
+    color: '#fff',
+    fontSize: 16,
+    opacity: 0.9,
     marginTop: 5,
   },
-  businessText: {
-    color: 'white',
-    fontSize: 14,
-    opacity: 0.8,
-    marginTop: 5,
+  statsContainer: {
+    marginTop: -20,
+    paddingHorizontal: 16,
   },
-  section: {
-    backgroundColor: 'white',
-    margin: 15,
-    padding: 20,
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#fff',
     borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  statCard: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 5,
-    padding: 15,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
   },
   statNumber: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
     marginTop: 8,
@@ -179,75 +274,167 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 4,
+    textAlign: 'center',
   },
-  revenueContainer: {
+  additionalStats: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 16,
   },
-  revenueCard: {
+  additionalStatCard: {
     flex: 1,
-    marginHorizontal: 5,
-    padding: 15,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  additionalStatNumber: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 4,
+  },
+  additionalStatLabel: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 2,
+  },
+  section: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 12,
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+  },
+  appointmentCard: {
     backgroundColor: '#f8f9fa',
     borderRadius: 8,
+    padding: 16,
   },
-  revenueAmount: {
-    fontSize: 24,
+  appointmentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  appointmentClient: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  appointmentPrice: {
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#2ECC71',
+    color: '#4ECDC4',
   },
-  revenueLabel: {
+  appointmentService: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
+    marginBottom: 8,
   },
-  revenueChange: {
+  appointmentTime: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  appointmentTimeText: {
     fontSize: 12,
-    color: '#27AE60',
-    marginTop: 4,
+    color: '#666',
+    marginLeft: 4,
   },
-  actionsGrid: {
+  appointmentItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  appointmentInfo: {
+    flex: 1,
+  },
+  appointmentItemClient: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  appointmentItemService: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  appointmentItemTime: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 2,
+  },
+  appointmentItemPrice: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#4ECDC4',
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  activityIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activityInfo: {
+    flex: 1,
+  },
+  activityDescription: {
+    fontSize: 14,
+    color: '#333',
+  },
+  activityDate: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  activityAmount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#4ECDC4',
+  },
+  quickActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  actionCard: {
-    width: '48%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
+  actionButton: {
+    width: '47%',
     backgroundColor: '#f8f9fa',
     borderRadius: 8,
-    marginBottom: 10,
-    borderLeftWidth: 4,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  actionTitle: {
-    fontSize: 14,
+  actionButtonText: {
+    fontSize: 12,
+    color: '#333',
+    marginTop: 8,
     fontWeight: '500',
-    color: '#333',
-    marginLeft: 10,
-    flex: 1,
-  },
-  performanceContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  performanceItem: {
-    alignItems: 'center',
-  },
-  performanceNumber: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  performanceLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
 });
 
