@@ -56,11 +56,35 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUnreadCount(prev => prev + 1);
       });
 
+      // Set up message status handlers
+      const unsubscribeMessageDelivered = chatService.onMessageDelivered((messageId: string, userId: string) => {
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageId ? { ...msg, status: 'Delivered' as const, deliveredAt: new Date().toISOString() } : msg
+        ));
+      });
+
+      const unsubscribeMessageRead = chatService.onMessageRead((messageId: string, userId: string) => {
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageId ? { ...msg, status: 'Read' as const, readAt: new Date().toISOString(), isRead: true } : msg
+        ));
+      });
+
+      const unsubscribeMessagesRead = chatService.onMessagesRead((messageIds: string[], userId: string) => {
+        setMessages(prev => prev.map(msg => 
+          messageIds.includes(msg.id) ? { ...msg, status: 'Read' as const, readAt: new Date().toISOString(), isRead: true } : msg
+        ));
+      });
+
       // Load initial data
       await loadChatRooms();
       await loadUnreadCount();
 
-      return unsubscribeMessage;
+      return () => {
+        unsubscribeMessage();
+        unsubscribeMessageDelivered();
+        unsubscribeMessageRead();
+        unsubscribeMessagesRead();
+      };
     } catch (error) {
       console.error('Failed to connect to chat:', error);
       setIsConnected(false);

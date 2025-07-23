@@ -63,5 +63,28 @@ namespace FYLA2_Backend.Hubs
         await Clients.Group($"user_{receiverId}").SendAsync("UserStoppedTyping", senderId);
       }
     }
+
+    public async Task MarkMessageAsDelivered(int messageId, string senderId)
+    {
+      var userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+      if (!string.IsNullOrEmpty(userId))
+      {
+        await Clients.Group($"user_{senderId}").SendAsync("MessageDelivered", messageId, userId);
+      }
+    }
+
+    public async Task MarkMessageAsRead(int messageId, string senderId)
+    {
+      var userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+      if (!string.IsNullOrEmpty(userId))
+      {
+        await Clients.Group($"user_{senderId}").SendAsync("MessageRead", messageId, userId);
+      }
+    }
+
+    public async Task SendUserOnlineStatus(string userId, bool isOnline)
+    {
+      await Clients.All.SendAsync("UserOnlineStatusChanged", userId, isOnline);
+    }
   }
 }

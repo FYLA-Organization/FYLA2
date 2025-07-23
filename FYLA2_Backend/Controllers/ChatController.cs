@@ -97,7 +97,14 @@ namespace FYLA2_Backend.Controllers
             content = m.Content,
             timestamp = m.Timestamp.ToString("yyyy-MM-ddTHH:mm:ssZ"),
             isRead = m.IsRead,
-            messageType = m.MessageType
+            messageType = m.MessageType,
+            status = m.Status.ToString(),
+            deliveredAt = m.DeliveredAt.HasValue ? m.DeliveredAt.Value.ToString("yyyy-MM-ddTHH:mm:ssZ") : null,
+            readAt = m.ReadAt.HasValue ? m.ReadAt.Value.ToString("yyyy-MM-ddTHH:mm:ssZ") : null,
+            attachmentUrl = m.AttachmentUrl,
+            attachmentType = m.AttachmentType,
+            attachmentSize = m.AttachmentSize,
+            attachmentName = m.AttachmentName
           })
           .ToListAsync();
 
@@ -139,7 +146,12 @@ namespace FYLA2_Backend.Controllers
         Content = request.Content,
         MessageType = request.MessageType ?? "text",
         Timestamp = DateTime.UtcNow,
-        IsRead = false
+        IsRead = false,
+        Status = Models.MessageStatus.Sent,
+        AttachmentUrl = request.AttachmentUrl,
+        AttachmentType = request.AttachmentType,
+        AttachmentSize = request.AttachmentSize,
+        AttachmentName = request.AttachmentName
       };
 
       _context.Messages.Add(message);
@@ -153,7 +165,14 @@ namespace FYLA2_Backend.Controllers
         content = message.Content,
         timestamp = message.Timestamp.ToString("yyyy-MM-ddTHH:mm:ssZ"),
         isRead = message.IsRead,
-        messageType = message.MessageType
+        messageType = message.MessageType,
+        status = message.Status.ToString(),
+        deliveredAt = message.DeliveredAt?.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+        readAt = message.ReadAt?.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+        attachmentUrl = message.AttachmentUrl,
+        attachmentType = message.AttachmentType,
+        attachmentSize = message.AttachmentSize,
+        attachmentName = message.AttachmentName
       };
 
       // Send real-time notification to receiver
@@ -172,15 +191,20 @@ namespace FYLA2_Backend.Controllers
         return Unauthorized();
 
       var message = await _context.Messages.FindAsync(messageId);
-      if (message == null)
+      if (message == null || message.ReceiverId != userId)
         return NotFound();
 
-      // Only the receiver can mark a message as read
-      if (message.ReceiverId != userId)
-        return Forbid();
+      if (!message.IsRead)
+      {
+        message.IsRead = true;
+        message.Status = Models.MessageStatus.Read;
+        message.ReadAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
 
-      message.IsRead = true;
-      await _context.SaveChangesAsync();
+        // Notify sender via SignalR
+        await _hubContext.Clients.Group($"user_{message.SenderId}")
+            .SendAsync("MessageRead", messageId, userId);
+      }
 
       return Ok();
     }
@@ -198,6 +222,65 @@ namespace FYLA2_Backend.Controllers
 
       return Ok(new { unreadCount });
     }
+
+    // PUT: api/chat/messages/{messageId}/delivered
+    [HttpPut("messages/{messageId}/delivered")]
+    public async Task<ActionResult> MarkMessageAsDelivered(int messageId)
+    {
+      var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+      if (string.IsNullOrEmpty(userId))
+        return Unauthorized();
+
+      var message = await _context.Messages.FindAsync(messageId);
+      if (message == null || message.ReceiverId != userId)
+        return NotFound();
+
+      if (message.Status == Models.MessageStatus.Sent)
+      {
+        message.Status = Models.MessageStatus.Delivered;
+        message.DeliveredAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        // Notify sender via SignalR
+        await _hubContext.Clients.Group($"user_{message.SenderId}")
+            .SendAsync("MessageDelivered", messageId, userId);
+      }
+
+      return Ok();
+    }
+
+    // PUT: api/chat/conversations/{userId}/mark-all-read
+    [HttpPut("conversations/{otherUserId}/mark-all-read")]
+    public async Task<ActionResult> MarkAllMessagesAsRead(string otherUserId)
+    {
+      var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+      if (string.IsNullOrEmpty(userId))
+        return Unauthorized();
+
+      var unreadMessages = await _context.Messages
+          .Where(m => m.SenderId == otherUserId && m.ReceiverId == userId && !m.IsRead)
+          .ToListAsync();
+
+      if (unreadMessages.Any())
+      {
+        var now = DateTime.UtcNow;
+        foreach (var message in unreadMessages)
+        {
+          message.IsRead = true;
+          message.Status = Models.MessageStatus.Read;
+          message.ReadAt = now;
+        }
+
+        await _context.SaveChangesAsync();
+
+        // Notify sender via SignalR
+        var messageIds = unreadMessages.Select(m => m.Id).ToList();
+        await _hubContext.Clients.Group($"user_{otherUserId}")
+            .SendAsync("MessagesRead", messageIds, userId);
+      }
+
+      return Ok();
+    }
   }
 
   // DTOs
@@ -206,5 +289,27 @@ namespace FYLA2_Backend.Controllers
     public string ReceiverId { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
     public string? MessageType { get; set; } = "text";
+    public string? AttachmentUrl { get; set; }
+    public string? AttachmentType { get; set; }
+    public long? AttachmentSize { get; set; }
+    public string? AttachmentName { get; set; }
+  }
+
+  public class MessageDTO
+  {
+    public int Id { get; set; }
+    public string Content { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public string SenderId { get; set; } = string.Empty;
+    public string SenderName { get; set; } = string.Empty;
+    public bool IsFromCurrentUser { get; set; }
+    public bool IsRead { get; set; }
+    public MessageStatus Status { get; set; }
+    public DateTime? DeliveredAt { get; set; }
+    public DateTime? ReadAt { get; set; }
+    public string? AttachmentUrl { get; set; }
+    public string? AttachmentType { get; set; }
+    public long? AttachmentSize { get; set; }
+    public string? AttachmentName { get; set; }
   }
 }

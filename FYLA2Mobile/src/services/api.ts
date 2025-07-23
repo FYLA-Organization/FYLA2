@@ -360,6 +360,24 @@ class ApiService {
     }
   }
 
+  async markMessageAsDelivered(messageId: string): Promise<void> {
+    try {
+      await this.api.put(`/chat/messages/${messageId}/delivered`);
+    } catch (error) {
+      console.error('Error marking message as delivered:', error);
+      throw error;
+    }
+  }
+
+  async markAllMessagesAsRead(userId: string): Promise<void> {
+    try {
+      await this.api.put(`/chat/conversations/${userId}/mark-all-read`);
+    } catch (error) {
+      console.error('Error marking all messages as read:', error);
+      throw error;
+    }
+  }
+
   async getUnreadCount(): Promise<number> {
     try {
       const response = await this.api.get('/chat/unread-count');

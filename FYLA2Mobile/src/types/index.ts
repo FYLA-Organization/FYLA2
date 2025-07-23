@@ -159,6 +159,13 @@ export interface ChatMessage {
   timestamp: string;
   isRead: boolean;
   messageType: 'text' | 'image' | 'file' | 'booking';
+  status: 'Sent' | 'Delivered' | 'Read';
+  deliveredAt?: string;
+  readAt?: string;
+  attachmentUrl?: string;
+  attachmentType?: string;
+  attachmentSize?: number;
+  attachmentName?: string;
 }
 
 // Legacy interface for backward compatibility
@@ -342,6 +349,10 @@ export interface SendMessageRequest {
   receiverId: string;
   content: string;
   messageType?: 'text' | 'image' | 'file' | 'booking';
+  attachmentUrl?: string;
+  attachmentType?: string;
+  attachmentSize?: number;
+  attachmentName?: string;
 }
 
 export interface ChatContextType {

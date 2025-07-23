@@ -7,6 +7,9 @@ class ChatService {
   private messageHandlers: ((message: ChatMessage) => void)[] = [];
   private typingHandlers: ((userId: string) => void)[] = [];
   private stopTypingHandlers: ((userId: string) => void)[] = [];
+  private messageDeliveredHandlers: ((messageId: string, userId: string) => void)[] = [];
+  private messageReadHandlers: ((messageId: string, userId: string) => void)[] = [];
+  private messagesReadHandlers: ((messageIds: string[], userId: string) => void)[] = [];
 
   async connect(token: string): Promise<void> {
     if (this.connection?.state === 'Connected') {
@@ -35,6 +38,21 @@ class ChatService {
     this.connection.on('UserStoppedTyping', (userId: string) => {
       console.log('User stopped typing:', userId);
       this.stopTypingHandlers.forEach(handler => handler(userId));
+    });
+
+    this.connection.on('MessageDelivered', (messageId: string, userId: string) => {
+      console.log('Message delivered:', messageId, 'by user:', userId);
+      this.messageDeliveredHandlers.forEach(handler => handler(messageId, userId));
+    });
+
+    this.connection.on('MessageRead', (messageId: string, userId: string) => {
+      console.log('Message read:', messageId, 'by user:', userId);
+      this.messageReadHandlers.forEach(handler => handler(messageId, userId));
+    });
+
+    this.connection.on('MessagesRead', (messageIds: string[], userId: string) => {
+      console.log('Messages read:', messageIds, 'by user:', userId);
+      this.messagesReadHandlers.forEach(handler => handler(messageIds, userId));
     });
 
     try {
@@ -83,6 +101,36 @@ class ChatService {
       const index = this.stopTypingHandlers.indexOf(handler);
       if (index > -1) {
         this.stopTypingHandlers.splice(index, 1);
+      }
+    };
+  }
+
+  onMessageDelivered(handler: (messageId: string, userId: string) => void): () => void {
+    this.messageDeliveredHandlers.push(handler);
+    return () => {
+      const index = this.messageDeliveredHandlers.indexOf(handler);
+      if (index > -1) {
+        this.messageDeliveredHandlers.splice(index, 1);
+      }
+    };
+  }
+
+  onMessageRead(handler: (messageId: string, userId: string) => void): () => void {
+    this.messageReadHandlers.push(handler);
+    return () => {
+      const index = this.messageReadHandlers.indexOf(handler);
+      if (index > -1) {
+        this.messageReadHandlers.splice(index, 1);
+      }
+    };
+  }
+
+  onMessagesRead(handler: (messageIds: string[], userId: string) => void): () => void {
+    this.messagesReadHandlers.push(handler);
+    return () => {
+      const index = this.messagesReadHandlers.indexOf(handler);
+      if (index > -1) {
+        this.messagesReadHandlers.splice(index, 1);
       }
     };
   }
@@ -143,6 +191,24 @@ class ChatService {
       await ApiService.markMessageAsRead(messageId);
     } catch (error) {
       console.error('Error marking message as read:', error);
+      throw error;
+    }
+  }
+
+  async markMessageAsDelivered(messageId: string): Promise<void> {
+    try {
+      await ApiService.markMessageAsDelivered(messageId);
+    } catch (error) {
+      console.error('Error marking message as delivered:', error);
+      throw error;
+    }
+  }
+
+  async markAllMessagesAsRead(userId: string): Promise<void> {
+    try {
+      await ApiService.markAllMessagesAsRead(userId);
+    } catch (error) {
+      console.error('Error marking all messages as read:', error);
       throw error;
     }
   }
