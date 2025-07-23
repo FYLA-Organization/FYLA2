@@ -17,6 +17,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { ChatMessage } from '../types';
 import { useChat } from '../contexts/ChatContext';
 import { useAuth } from '../context/AuthContext';
+import { chatService } from '../services/chatService';
 
 interface ChatScreenRouteParams {
   userId: string;
@@ -37,7 +38,10 @@ const ChatScreen: React.FC = () => {
   
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [otherUserTyping, setOtherUserTyping] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Filter messages for this conversation
   const conversationMessages = messages.filter(
@@ -55,6 +59,27 @@ const ChatScreen: React.FC = () => {
       msg => msg.receiverId === currentUser?.id && !msg.isRead
     );
     unreadMessages.forEach(msg => markAsRead(msg.id));
+
+    // Set up typing indicators
+    const unsubscribeTyping = chatService.onUserTyping((typingUserId: string) => {
+      if (typingUserId === userId) {
+        setOtherUserTyping(true);
+      }
+    });
+
+    const unsubscribeStopTyping = chatService.onUserStoppedTyping((typingUserId: string) => {
+      if (typingUserId === userId) {
+        setOtherUserTyping(false);
+      }
+    });
+
+    return () => {
+      unsubscribeTyping();
+      unsubscribeStopTyping();
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
   }, [userId, loadMessages, markAsRead, currentUser?.id]);
 
   useEffect(() => {
@@ -88,6 +113,46 @@ const ChatScreen: React.FC = () => {
     }
   };
 
+  const handleTyping = async (text: string) => {
+    setInputText(text);
+
+    if (text.length > 0 && !isTyping) {
+      setIsTyping(true);
+      try {
+        await chatService.sendTyping(userId);
+      } catch (error) {
+        console.error('Error sending typing indicator:', error);
+      }
+    }
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set new timeout to stop typing after 2 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(async () => {
+      if (isTyping) {
+        setIsTyping(false);
+        try {
+          await chatService.stopTyping(userId);
+        } catch (error) {
+          console.error('Error stopping typing indicator:', error);
+        }
+      }
+    }, 2000);
+
+    // Stop typing immediately if text is empty
+    if (text.length === 0 && isTyping) {
+      setIsTyping(false);
+      try {
+        await chatService.stopTyping(userId);
+      } catch (error) {
+        console.error('Error stopping typing indicator:', error);
+      }
+    }
+  };
+
   const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -107,12 +172,17 @@ const ChatScreen: React.FC = () => {
               {formatMessageTime(item.timestamp)}
             </Text>
             {isOwnMessage && (
-              <Icon
-                name={item.isRead ? 'checkmark-done' : 'checkmark'}
-                size={14}
-                color={item.isRead ? '#4CAF50' : '#999'}
-                style={styles.readIcon}
-              />
+              <View style={styles.messageStatus}>
+                {item.status === 'Sent' && (
+                  <Icon name="checkmark" size={14} color="#999" style={styles.readIcon} />
+                )}
+                {item.status === 'Delivered' && (
+                  <Icon name="checkmark-done" size={14} color="#999" style={styles.readIcon} />
+                )}
+                {item.status === 'Read' && (
+                  <Icon name="checkmark-done" size={14} color="#4CAF50" style={styles.readIcon} />
+                )}
+              </View>
             )}
           </View>
         </View>
@@ -177,12 +247,21 @@ const ChatScreen: React.FC = () => {
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
 
+        {/* Typing Indicator */}
+        {otherUserTyping && (
+          <View style={styles.typingIndicator}>
+            <Text style={styles.typingText}>
+              {user.firstName} is typing...
+            </Text>
+          </View>
+        )}
+
         {/* Input */}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.textInput}
             value={inputText}
-            onChangeText={setInputText}
+            onChangeText={handleTyping}
             placeholder="Type a message..."
             multiline
             maxLength={1000}
@@ -316,6 +395,10 @@ const styles = StyleSheet.create({
   readIcon: {
     marginLeft: 4,
   },
+  messageStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -358,6 +441,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+  },
+  typingIndicator: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f8f9fa',
+  },
+  typingText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
   },
 });
 
