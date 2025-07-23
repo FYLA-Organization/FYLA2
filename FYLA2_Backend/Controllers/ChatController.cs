@@ -21,8 +21,8 @@ namespace FYLA2_Backend.Controllers
     private readonly IPushNotificationService _pushNotificationService;
 
     public ChatController(
-        ApplicationDbContext context, 
-        ILogger<ChatController> logger, 
+        ApplicationDbContext context,
+        ILogger<ChatController> logger,
         IHubContext<ChatHub> hubContext,
         IPushNotificationService pushNotificationService)
     {

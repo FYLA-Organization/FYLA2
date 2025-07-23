@@ -19,7 +19,7 @@ namespace FYLA2_Backend.Controllers
     private readonly HttpClient _httpClient;
 
     public NotificationController(
-        ApplicationDbContext context, 
+        ApplicationDbContext context,
         ILogger<NotificationController> logger,
         HttpClient httpClient)
     {
@@ -158,7 +158,7 @@ namespace FYLA2_Backend.Controllers
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         var response = await _httpClient.PostAsync("https://exp.host/--/api/v2/push/send", content);
-        
+
         if (response.IsSuccessStatusCode)
         {
           _logger.LogInformation("Push notification sent successfully to token: {Token}", pushToken.Substring(0, 10) + "...");

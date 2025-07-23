@@ -33,7 +33,7 @@ namespace FYLA2_Backend.Services
     {
       var title = $"New message from {senderName}";
       var body = messageContent.Length > 100 ? messageContent.Substring(0, 100) + "..." : messageContent;
-      
+
       var data = new
       {
         type = "message",
@@ -82,11 +82,11 @@ namespace FYLA2_Backend.Services
           return;
         }
 
-        var tasks = pushTokens.Select(pushToken => 
+        var tasks = pushTokens.Select(pushToken =>
             SendExpoPushNotificationAsync(pushToken.Token, title, body, data));
-        
+
         await Task.WhenAll(tasks);
-        
+
         _logger.LogInformation("Push notifications sent to {Count} devices for user {UserId}", pushTokens.Count, userId);
       }
       catch (Exception ex)
@@ -114,7 +114,7 @@ namespace FYLA2_Backend.Services
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         var response = await _httpClient.PostAsync("https://exp.host/--/api/v2/push/send", content);
-        
+
         if (response.IsSuccessStatusCode)
         {
           _logger.LogDebug("Push notification sent successfully to token: {Token}", pushToken.Substring(0, 10) + "...");

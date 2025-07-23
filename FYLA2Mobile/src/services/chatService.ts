@@ -17,7 +17,7 @@ class ChatService {
     }
 
     this.connection = new HubConnectionBuilder()
-      .withUrl('http://192.168.1.185:5224/chathub', {
+      .withUrl('http://10.0.12.121:5224/chathub', {
         accessTokenFactory: () => token
       })
       .withAutomaticReconnect()
