@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Config from '../config/environment';
 import { 
   AuthResponse, 
   LoginRequest, 
@@ -22,16 +23,50 @@ import {
 
 class ApiService {
   private api: AxiosInstance;
-  private baseURL = 'http://10.0.12.121:5224/api'; // Backend API URL
+  private isInitialized: boolean = false;
 
   constructor() {
+    // Initialize with a placeholder - will be updated after config initialization
     this.api = axios.create({
-      baseURL: this.baseURL,
-      timeout: 15000, // Increased timeout
+      baseURL: 'http://localhost:5224/api',
+      timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
       },
     });
+    
+    this.initializeConfig();
+  }
+
+  private async initializeConfig() {
+    try {
+      await Config.initialize();
+      
+      console.log('🔄 Initializing API Service...');
+      console.log('📱 Environment API URL:', process.env.EXPO_PUBLIC_API_URL);
+      console.log('📱 Config base URL:', Config.baseURL);
+      
+      // Update the axios instance with the correct base URL
+      this.api = axios.create({
+        baseURL: Config.baseURL,
+        timeout: parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT || '30000'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      this.setupInterceptors();
+      this.isInitialized = true;
+      console.log('✅ API Service initialized with URL:', Config.baseURL);
+      console.log('✅ Using timeout:', parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT || '30000'));
+    } catch (error) {
+      console.error('❌ Failed to initialize API service:', error);
+      this.setupInterceptors();
+      this.isInitialized = true;
+    }
+  }
+
+  private setupInterceptors() {
 
     // Add request interceptor to include auth token
     this.api.interceptors.request.use(
@@ -62,6 +97,10 @@ class ApiService {
   // Auth Methods
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
+      console.log('🔄 Attempting login with URL:', Config.baseURL);
+      console.log('🔄 Login credentials:', { email: credentials.email, password: '***' });
+      console.log('🔄 API timeout setting:', this.api.defaults.timeout);
+      
       const response = await this.api.post('/auth/login', credentials);
       
       if (response.data.token) {
@@ -70,8 +109,13 @@ class ApiService {
       }
       
       return response.data;
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch (error: any) {
+      console.error('❌ Login error:', error);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error code:', error.code);
+      console.error('❌ Request URL:', error.config?.url);
+      console.error('❌ Base URL being used:', error.config?.baseURL);
+      console.error('❌ Full error config:', error.config);
       throw error;
     }
   }

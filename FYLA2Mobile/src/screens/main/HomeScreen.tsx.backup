@@ -1,0 +1,420 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  RefreshControl,
+  Dimensions,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { useAuth } from '../../context/AuthContext';
+import { ServiceProvider, RootStackParamList } from '../../types';
+import ApiService from '../../services/api';
+import ProfilePicture from '../../components/ProfilePicture';
+import { Colors, Typography, Spacing, BorderRadius, Shadows, ComponentStyles } from '../../theme';
+
+const { width } = Dimensions.get('window');
+
+type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+
+const HomeScreen: React.FC = () => {
+  const [featuredProviders, setFeaturedProviders] = useState<ServiceProvider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const { user } = useAuth();
+  const navigation = useNavigation<HomeScreenNavigationProp>();
+
+  useEffect(() => {
+    loadFeaturedProviders();
+  }, []);
+
+  const loadFeaturedProviders = async () => {
+    try {
+      const providers = await ApiService.getFeaturedProviders();
+      // Take only first 6 providers for featured display
+      setFeaturedProviders(providers.slice(0, 6));
+    } catch (error) {
+      console.error('Error loading featured providers:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadFeaturedProviders();
+    setRefreshing(false);
+  };
+
+  const handleProviderPress = (provider: ServiceProvider) => {
+    navigation.navigate('ProviderProfile', { providerId: provider.id });
+  };
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'book':
+        navigation.navigate('Search');
+        break;
+      case 'bookings':
+        // Navigate to bookings tab
+        navigation.navigate('Bookings');
+        break;
+      case 'favorites':
+        // Navigate to favorites (could be a filtered search)
+        navigation.navigate('Search');
+        break;
+      case 'profile':
+        navigation.navigate('EnhancedProfile');
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleCategoryPress = (categoryName: string) => {
+    // Navigate to search with category filter
+    navigation.navigate('Search');
+  };
+
+  const categories = [
+    { name: 'Hair', icon: 'cut-outline', color: Colors.accent },
+    { name: 'Nails', icon: 'finger-print-outline', color: Colors.primary },
+    { name: 'Makeup', icon: 'color-palette-outline', color: Colors.warning },
+    { name: 'Massage', icon: 'hand-left-outline', color: Colors.success },
+    { name: 'Skin Care', icon: 'water-outline', color: Colors.info },
+    { name: 'Fitness', icon: 'fitness-outline', color: Colors.primary.light },
+  ];
+
+  return (
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      {/* Header */}
+      <LinearGradient colors={['#5A4FCF', '#7B6FF2']} style={styles.header}>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.greeting}>Hello, {user?.firstName}!</Text>
+            <Text style={styles.subGreeting}>Find your perfect look today</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.notificationButton}
+            onPress={() => navigation.navigate('NotificationSettings')}
+          >
+            <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+
+      {/* Categories */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Categories</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
+          {categories.map((category, index) => (
+            <TouchableOpacity 
+              key={index} 
+              style={styles.categoryCard}
+              onPress={() => handleCategoryPress(category.name)}
+            >
+              <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
+                <Ionicons name={category.icon as any} size={24} color="white" />
+              </View>
+              <Text style={styles.categoryName}>{category.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Featured Providers */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Featured Providers</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Search')}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <Text>Loading...</Text>
+          </View>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {featuredProviders.map((provider) => (
+              <TouchableOpacity 
+                key={provider.id} 
+                style={styles.providerCard}
+                onPress={() => handleProviderPress(provider)}
+              >
+                <ProfilePicture 
+                  user={provider}
+                  size={120}
+                  style={styles.providerImage}
+                />
+                <View style={styles.providerInfo}>
+                  <Text style={styles.providerName} numberOfLines={1}>
+                    {provider.businessName}
+                  </Text>
+                  <View style={styles.ratingContainer}>
+                    <Ionicons name="star" size={14} color="#FFD700" />
+                    <Text style={styles.rating}>{provider.averageRating.toFixed(1)}</Text>
+                    <Text style={styles.reviewCount}>({provider.totalReviews})</Text>
+                  </View>
+                  <Text style={styles.providerSpecialty} numberOfLines={1}>
+                    {provider.specialties?.join(', ') || 'Beauty Services'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+      </View>
+
+      {/* Quick Actions */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <View style={styles.quickActions}>
+          <TouchableOpacity 
+            style={styles.actionCard}
+            onPress={() => handleQuickAction('book')}
+          >
+            <Ionicons name="calendar-outline" size={32} color={Colors.primary} />
+            <Text style={styles.actionText}>Book Now</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionCard}
+            onPress={() => handleQuickAction('bookings')}
+          >
+            <Ionicons name="time-outline" size={32} color={Colors.accent} />
+            <Text style={styles.actionText}>My Bookings</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.quickActions}>
+          <TouchableOpacity 
+            style={styles.actionCard}
+            onPress={() => handleQuickAction('favorites')}
+          >
+            <Ionicons name="heart-outline" size={32} color={Colors.error} />
+            <Text style={styles.actionText}>Favorites</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionCard}
+            onPress={() => handleQuickAction('profile')}
+          >
+            <Ionicons name="person-outline" size={32} color={Colors.success} />
+            <Text style={styles.actionText}>My Profile</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Add some bottom padding */}
+      <View style={{ height: 30 }} />
+
+      {/* Trending Services */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Trending Services</Text>
+        <View style={styles.trendingContainer}>
+          <TouchableOpacity 
+            style={styles.trendingTag}
+            onPress={() => navigation.navigate('Search')}
+          >
+            <Text style={styles.trendingText}>Hair Color</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.trendingTag}
+            onPress={() => navigation.navigate('Search')}
+          >
+            <Text style={styles.trendingText}>Manicure</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.trendingTag}
+            onPress={() => navigation.navigate('Search')}
+          >
+            <Text style={styles.trendingText}>Deep Tissue</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.trendingTag}
+            onPress={() => navigation.navigate('Search')}
+          >
+            <Text style={styles.trendingText}>Facial</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Final bottom padding */}
+      <View style={{ height: 40 }} />
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background.primary,
+  },
+  header: {
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: Spacing.component.screenPadding,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  greeting: {
+    ...Typography.display.small,
+    color: '#FFFFFF',
+  },
+  subGreeting: {
+    ...Typography.body.large,
+    color: '#FFFFFF',
+    opacity: 0.9,
+    marginTop: Spacing.xs,
+  },
+  notificationButton: {
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.round,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  section: {
+    marginTop: Spacing.xl,
+    paddingHorizontal: Spacing.component.screenPadding,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    ...Typography.heading.h2,
+    color: Colors.text.primary,
+  },
+  seeAllText: {
+    ...Typography.body.medium,
+    color: Colors.primary.main,
+    fontWeight: '600',
+  },
+  categoriesScroll: {
+    marginHorizontal: -Spacing.component.screenPadding,
+    paddingHorizontal: Spacing.component.screenPadding,
+  },
+  categoryCard: {
+    alignItems: 'center',
+    marginRight: Spacing.lg,
+    width: 70,
+  },
+  categoryIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: BorderRadius.round,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+    ...Shadows.medium,
+  },
+  categoryName: {
+    ...Typography.label.small,
+    color: Colors.text.primary,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  providerCard: {
+    ...ComponentStyles.cards.primary,
+    width: width * 0.4,
+    marginRight: Spacing.md,
+    backgroundColor: Colors.background.card,
+    ...Shadows.card,
+  },
+  providerImage: {
+    width: '100%',
+    height: 120,
+    borderTopLeftRadius: BorderRadius.card,
+    borderTopRightRadius: BorderRadius.card,
+  },
+  providerInfo: {
+    padding: Spacing.md,
+  },
+  providerName: {
+    ...Typography.body.large,
+    color: Colors.text.primary,
+    fontWeight: 'bold',
+    marginBottom: Spacing.xs,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
+  },
+  rating: {
+    ...Typography.label.small,
+    color: Colors.text.primary,
+    fontWeight: '600',
+    marginLeft: Spacing.xs,
+  },
+  reviewCount: {
+    ...Typography.label.small,
+    color: Colors.text.secondary,
+    marginLeft: Spacing.xs,
+  },
+  providerSpecialty: {
+    ...Typography.label.small,
+    color: Colors.text.secondary,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  actionCard: {
+    ...ComponentStyles.cards.primary,
+    padding: Spacing.lg,
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: Spacing.xs,
+    backgroundColor: Colors.background.card,
+    ...Shadows.card,
+  },
+  actionText: {
+    ...Typography.label.medium,
+    color: Colors.text.primary,
+    marginTop: Spacing.sm,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    padding: Spacing.lg,
+    alignItems: 'center',
+  },
+  trendingContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: Spacing.sm,
+  },
+  trendingTag: {
+    backgroundColor: Colors.primary.light + '20', // 20% opacity
+    borderRadius: BorderRadius.chip,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginRight: Spacing.sm,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.primary + '40', // 40% opacity
+  },
+  trendingText: {
+    ...Typography.label.small,
+    color: Colors.primary.main,
+    fontWeight: '600',
+  },
+});
+
+export default HomeScreen;

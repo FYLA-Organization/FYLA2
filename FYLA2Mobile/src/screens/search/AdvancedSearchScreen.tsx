@@ -1,0 +1,675 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  Modal,
+  Switch,
+  Alert,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { apiService } from '../../services/api';
+import { ServiceProvider, Service } from '../../types';
+import { RootStackParamList } from '../../types/navigation';
+import ProviderCard from '../../components/ProviderCard';
+
+type AdvancedSearchNavigationProp = StackNavigationProp<RootStackParamList, 'AdvancedSearch'>;
+
+interface SearchFilters {
+  category: string;
+  priceRange: { min: number; max: number };
+  rating: number;
+  distance: number;
+  availability: 'any' | 'today' | 'thisWeek' | 'thisMonth';
+  sortBy: 'relevance' | 'rating' | 'price' | 'distance' | 'newest';
+  features: string[];
+  location: string;
+  openNow: boolean;
+}
+
+const BEAUTY_CATEGORIES = [
+  { id: 'all', name: 'All Services', icon: 'star' },
+  { id: 'hair', name: 'Hair Services', icon: 'cut' },
+  { id: 'nails', name: 'Nail Services', icon: 'hand-left' },
+  { id: 'skincare', name: 'Skincare & Facials', icon: 'flower' },
+  { id: 'makeup', name: 'Makeup & Beauty', icon: 'brush' },
+  { id: 'massage', name: 'Massage & Spa', icon: 'leaf' },
+  { id: 'eyebrows', name: 'Eyebrows & Lashes', icon: 'eye' },
+  { id: 'piercing', name: 'Piercing & Tattoo', icon: 'diamond' },
+];
+
+const FEATURES = [
+  'Parking Available',
+  'Wheelchair Accessible',
+  'Credit Cards Accepted',
+  'Online Booking',
+  'Walk-ins Welcome',
+  'Private Rooms',
+  'Organic Products',
+  'Luxury Experience',
+  'Student Discounts',
+  'Group Bookings',
+];
+
+const PRICE_RANGES = [
+  { min: 0, max: 50, label: '$0 - $50' },
+  { min: 50, max: 100, label: '$50 - $100' },
+  { min: 100, max: 200, label: '$100 - $200' },
+  { min: 200, max: 500, label: '$200 - $500' },
+  { min: 500, max: 1000, label: '$500+' },
+];
+
+const AdvancedSearchScreen: React.FC = () => {
+  const navigation = useNavigation<AdvancedSearchNavigationProp>();
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<SearchFilters>({
+    category: 'all',
+    priceRange: { min: 0, max: 1000 },
+    rating: 0,
+    distance: 25,
+    availability: 'any',
+    sortBy: 'relevance',
+    features: [],
+    location: '',
+    openNow: false,
+  });
+  
+  const [providers, setProviders] = useState<ServiceProvider[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+
+  const performSearch = async () => {
+    if (!searchQuery.trim() && filters.category === 'all') {
+      Alert.alert('Search Required', 'Please enter a search term or select a category');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await apiService.advancedSearch({
+        query: searchQuery,
+        ...filters,
+      });
+      setProviders(response.data);
+      
+      // Add to recent searches
+      if (searchQuery.trim()) {
+        const updatedSearches = [searchQuery, ...recentSearches.filter(s => s !== searchQuery)].slice(0, 10);
+        setRecentSearches(updatedSearches);
+      }
+    } catch (error) {
+      console.error('Error performing advanced search:', error);
+      Alert.alert('Search Error', 'Failed to perform search. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateFilter = (key: keyof SearchFilters, value: any) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const toggleFeature = (feature: string) => {
+    setFilters(prev => ({
+      ...prev,
+      features: prev.features.includes(feature)
+        ? prev.features.filter(f => f !== feature)
+        : [...prev.features, feature]
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      category: 'all',
+      priceRange: { min: 0, max: 1000 },
+      rating: 0,
+      distance: 25,
+      availability: 'any',
+      sortBy: 'relevance',
+      features: [],
+      location: '',
+      openNow: false,
+    });
+  };
+
+  const renderProviderCard = ({ item }: { item: ServiceProvider }) => (
+    <ProviderCard 
+      provider={item} 
+      onPress={() => navigation.navigate('ProviderDetails', { providerId: item.id })}
+    />
+  );
+
+  const renderCategory = ({ item }: { item: typeof BEAUTY_CATEGORIES[0] }) => (
+    <TouchableOpacity
+      style={[
+        styles.categoryItem,
+        filters.category === item.id && styles.selectedCategory
+      ]}
+      onPress={() => updateFilter('category', item.id)}
+    >
+      <Ionicons 
+        name={item.icon as any} 
+        size={24} 
+        color={filters.category === item.id ? '#fff' : '#007AFF'} 
+      />
+      <Text style={[
+        styles.categoryText,
+        filters.category === item.id && styles.selectedCategoryText
+      ]}>
+        {item.name}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const renderRecentSearch = ({ item }: { item: string }) => (
+    <TouchableOpacity
+      style={styles.recentSearchItem}
+      onPress={() => setSearchQuery(item)}
+    >
+      <Ionicons name="time-outline" size={16} color="#666" />
+      <Text style={styles.recentSearchText}>{item}</Text>
+    </TouchableOpacity>
+  );
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Advanced Search</Text>
+        <TouchableOpacity 
+          onPress={() => setShowFilters(true)}
+          style={styles.filterButton}
+        >
+          <Ionicons name="options-outline" size={24} color="#007AFF" />
+          {(filters.features.length > 0 || filters.rating > 0 || filters.openNow) && (
+            <View style={styles.filterBadge} />
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Search Input */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <Ionicons name="search" size={20} color="#666" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for services, providers, treatments..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={performSearch}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={20} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity 
+          style={styles.searchButton}
+          onPress={performSearch}
+        >
+          <Text style={styles.searchButtonText}>Search</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Categories */}
+      <View style={styles.categoriesSection}>
+        <Text style={styles.sectionTitle}>Categories</Text>
+        <FlatList
+          data={BEAUTY_CATEGORIES}
+          renderItem={renderCategory}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriesList}
+        />
+      </View>
+
+      {/* Recent Searches */}
+      {recentSearches.length > 0 && searchQuery.length === 0 && (
+        <View style={styles.recentSearchesSection}>
+          <Text style={styles.sectionTitle}>Recent Searches</Text>
+          <FlatList
+            data={recentSearches}
+            renderItem={renderRecentSearch}
+            scrollEnabled={false}
+          />
+        </View>
+      )}
+
+      {/* Results */}
+      <View style={styles.resultsSection}>
+        {providers.length > 0 && (
+          <View style={styles.resultsHeader}>
+            <Text style={styles.resultsCount}>{providers.length} results found</Text>
+            <TouchableOpacity style={styles.sortButton}>
+              <Text style={styles.sortText}>Sort by {filters.sortBy}</Text>
+              <Ionicons name="chevron-down" size={16} color="#666" />
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        <FlatList
+          data={providers}
+          renderItem={renderProviderCard}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.providersList}
+          refreshing={loading}
+          onRefresh={performSearch}
+        />
+      </View>
+
+      {/* Filters Modal */}
+      <Modal
+        visible={showFilters}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <View style={styles.filtersModal}>
+          <View style={styles.filtersHeader}>
+            <TouchableOpacity onPress={() => setShowFilters(false)}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.filtersTitle}>Filters</Text>
+            <TouchableOpacity onPress={clearFilters}>
+              <Text style={styles.clearText}>Clear All</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.filtersContent}>
+            {/* Price Range */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterTitle}>Price Range</Text>
+              {PRICE_RANGES.map((range, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.priceRangeItem,
+                    filters.priceRange.min === range.min && filters.priceRange.max === range.max && styles.selectedPriceRange
+                  ]}
+                  onPress={() => updateFilter('priceRange', { min: range.min, max: range.max })}
+                >
+                  <Text style={[
+                    styles.priceRangeText,
+                    filters.priceRange.min === range.min && filters.priceRange.max === range.max && styles.selectedPriceRangeText
+                  ]}>
+                    {range.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Rating */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterTitle}>Minimum Rating</Text>
+              <View style={styles.ratingContainer}>
+                {[1, 2, 3, 4, 5].map(rating => (
+                  <TouchableOpacity
+                    key={rating}
+                    style={styles.ratingItem}
+                    onPress={() => updateFilter('rating', rating)}
+                  >
+                    <Ionicons 
+                      name="star" 
+                      size={24} 
+                      color={rating <= filters.rating ? '#FFD700' : '#ddd'} 
+                    />
+                  </TouchableOpacity>
+                ))}
+                <Text style={styles.ratingText}>
+                  {filters.rating > 0 ? `${filters.rating}+ stars` : 'Any rating'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Distance */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterTitle}>Distance: {filters.distance} miles</Text>
+              <View style={styles.distanceContainer}>
+                {[5, 10, 25, 50].map(distance => (
+                  <TouchableOpacity
+                    key={distance}
+                    style={[
+                      styles.distanceItem,
+                      filters.distance === distance && styles.selectedDistance
+                    ]}
+                    onPress={() => updateFilter('distance', distance)}
+                  >
+                    <Text style={[
+                      styles.distanceText,
+                      filters.distance === distance && styles.selectedDistanceText
+                    ]}>
+                      {distance}mi
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Open Now */}
+            <View style={styles.filterSection}>
+              <View style={styles.switchContainer}>
+                <Text style={styles.filterTitle}>Open Now</Text>
+                <Switch
+                  value={filters.openNow}
+                  onValueChange={(value) => updateFilter('openNow', value)}
+                  trackColor={{ false: '#ddd', true: '#007AFF' }}
+                />
+              </View>
+            </View>
+
+            {/* Features */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterTitle}>Features</Text>
+              {FEATURES.map(feature => (
+                <TouchableOpacity
+                  key={feature}
+                  style={styles.featureItem}
+                  onPress={() => toggleFeature(feature)}
+                >
+                  <Text style={styles.featureText}>{feature}</Text>
+                  <Ionicons 
+                    name={filters.features.includes(feature) ? 'checkmark-circle' : 'ellipse-outline'} 
+                    size={24} 
+                    color={filters.features.includes(feature) ? '#007AFF' : '#ddd'} 
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+
+          <View style={styles.filtersFooter}>
+            <TouchableOpacity 
+              style={styles.applyButton}
+              onPress={() => {
+                setShowFilters(false);
+                performSearch();
+              }}
+            >
+              <Text style={styles.applyButtonText}>Apply Filters</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 60,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  filterButton: {
+    padding: 8,
+    position: 'relative',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    backgroundColor: '#FF3B30',
+    borderRadius: 4,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 16,
+  },
+  searchButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    justifyContent: 'center',
+  },
+  searchButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  categoriesSection: {
+    paddingVertical: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  categoriesList: {
+    paddingHorizontal: 16,
+  },
+  categoryItem: {
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    marginRight: 12,
+    minWidth: 80,
+  },
+  selectedCategory: {
+    backgroundColor: '#007AFF',
+  },
+  categoryText: {
+    fontSize: 12,
+    marginTop: 4,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  selectedCategoryText: {
+    color: '#fff',
+  },
+  recentSearchesSection: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  recentSearchItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  recentSearchText: {
+    fontSize: 16,
+    marginLeft: 12,
+    color: '#333',
+  },
+  resultsSection: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  resultsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  resultsCount: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sortText: {
+    fontSize: 14,
+    color: '#666',
+    marginRight: 4,
+  },
+  providersList: {
+    paddingBottom: 20,
+  },
+  filtersModal: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  filtersHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 60,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  cancelText: {
+    fontSize: 16,
+    color: '#007AFF',
+  },
+  filtersTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  clearText: {
+    fontSize: 16,
+    color: '#FF3B30',
+  },
+  filtersContent: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  filterSection: {
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  filterTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  priceRangeItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: '#f8f8f8',
+  },
+  selectedPriceRange: {
+    backgroundColor: '#007AFF',
+  },
+  priceRangeText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  selectedPriceRangeText: {
+    color: '#fff',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingItem: {
+    marginRight: 4,
+  },
+  ratingText: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 12,
+  },
+  distanceContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  distanceItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f8f8f8',
+  },
+  selectedDistance: {
+    backgroundColor: '#007AFF',
+  },
+  distanceText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  selectedDistanceText: {
+    color: '#fff',
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  featureItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  featureText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  filtersFooter: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  applyButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  applyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+
+export default AdvancedSearchScreen;

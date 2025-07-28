@@ -35,6 +35,11 @@ namespace FYLA2_Backend.Models
 
     public string? PaymentIntentId { get; set; }
 
+    public int DurationMinutes { get; set; }
+
+    [MaxLength(50)]
+    public string? PaymentMethod { get; set; } = "stripe";
+
     // Foreign Keys
     [Required]
     public string ClientId { get; set; } = string.Empty;

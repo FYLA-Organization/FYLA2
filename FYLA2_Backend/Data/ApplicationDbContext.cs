@@ -17,6 +17,10 @@ namespace FYLA2_Backend.Data
     public DbSet<Comment> Comments { get; set; }
     public DbSet<UserFollow> UserFollows { get; set; }
     public DbSet<PushToken> PushTokens { get; set; }
+    public DbSet<Subscription> Subscriptions { get; set; }
+    public DbSet<PaymentRecord> PaymentRecords { get; set; }
+    public DbSet<ProviderSchedule> ProviderSchedules { get; set; }
+    public DbSet<ProviderBlockedTime> ProviderBlockedTimes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

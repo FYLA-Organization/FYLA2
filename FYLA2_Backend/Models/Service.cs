@@ -19,6 +19,9 @@ namespace FYLA2_Backend.Models
     [Required]
     public int DurationMinutes { get; set; }
 
+    // Alias for backwards compatibility
+    public int Duration => DurationMinutes;
+
     public string? ImageUrl { get; set; }
 
     [Required]
