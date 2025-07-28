@@ -6,9 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Switch,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -39,10 +39,11 @@ const ProfileScreen: React.FC = () => {
   ];
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <LinearGradient colors={['#FF6B6B', '#4ECDC4']} style={styles.header}>
-        <View style={styles.profileSection}>
+    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+      <ScrollView style={styles.scrollContainer}>
+        {/* Header */}
+        <BlurView intensity={80} style={styles.header}>
+          <View style={styles.profileSection}>
           <Image
             source={{
               uri: user?.profilePictureUrl || 'https://via.placeholder.com/100',
@@ -59,252 +60,186 @@ const ProfileScreen: React.FC = () => {
               <Text style={styles.providerText}>Service Provider</Text>
             </View>
           )}
-        </View>
-      </LinearGradient>
+          </View>
+        </BlurView>
 
-      {/* Stats Section */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>12</Text>
-          <Text style={styles.statLabel}>Bookings</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>4.8</Text>
-          <Text style={styles.statLabel}>Rating</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>8</Text>
-          <Text style={styles.statLabel}>Reviews</Text>
-        </View>
-      </View>
-
-      {/* Menu Items */}
-      <View style={styles.menuContainer}>
+        {/* Menu Items */}
+        <BlurView intensity={80} style={styles.menuContainer}>
         {menuItems.map((item, index) => (
           <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
             <View style={styles.menuIcon}>
-              <Ionicons name={item.icon as any} size={24} color="#666" />
+              <Ionicons name={item.icon as any} size={24} color="white" />
             </View>
             <View style={styles.menuContent}>
               <Text style={styles.menuTitle}>{item.title}</Text>
               <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+            <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.7)" />
           </TouchableOpacity>
         ))}
-      </View>
+        </BlurView>
 
-      {/* Settings */}
-      <View style={styles.settingsContainer}>
-        <Text style={styles.sectionTitle}>Settings</Text>
-        
-        <View style={styles.settingItem}>
-          <View style={styles.settingContent}>
-            <Ionicons name="moon-outline" size={24} color="#666" />
-            <Text style={styles.settingTitle}>Dark Mode</Text>
-          </View>
-          <Switch value={false} onValueChange={() => {}} />
+        {/* Logout */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={24} color="#FF6B6B" />
+          <Text style={styles.logoutText}>Sign Out</Text>
+        </TouchableOpacity>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>FYLA2 v1.0.0</Text>
         </View>
-        
-        <View style={styles.settingItem}>
-          <View style={styles.settingContent}>
-            <Ionicons name="shield-checkmark-outline" size={24} color="#666" />
-            <Text style={styles.settingTitle}>Face ID / Touch ID</Text>
-          </View>
-          <Switch value={true} onValueChange={() => {}} />
-        </View>
-      </View>
-
-      {/* Logout */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={24} color="#FF6B6B" />
-        <Text style={styles.logoutText}>Sign Out</Text>
-      </TouchableOpacity>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>FYLA2 v1.0.0</Text>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
+  // Base Layout
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
+  scrollContainer: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    paddingBottom: 100,
+  },
+  
+  // Header Section
   header: {
-    paddingTop: 50,
-    paddingBottom: 30,
-    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
   },
   profileSection: {
     alignItems: 'center',
   },
   profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     borderWidth: 4,
-    borderColor: 'white',
-    marginBottom: 15,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    marginBottom: 20,
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
     color: 'white',
-    marginBottom: 5,
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   userEmail: {
-    fontSize: 16,
-    color: 'white',
-    opacity: 0.9,
-    marginBottom: 10,
+    fontSize: 17,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 16,
+    fontWeight: '500',
   },
   providerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   providerText: {
     color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+    letterSpacing: 0.3,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    marginTop: -20,
-    borderRadius: 12,
-    paddingVertical: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#e0e0e0',
-    marginVertical: 10,
-  },
+  
+  // Menu Section
   menuContainer: {
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     marginHorizontal: 20,
     marginTop: 20,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   menuIcon: {
-    marginRight: 15,
+    marginRight: 16,
+    width: 32,
+    alignItems: 'center',
   },
   menuContent: {
     flex: 1,
   },
   menuTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: -0.3,
   },
   menuSubtitle: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 4,
+    fontWeight: '500',
   },
-  settingsContainer: {
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-  },
-  settingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  settingContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  settingTitle: {
-    fontSize: 16,
-    color: '#333',
-    marginLeft: 15,
-  },
+  
+  // Logout Section
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     marginHorizontal: 20,
     marginTop: 20,
-    paddingVertical: 15,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: 24,
+    paddingVertical: 20,
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   logoutText: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#FF6B6B',
-    fontWeight: '600',
-    marginLeft: 10,
+    fontWeight: '700',
+    marginLeft: 12,
+    letterSpacing: -0.3,
   },
+  
+  // Footer
   footer: {
     alignItems: 'center',
-    paddingVertical: 30,
+    paddingVertical: 40,
+    paddingBottom: 60,
   },
   footerText: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontWeight: '500',
   },
 });
 

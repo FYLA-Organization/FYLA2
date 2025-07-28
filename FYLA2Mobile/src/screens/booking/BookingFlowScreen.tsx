@@ -237,28 +237,49 @@ const BookingFlowScreen: React.FC = () => {
   };
 
   const renderStepIndicator = () => (
-    <View style={styles.stepIndicator}>
-      {[1, 2, 3].map((step) => (
-        <React.Fragment key={step}>
-          <View style={[
-            styles.stepCircle,
-            currentStep >= step && styles.activeStepCircle
-          ]}>
-            <Text style={[
-              styles.stepNumber,
-              currentStep >= step && styles.activeStepNumber
-            ]}>
-              {step}
-            </Text>
-          </View>
-          {step < 3 && (
+    <View style={styles.stepIndicatorContainer}>
+      <View style={styles.stepIndicator}>
+        {[1, 2, 3].map((step) => (
+          <React.Fragment key={step}>
             <View style={[
-              styles.stepLine,
-              currentStep > step && styles.activeStepLine
-            ]} />
-          )}
-        </React.Fragment>
-      ))}
+              styles.stepCircle,
+              currentStep >= step && styles.activeStepCircle
+            ]}>
+              {currentStep > step ? (
+                <Ionicons name="checkmark" size={20} color="#667eea" />
+              ) : (
+                <Text style={[
+                  styles.stepNumber,
+                  currentStep >= step && styles.activeStepNumber
+                ]}>
+                  {step}
+                </Text>
+              )}
+            </View>
+            {step < 3 && (
+              <View style={styles.stepLineContainer}>
+                <View style={[
+                  styles.stepLine,
+                  currentStep > step && styles.activeStepLine
+                ]} />
+              </View>
+            )}
+          </React.Fragment>
+        ))}
+      </View>
+      
+      {/* Step Labels */}
+      <View style={styles.stepLabels}>
+        <Text style={[styles.stepLabel, currentStep >= 1 && styles.activeStepLabel]}>
+          Date
+        </Text>
+        <Text style={[styles.stepLabel, currentStep >= 2 && styles.activeStepLabel]}>
+          Time
+        </Text>
+        <Text style={[styles.stepLabel, currentStep >= 3 && styles.activeStepLabel]}>
+          Review
+        </Text>
+      </View>
     </View>
   );
 
@@ -280,7 +301,7 @@ const BookingFlowScreen: React.FC = () => {
       <Text style={styles.stepTitle}>Select Date</Text>
       <Text style={styles.stepSubtitle}>Choose your preferred appointment date</Text>
       
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
+      <View style={styles.dateGrid}>
         {generateDateOptions().map((date, index) => {
           const isSelected = selectedDate.toDateString() === date.toDateString();
           const isToday = date.toDateString() === new Date().toDateString();
@@ -288,7 +309,11 @@ const BookingFlowScreen: React.FC = () => {
           return (
             <TouchableOpacity
               key={index}
-              style={[styles.dateCard, isSelected && styles.selectedDateCard]}
+              style={[
+                styles.dateCard, 
+                isSelected && styles.selectedDateCard,
+                (index + 1) % 3 === 0 && styles.dateCardLastInRow
+              ]}
               onPress={() => handleDateSelect(date)}
             >
               <Text style={[styles.dateDay, isSelected && styles.selectedDateText]}>
@@ -302,13 +327,13 @@ const BookingFlowScreen: React.FC = () => {
               </Text>
               {isToday && (
                 <View style={styles.todayBadge}>
-                  <Text style={styles.todayText}>Today</Text>
+                  <Text style={styles.todayText}>TODAY</Text>
                 </View>
               )}
             </TouchableOpacity>
           );
         })}
-      </ScrollView>
+      </View>
     </View>
   );
 
@@ -321,14 +346,14 @@ const BookingFlowScreen: React.FC = () => {
       
       {isLoadingSlots ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF6B6B" />
+          <ActivityIndicator size="large" color="white" />
           <Text style={styles.loadingText}>Loading available times...</Text>
         </View>
       ) : (
         <View style={styles.timeSlotsContainer}>
           {availableSlots.length === 0 ? (
             <View style={styles.noSlotsContainer}>
-              <Ionicons name="calendar-outline" size={48} color="#ccc" />
+              <Ionicons name="calendar-outline" size={48} color="rgba(255, 255, 255, 0.6)" />
               <Text style={styles.noSlotsText}>No available slots for this date</Text>
               <TouchableOpacity 
                 style={styles.changeDateButton}
@@ -391,24 +416,24 @@ const BookingFlowScreen: React.FC = () => {
         
         <View style={styles.bookingDetails}>
           <View style={styles.detailRow}>
-            <Ionicons name="calendar-outline" size={20} color="#666" />
+            <Ionicons name="calendar-outline" size={20} color="white" />
             <Text style={styles.detailText}>{formatDate(selectedDate)}</Text>
           </View>
           
           <View style={styles.detailRow}>
-            <Ionicons name="time-outline" size={20} color="#666" />
+            <Ionicons name="time-outline" size={20} color="white" />
             <Text style={styles.detailText}>
               {formatTime(selectedTimeSlot)} - {formatTime(getEndTime(selectedTimeSlot))}
             </Text>
           </View>
           
           <View style={styles.detailRow}>
-            <Ionicons name="time" size={20} color="#666" />
+            <Ionicons name="time" size={20} color="white" />
             <Text style={styles.detailText}>{service.duration} minutes</Text>
           </View>
           
           <View style={[styles.detailRow, styles.priceRow]}>
-            <Ionicons name="card-outline" size={20} color="#FF6B6B" />
+            <Ionicons name="card-outline" size={20} color="#FFD700" />
             <Text style={styles.priceText}>${service.price}</Text>
           </View>
         </View>
@@ -472,9 +497,9 @@ const BookingFlowScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
       {/* Header */}
-      <LinearGradient colors={['#FF6B6B', '#FFE66D']} style={styles.header}>
+      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity 
             style={styles.headerBackButton}
@@ -528,126 +553,229 @@ const BookingFlowScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'transparent',
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   headerBackButton: {
-    padding: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '800',
     color: 'white',
+    letterSpacing: -0.5,
   },
   placeholder: {
     width: 40,
   },
   testButton: {
-    padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  stepIndicatorContainer: {
+    alignItems: 'center',
+    paddingVertical: 8,
   },
   stepIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 16,
   },
   stepCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   activeStepCircle: {
     backgroundColor: 'white',
+    borderColor: 'white',
+    shadowColor: 'rgba(255, 255, 255, 0.4)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 8,
+    transform: [{ scale: 1.1 }],
   },
   stepNumber: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: 18,
+    fontWeight: '800',
+    color: 'rgba(255, 255, 255, 0.9)',
+    letterSpacing: 0.3,
   },
   activeStepNumber: {
-    color: '#FF6B6B',
+    color: '#667eea',
+    fontSize: 20,
+  },
+  stepLineContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    alignItems: 'center',
   },
   stepLine: {
-    width: 40,
-    height: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    marginHorizontal: 8,
+    width: '100%',
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 2,
   },
   activeStepLine: {
     backgroundColor: 'white',
+    shadowColor: 'rgba(255, 255, 255, 0.6)',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  stepLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '80%',
+    paddingHorizontal: 20,
+  },
+  stepLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.7)',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    flex: 1,
+  },
+  activeStepLabel: {
+    color: 'white',
+    fontWeight: '800',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   content: {
     flex: 1,
   },
   stepContent: {
-    padding: 20,
+    padding: 24,
   },
   stepTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 28,
+    fontWeight: '800',
+    color: 'white',
     marginBottom: 8,
+    letterSpacing: -0.3,
   },
   stepSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 24,
+    fontSize: 17,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginBottom: 32,
+    fontWeight: '500',
+    lineHeight: 24,
   },
   dateScroll: {
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+  dateGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    marginBottom: 24,
   },
   dateCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
     padding: 16,
-    marginRight: 12,
     alignItems: 'center',
-    minWidth: 80,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    width: '31%',
+    minHeight: 100,
+    marginRight: '3.5%',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
     position: 'relative',
+    justifyContent: 'center',
+  },
+  dateCardLastInRow: {
+    marginRight: 0,
   },
   selectedDateCard: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'white',
+    shadowColor: 'rgba(255, 255, 255, 0.3)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 8,
   },
   dateDay: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 6,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   dateNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: 24,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
   dateMonth: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   selectedDateText: {
     color: 'white',
@@ -656,217 +784,293 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: '#27AE60',
-    borderRadius: 8,
+    backgroundColor: '#4ECDC4',
+    borderRadius: 12,
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: 4,
+    borderWidth: 2,
+    borderColor: 'white',
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   todayText: {
-    fontSize: 10,
+    fontSize: 9,
     color: 'white',
-    fontWeight: 'bold',
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   loadingContainer: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 60,
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666',
+    marginTop: 16,
+    fontSize: 17,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '500',
   },
   timeSlotsContainer: {
     flex: 1,
   },
   noSlotsContainer: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    marginHorizontal: 4,
   },
   noSlotsText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 12,
-    marginBottom: 20,
+    fontSize: 18,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 16,
+    marginBottom: 24,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   changeDateButton: {
-    backgroundColor: '#FF6B6B',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   changeDateText: {
     color: 'white',
-    fontWeight: 'bold',
+    fontWeight: '700',
+    fontSize: 16,
+    letterSpacing: 0.3,
   },
   timeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    gap: 12,
   },
   timeSlot: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 18,
+    padding: 16,
     marginBottom: 12,
-    width: '48%',
+    width: '47%',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   selectedTimeSlot: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'white',
+    shadowColor: 'rgba(255, 255, 255, 0.3)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 8,
   },
   unavailableTimeSlot: {
-    backgroundColor: '#f5f5f5',
-    opacity: 0.6,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    opacity: 0.5,
   },
   timeSlotText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 17,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: 0.2,
   },
   selectedTimeSlotText: {
     color: 'white',
+    fontWeight: '800',
   },
   unavailableTimeSlotText: {
-    color: '#999',
+    color: 'rgba(255, 255, 255, 0.4)',
   },
   timeSlotPrice: {
-    fontSize: 12,
-    color: '#FF6B6B',
-    marginTop: 4,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 6,
+    fontWeight: '600',
   },
   selectedTimeSlotPrice: {
     color: 'white',
+    fontWeight: '700',
   },
   reviewCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 28,
+    padding: 24,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   serviceInfo: {
-    marginBottom: 20,
-    paddingBottom: 20,
+    marginBottom: 24,
+    paddingBottom: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
   serviceName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: 22,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 6,
+    letterSpacing: -0.3,
   },
   providerName: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 17,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '500',
   },
   bookingDetails: {
-    gap: 16,
+    gap: 20,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   detailText: {
-    fontSize: 16,
-    color: '#333',
-    marginLeft: 12,
+    fontSize: 17,
+    color: 'white',
+    marginLeft: 16,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   priceRow: {
-    marginTop: 8,
-    paddingTop: 16,
+    marginTop: 12,
+    paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
   },
   priceText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FF6B6B',
-    marginLeft: 12,
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFD700',
+    marginLeft: 16,
+    letterSpacing: 0.2,
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 16,
   },
   backButton: {
     flex: 1,
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    padding: 18,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   backButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#666',
+    fontSize: 17,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: 0.3,
+    opacity: 0.9,
   },
   confirmButton: {
     flex: 2,
-    backgroundColor: '#FF6B6B',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: 'rgba(255, 215, 0, 0.9)',
+    borderRadius: 20,
+    padding: 18,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FFD700',
+    shadowColor: 'rgba(255, 215, 0, 0.3)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 8,
   },
   confirmButtonDisabled: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   confirmButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '800',
     color: 'white',
+    letterSpacing: 0.3,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
   successCard: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 32,
+    padding: 40,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    shadowColor: 'rgba(0, 0, 0, 0.25)',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 1,
+    shadowRadius: 40,
+    elevation: 20,
+    maxWidth: '90%',
+    minWidth: 300,
   },
   successIcon: {
-    marginBottom: 20,
+    marginBottom: 24,
+    shadowColor: 'rgba(39, 174, 96, 0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   successTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
     color: '#333',
-    marginBottom: 12,
+    marginBottom: 16,
+    letterSpacing: -0.5,
+    textAlign: 'center',
   },
   successMessage: {
-    fontSize: 16,
+    fontSize: 17,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 24,
+    marginBottom: 24,
+    lineHeight: 26,
+    fontWeight: '500',
   },
   successDetails: {
-    gap: 8,
+    gap: 12,
+    alignItems: 'center',
   },
   successDetailText: {
-    fontSize: 16,
+    fontSize: 17,
     color: '#333',
     textAlign: 'center',
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });
 

@@ -10,6 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 import { ProviderDashboard } from '../../types';
@@ -67,77 +68,78 @@ const DashboardScreen = () => {
 
   if (loading && !dashboardData) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#667eea" />
-        <Text style={styles.loadingText}>Loading dashboard...</Text>
-      </View>
+      <LinearGradient colors={['#667eea', '#764ba2']} style={[styles.container, styles.centered]}>
+        <BlurView intensity={20} style={styles.loadingCard}>
+          <ActivityIndicator size="large" color="white" />
+          <Text style={styles.loadingText}>Loading dashboard...</Text>
+        </BlurView>
+      </LinearGradient>
     );
   }
 
   return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      {/* Header */}
-      <LinearGradient
-        colors={['#667eea', '#764ba2']}
-        style={styles.header}
+    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+      <ScrollView 
+        style={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="white" />
+        }
       >
-        <Text style={styles.headerTitle}>Dashboard</Text>
-        <Text style={styles.headerSubtitle}>
-          {new Date().toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })}
-        </Text>
-      </LinearGradient>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Dashboard</Text>
+          <Text style={styles.headerSubtitle}>
+            {new Date().toLocaleDateString('en-US', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </Text>
+        </View>
+        
+        {/* Quick Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Ionicons name="calendar-outline" size={28} color="#4ECDC4" />
+              <Text style={[styles.statNumber, { color: '#4ECDC4' }]}>{dashboardData?.todayAppointments || 0}</Text>
+              <Text style={styles.statLabel}>Today's Appointments</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Ionicons name="time-outline" size={28} color="#FF6B6B" />
+              <Text style={[styles.statNumber, { color: '#FF6B6B' }]}>{dashboardData?.pendingAppointments || 0}</Text>
+              <Text style={styles.statLabel}>Pending Requests</Text>
+            </View>
+          </View>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Ionicons name="trending-up-outline" size={28} color="#45B7D1" />
+              <Text style={[styles.statNumber, { color: '#45B7D1' }]}>{formatCurrency(dashboardData?.weeklyRevenue || 0)}</Text>
+              <Text style={styles.statLabel}>This Week</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Ionicons name="cash-outline" size={28} color="#96CEB4" />
+              <Text style={[styles.statNumber, { color: '#96CEB4' }]}>{formatCurrency(dashboardData?.monthlyRevenue || 0)}</Text>
+              <Text style={styles.statLabel}>This Month</Text>
+            </View>
+          </View>
+        </View>
 
-      {/* Quick Stats */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Ionicons name="calendar-outline" size={24} color="#4ECDC4" />
-            <Text style={styles.statNumber}>{dashboardData?.todayAppointments || 0}</Text>
-            <Text style={styles.statLabel}>Today's Appointments</Text>
+        {/* Additional Stats Row */}
+        <View style={styles.additionalStats}>
+          <View style={styles.additionalStatCard}>
+            <Ionicons name="people-outline" size={24} color="#667eea" />
+            <Text style={[styles.additionalStatNumber, { color: '#667eea' }]}>{dashboardData?.totalClients || 0}</Text>
+            <Text style={styles.additionalStatLabel}>Total Clients</Text>
           </View>
-          <View style={styles.statCard}>
-            <Ionicons name="time-outline" size={24} color="#FF6B6B" />
-            <Text style={styles.statNumber}>{dashboardData?.pendingAppointments || 0}</Text>
-            <Text style={styles.statLabel}>Pending Requests</Text>
-          </View>
-        </View>
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Ionicons name="trending-up-outline" size={24} color="#45B7D1" />
-            <Text style={styles.statNumber}>{formatCurrency(dashboardData?.weeklyRevenue || 0)}</Text>
-            <Text style={styles.statLabel}>This Week</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Ionicons name="cash-outline" size={24} color="#96CEB4" />
-            <Text style={styles.statNumber}>{formatCurrency(dashboardData?.monthlyRevenue || 0)}</Text>
-            <Text style={styles.statLabel}>This Month</Text>
+          <View style={styles.additionalStatCard}>
+            <Ionicons name="star-outline" size={24} color="#FFD93D" />
+            <Text style={[styles.additionalStatNumber, { color: '#FFD93D' }]}>{dashboardData?.averageRating?.toFixed(1) || '0.0'}</Text>
+            <Text style={styles.additionalStatLabel}>Rating</Text>
           </View>
         </View>
-      </View>
-
-      {/* Additional Stats Row */}
-      <View style={styles.additionalStats}>
-        <View style={styles.additionalStatCard}>
-          <Ionicons name="people-outline" size={20} color="#667eea" />
-          <Text style={styles.additionalStatNumber}>{dashboardData?.totalClients || 0}</Text>
-          <Text style={styles.additionalStatLabel}>Total Clients</Text>
-        </View>
-        <View style={styles.additionalStatCard}>
-          <Ionicons name="star-outline" size={20} color="#FFD93D" />
-          <Text style={styles.additionalStatNumber}>{dashboardData?.averageRating?.toFixed(1) || '0.0'}</Text>
-          <Text style={styles.additionalStatLabel}>Rating</Text>
-        </View>
-      </View>
 
       {/* Next Appointment */}
       {dashboardData?.nextAppointment && (
@@ -156,7 +158,7 @@ const DashboardScreen = () => {
               {dashboardData.nextAppointment.serviceName}
             </Text>
             <View style={styles.appointmentTime}>
-              <Ionicons name="calendar-outline" size={16} color="#666" />
+              <Ionicons name="calendar-outline" size={16} color="#4ECDC4" />
               <Text style={styles.appointmentTimeText}>
                 {formatDate(dashboardData.nextAppointment.scheduledDate)} • {dashboardData.nextAppointment.duration} min
               </Text>
@@ -199,150 +201,194 @@ const DashboardScreen = () => {
             <Text style={styles.actionButtonText}>View Schedule</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="chatbubble-outline" size={24} color="#FF6B6B" />
+            <Ionicons name="chatbubble-outline" size={24} color="white" />
             <Text style={styles.actionButtonText}>Messages</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="stats-chart-outline" size={24} color="#96CEB4" />
+            <Ionicons name="stats-chart-outline" size={24} color="white" />
             <Text style={styles.actionButtonText}>Analytics</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
+  // Base Layout
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+  },
+  scrollContainer: {
+    flex: 1,
+    paddingBottom: 100,
   },
   centered: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
+  loadingCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 18,
+    color: 'white',
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  
+  // Header Section
   header: {
-    padding: 20,
-    paddingTop: 50,
-    paddingBottom: 30,
+    paddingTop: 60,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
   },
   headerTitle: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: 'bold',
+    color: 'white',
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   headerSubtitle: {
-    color: '#fff',
+    color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 16,
-    opacity: 0.9,
-    marginTop: 5,
+    fontWeight: '500',
+    marginTop: 8,
+    letterSpacing: -0.2,
   },
+  
+  // Stats Section
   statsContainer: {
-    marginTop: -20,
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
+    marginBottom: 24,
   },
   statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 16,
+    gap: 12,
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    padding: 20,
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 8,
   },
   statNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 24,
+    fontWeight: '800',
+    color: 'white',
     marginTop: 8,
+    letterSpacing: -0.3,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 8,
     textAlign: 'center',
+    fontWeight: '600',
+    letterSpacing: -0.1,
   },
+  
+  // Additional Stats
   additionalStats: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    paddingHorizontal: 24,
+    marginBottom: 24,
+    gap: 12,
   },
   additionalStatCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    marginHorizontal: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 16,
     alignItems: 'center',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   additionalStatNumber: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 4,
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'white',
+    marginTop: 6,
+    letterSpacing: -0.2,
   },
   additionalStatLabel: {
-    fontSize: 10,
-    color: '#666',
-    marginTop: 2,
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 6,
+    fontWeight: '500',
   },
+  
+  // Section Containers
   section: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    marginHorizontal: 24,
+    marginVertical: 12,
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 8,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
+    fontSize: 20,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 20,
+    letterSpacing: -0.3,
   },
+  
+  // Appointment Cards
   appointmentCard: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   appointmentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   appointmentClient: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: -0.2,
   },
   appointmentPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '800',
     color: '#4ECDC4',
+    letterSpacing: -0.2,
   },
   appointmentService: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 12,
+    fontWeight: '500',
   },
   appointmentTime: {
     flexDirection: 'row',
@@ -350,91 +396,113 @@ const styles = StyleSheet.create({
   },
   appointmentTimeText: {
     fontSize: 12,
-    color: '#666',
-    marginLeft: 4,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginLeft: 6,
+    fontWeight: '500',
   },
+  
+  // Appointment Items
   appointmentItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   appointmentInfo: {
     flex: 1,
   },
   appointmentItemClient: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 16,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: -0.2,
   },
   appointmentItemService: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 4,
+    fontWeight: '500',
   },
   appointmentItemTime: {
-    fontSize: 11,
-    color: '#999',
-    marginTop: 2,
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginTop: 4,
+    fontWeight: '500',
   },
   appointmentItemPrice: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#4ECDC4',
+    letterSpacing: -0.2,
   },
+  
+  // Activity Items
   activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   activityIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f0f0ff',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   activityInfo: {
     flex: 1,
   },
   activityDescription: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 15,
+    color: 'white',
+    fontWeight: '600',
+    letterSpacing: -0.2,
   },
   activityDate: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 4,
+    fontWeight: '500',
   },
   activityAmount: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#4ECDC4',
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#96CEB4',
+    letterSpacing: -0.2,
   },
+  
+  // Quick Actions
   quickActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    gap: 12,
   },
   actionButton: {
     width: '47%',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   actionButtonText: {
-    fontSize: 12,
-    color: '#333',
-    marginTop: 8,
-    fontWeight: '500',
+    fontSize: 13,
+    color: 'white',
+    marginTop: 12,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+    textAlign: 'center',
   },
 });
 

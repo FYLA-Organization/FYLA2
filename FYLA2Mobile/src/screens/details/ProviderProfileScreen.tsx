@@ -12,6 +12,7 @@ import {
   FlatList,
   Modal,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -48,15 +49,11 @@ const ProviderProfileScreen: React.FC = () => {
 
   const handleStartChat = () => {
     if (provider) {
-      navigation.navigate('ChatScreen' as never, { 
+      navigation.navigate('Chat', { 
         userId: provider.userId, 
-        user: {
-          id: provider.userId,
-          firstName: provider.firstName,
-          lastName: provider.lastName,
-          profilePictureUrl: provider.profileImageUrl
-        }
-      } as never);
+        userName: `${provider.businessName}`,
+        userImage: provider.profilePictureUrl
+      });
     }
   };
 
@@ -107,11 +104,11 @@ const ProviderProfileScreen: React.FC = () => {
         <Text style={styles.serviceDescription}>{service.description}</Text>
         <View style={styles.serviceDetails}>
           <View style={styles.detailItem}>
-            <Ionicons name="time-outline" size={16} color="#666" />
+            <Ionicons name="time-outline" size={16} color="rgba(255, 255, 255, 0.8)" />
             <Text style={styles.detailText}>{service.duration} min</Text>
           </View>
           <View style={styles.detailItem}>
-            <Ionicons name="pricetag-outline" size={16} color="#4ECDC4" />
+            <Ionicons name="pricetag-outline" size={16} color="#FFD700" />
             <Text style={styles.detailText}>{service.category}</Text>
           </View>
         </View>
@@ -224,30 +221,35 @@ const ProviderProfileScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6B6B" />
-        <Text style={styles.loadingText}>Loading provider details...</Text>
-      </View>
+      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="white" />
+          <Text style={styles.loadingText}>Loading provider details...</Text>
+        </View>
+      </LinearGradient>
     );
   }
 
   if (!provider) {
     return (
-      <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={64} color="#FF6B6B" />
-        <Text style={styles.errorText}>Provider not found</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadProviderData}>
-          <Text style={styles.retryButtonText}>Try Again</Text>
-        </TouchableOpacity>
-      </View>
+      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={64} color="white" />
+          <Text style={styles.errorText}>Provider not found</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadProviderData}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
     );
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
       {/* Header with provider info */}
       <LinearGradient
-        colors={['#FF6B6B', '#FFE66D']}
+        colors={['#667eea', '#764ba2']}
         style={styles.header}
       >
         <View style={styles.providerHeader}>
@@ -284,19 +286,19 @@ const ProviderProfileScreen: React.FC = () => {
       {/* Quick Actions Bar */}
       <View style={styles.quickActionsContainer}>
         <TouchableOpacity style={styles.quickActionButton} onPress={handleStartChat}>
-          <Ionicons name="chatbubble-outline" size={20} color="#FF6B6B" />
+          <Ionicons name="chatbubble-outline" size={20} color="white" />
           <Text style={styles.quickActionText}>Message</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.quickActionButton}>
-          <Ionicons name="call-outline" size={20} color="#4ECDC4" />
+          <Ionicons name="call-outline" size={20} color="white" />
           <Text style={styles.quickActionText}>Call</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.quickActionButton}>
-          <Ionicons name="location-outline" size={20} color="#FFE66D" />
+          <Ionicons name="location-outline" size={20} color="white" />
           <Text style={styles.quickActionText}>Directions</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.quickActionButton}>
-          <Ionicons name="heart-outline" size={20} color="#FF69B4" />
+          <Ionicons name="heart-outline" size={20} color="white" />
           <Text style={styles.quickActionText}>Save</Text>
         </TouchableOpacity>
       </View>
@@ -366,54 +368,75 @@ const ProviderProfileScreen: React.FC = () => {
       </Modal>
 
       <View style={styles.bottomPadding} />
-    </ScrollView>
+      </ScrollView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
+  // Base Layout
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
+  scrollContainer: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  
+  // Loading States
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'transparent',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: 20,
+    fontSize: 18,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '600',
   },
+  
+  // Error States
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'transparent',
     padding: 20,
   },
   errorText: {
-    fontSize: 18,
-    color: '#666',
+    fontSize: 20,
+    color: 'white',
     marginTop: 16,
     marginBottom: 24,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   retryButton: {
-    backgroundColor: '#FF6B6B',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
     borderRadius: 25,
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   retryButtonText: {
-    color: '#fff',
+    color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
+  
+  // Header Section
   header: {
     paddingTop: 60,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
   },
   providerHeader: {
     flexDirection: 'row',
@@ -424,23 +447,30 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 4,
-    borderColor: '#fff',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   providerInfo: {
     flex: 1,
-    marginLeft: 16,
+    marginLeft: 20,
   },
   providerName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: 26,
+    fontWeight: '800',
+    color: 'white',
     marginBottom: 8,
+    letterSpacing: -0.5,
   },
   providerBio: {
-    fontSize: 14,
-    color: '#fff',
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
     marginBottom: 16,
-    lineHeight: 20,
+    lineHeight: 24,
+    fontWeight: '500',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -449,220 +479,290 @@ const styles = StyleSheet.create({
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 16,
-    marginBottom: 4,
+    marginRight: 20,
+    marginBottom: 6,
   },
   statText: {
-    color: '#fff',
-    fontSize: 12,
-    marginLeft: 4,
-    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontSize: 14,
+    marginLeft: 6,
+    fontWeight: '600',
   },
+  
   // Quick Actions
   quickActionsContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingVertical: 24,
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 24,
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   quickActionButton: {
     alignItems: 'center',
     flex: 1,
   },
   quickActionText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-    fontWeight: '500',
+    fontSize: 14,
+    color: 'white',
+    marginTop: 6,
+    fontWeight: '600',
   },
   // Sections
   section: {
-    backgroundColor: '#fff',
-    marginTop: 12,
-    paddingHorizontal: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    marginHorizontal: 20,
+    marginTop: 20,
+    paddingHorizontal: 24,
     paddingVertical: 24,
+    borderRadius: 24,
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
+    fontSize: 22,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 20,
+    letterSpacing: -0.4,
   },
   specialtiesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
   specialtyTag: {
-    backgroundColor: '#FFE66D',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-    marginBottom: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 12,
+    marginBottom: 12,
   },
   specialtyText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 14,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: 0.2,
   },
   // Tabs
   tabContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   tab: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
-    borderBottomWidth: 2,
+    borderBottomWidth: 3,
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: '#FF6B6B',
+    borderBottomColor: '#FFD700',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   tabText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  activeTabText: {
-    color: '#FF6B6B',
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
     fontWeight: '600',
   },
+  activeTabText: {
+    color: 'white',
+    fontWeight: '800',
+  },
   tabContent: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    marginHorizontal: 20,
+    marginTop: 16,
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 20,
+    borderRadius: 24,
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   // Enhanced Service Cards
   enhancedServiceCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    marginBottom: 20,
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 8,
     overflow: 'hidden',
   },
   serviceImage: {
     width: '100%',
-    height: 120,
-    backgroundColor: '#f8f9fa',
+    height: 140,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   serviceInfo: {
-    padding: 16,
+    padding: 20,
   },
   serviceHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   serviceName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 20,
+    fontWeight: '800',
+    color: 'white',
     flex: 1,
+    letterSpacing: -0.3,
   },
   priceContainer: {
-    backgroundColor: '#E8F4FD',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.4)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 20,
   },
   servicePrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#007AFF',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFD700',
+    letterSpacing: -0.2,
   },
   serviceDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
-    lineHeight: 20,
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: 16,
+    lineHeight: 24,
+    fontWeight: '500',
   },
   serviceDetails: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 20,
+    marginRight: 24,
   },
   detailText: {
-    fontSize: 13,
-    color: '#666',
-    marginLeft: 6,
-    fontWeight: '500',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginLeft: 8,
+    fontWeight: '600',
   },
   bookButton: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: 'rgba(255, 107, 107, 0.9)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 25,
+    paddingVertical: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.3)',
+    shadowColor: 'rgba(255, 107, 107, 0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   bookButtonText: {
-    color: '#fff',
+    color: 'white',
     fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 6,
+    fontWeight: '700',
+    marginLeft: 8,
+    letterSpacing: -0.2,
   },
   // Legacy Service Card (keeping for compatibility)
   serviceCard: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
+  
   // Reviews
   reviewCard: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   reviewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   reviewerImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 16,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   reviewerInfo: {
     flex: 1,
   },
   reviewerName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 2,
+    fontSize: 16,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 4,
+    letterSpacing: -0.2,
   },
   reviewRating: {
     flexDirection: 'row',
   },
   reviewDate: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '600',
   },
   reviewComment: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.9)',
+    lineHeight: 22,
+    fontWeight: '500',
   },
   // Gallery
   galleryRow: {
@@ -671,18 +771,21 @@ const styles = StyleSheet.create({
   galleryImageContainer: {
     width: '48%',
     aspectRatio: 1,
-    marginBottom: 12,
-    borderRadius: 12,
+    marginBottom: 16,
+    borderRadius: 16,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   galleryImage: {
     width: '100%',
     height: '100%',
   },
+  
   // Modal
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -691,47 +794,55 @@ const styles = StyleSheet.create({
     top: 60,
     right: 20,
     zIndex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 20,
-    padding: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 25,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   modalImage: {
     width: width * 0.9,
     height: width * 0.9,
+    borderRadius: 12,
   },
+  
   // Other
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: 40,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#999',
-    marginTop: 12,
+    fontSize: 18,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   contactCard: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   contactButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingVertical: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#FF6B6B',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   contactButtonText: {
-    color: '#FF6B6B',
+    color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     marginLeft: 8,
   },
   bottomPadding: {
-    height: 24,
+    height: 32,
   },
 });
 

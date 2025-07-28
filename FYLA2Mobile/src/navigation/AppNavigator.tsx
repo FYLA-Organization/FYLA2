@@ -3,6 +3,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { Platform, View } from 'react-native';
 
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList, AuthStackParamList, ClientTabParamList, ProviderTabParamList } from '../types';
@@ -10,6 +12,10 @@ import { RootStackParamList, AuthStackParamList, ClientTabParamList, ProviderTab
 // Auth Screens
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
+
+// Legal Screens
+import TermsOfServiceScreen from '../screens/legal/TermsOfServiceScreen';
+import PrivacyPolicyScreen from '../screens/legal/PrivacyPolicyScreen';
 
 // Client Screens (Consumer-focused)
 import HomeScreen from '../screens/main/HomeScreen';
@@ -52,6 +58,8 @@ const AuthNavigator = () => {
     >
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
+      <AuthStack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
     </AuthStack.Navigator>
   );
 };
@@ -83,18 +91,44 @@ const ClientTabNavigator = () => {
               iconName = 'help-outline';
           }
 
-          const iconSize = 24;
+          const iconSize = focused ? 26 : 24;
           return <Ionicons name={iconName as any} size={iconSize} color={color} />;
         },
-        tabBarActiveTintColor: '#FF6B6B',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: 'white',
+        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.6)',
         tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopWidth: 1,
-          borderTopColor: '#e0e0e0',
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
+          position: 'absolute',
+          bottom: 20,
+          left: 20,
+          right: 20,
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          borderRadius: 24,
+          height: 70,
+          paddingBottom: 10,
+          paddingTop: 10,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        tabBarBackground: () => (
+          <BlurView
+            intensity={80}
+            tint="dark"
+            style={{
+              flex: 1,
+              borderRadius: 24,
+              backgroundColor: 'rgba(0, 0, 0, 0.2)',
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              overflow: 'hidden',
+            }}
+          />
+        ),
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+          letterSpacing: -0.2,
+          marginTop: 2,
         },
         headerShown: false,
       })}
@@ -158,18 +192,44 @@ const ProviderTabNavigator = () => {
               iconName = 'help-outline';
           }
 
-          const iconSize = 24;
+          const iconSize = focused ? 26 : 24;
           return <Ionicons name={iconName as any} size={iconSize} color={color} />;
         },
-        tabBarActiveTintColor: '#4ECDC4',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: 'white',
+        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.6)',
         tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopWidth: 1,
-          borderTopColor: '#e0e0e0',
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
+          position: 'absolute',
+          bottom: 20,
+          left: 20,
+          right: 20,
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          borderRadius: 24,
+          height: 70,
+          paddingBottom: 10,
+          paddingTop: 10,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        tabBarBackground: () => (
+          <BlurView
+            intensity={80}
+            tint="dark"
+            style={{
+              flex: 1,
+              borderRadius: 24,
+              backgroundColor: 'rgba(0, 0, 0, 0.2)',
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              overflow: 'hidden',
+            }}
+          />
+        ),
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+          letterSpacing: -0.2,
+          marginTop: 2,
         },
         headerShown: false,
       })}
@@ -232,7 +292,32 @@ const AppNavigator = () => {
             <RootStack.Screen 
               name="ServiceDetails" 
               component={ServiceDetailsScreen}
-              options={{ headerShown: true, title: 'Service Details' }}
+              options={{ 
+                headerShown: true, 
+                title: 'Service Details',
+                headerStyle: {
+                  backgroundColor: 'transparent',
+                },
+                headerBackground: () => (
+                  <BlurView
+                    intensity={100}
+                    tint="dark"
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      borderBottomWidth: 1,
+                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                    }}
+                  />
+                ),
+                headerTintColor: 'white',
+                headerTitleStyle: {
+                  fontSize: 18,
+                  fontWeight: '700',
+                  letterSpacing: -0.3,
+                },
+                headerBackTitleVisible: false,
+              }}
             />
             <RootStack.Screen 
               name="BookingFlow" 
@@ -242,12 +327,62 @@ const AppNavigator = () => {
             <RootStack.Screen 
               name="ProviderProfile" 
               component={ProviderProfileScreen}
-              options={{ headerShown: true, title: 'Provider Profile' }}
+              options={{ 
+                headerShown: true, 
+                title: 'Provider Profile',
+                headerStyle: {
+                  backgroundColor: 'transparent',
+                },
+                headerBackground: () => (
+                  <BlurView
+                    intensity={100}
+                    tint="dark"
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      borderBottomWidth: 1,
+                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                    }}
+                  />
+                ),
+                headerTintColor: 'white',
+                headerTitleStyle: {
+                  fontSize: 18,
+                  fontWeight: '700',
+                  letterSpacing: -0.3,
+                },
+                headerBackTitleVisible: false,
+              }}
             />
             <RootStack.Screen 
               name="BookingDetails" 
               component={BookingDetailsScreen}
-              options={{ headerShown: true, title: 'Booking Details' }}
+              options={{ 
+                headerShown: true, 
+                title: 'Booking Details',
+                headerStyle: {
+                  backgroundColor: 'transparent',
+                },
+                headerBackground: () => (
+                  <BlurView
+                    intensity={100}
+                    tint="dark"
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      borderBottomWidth: 1,
+                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                    }}
+                  />
+                ),
+                headerTintColor: 'white',
+                headerTitleStyle: {
+                  fontSize: 18,
+                  fontWeight: '700',
+                  letterSpacing: -0.3,
+                },
+                headerBackTitleVisible: false,
+              }}
             />
             <RootStack.Screen 
               name="Chat" 

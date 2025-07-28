@@ -7,7 +7,12 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
+  TextInput,
+  Modal,
+  Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -16,17 +21,59 @@ import ApiService from '../../services/api';
 
 type BookingsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
+interface FilterOptions {
+  status: BookingStatus[];
+  categories: string[];
+  dateRange: {
+    start: Date | null;
+    end: Date | null;
+  };
+  priceRange: {
+    min: number;
+    max: number;
+  };
+  searchTerm: string;
+}
+
 const BookingsScreen: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<FilterOptions>({
+    status: [],
+    categories: [],
+    dateRange: { start: null, end: null },
+    priceRange: { min: 0, max: 1000 },
+    searchTerm: '',
+  });
+  const [activeFiltersCount, setActiveFiltersCount] = useState(0);
   
   const navigation = useNavigation<BookingsScreenNavigationProp>();
 
   useEffect(() => {
     loadBookings();
   }, []);
+
+  useEffect(() => {
+    updateActiveFiltersCount();
+  }, [filters]);
+
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, searchTerm }));
+  }, [searchTerm]);
+
+  const updateActiveFiltersCount = () => {
+    let count = 0;
+    if (filters.status.length > 0) count++;
+    if (filters.categories.length > 0) count++;
+    if (filters.dateRange.start || filters.dateRange.end) count++;
+    if (filters.priceRange.min > 0 || filters.priceRange.max < 1000) count++;
+    if (filters.searchTerm.trim().length > 0) count++;
+    setActiveFiltersCount(count);
+  };
 
   const loadBookings = async () => {
     try {
@@ -49,11 +96,56 @@ const BookingsScreen: React.FC = () => {
     const now = new Date();
     return bookings.filter((booking) => {
       const bookingDate = new Date(booking.bookingDate);
+      
+      // Time-based filtering (upcoming/past)
+      let passesTimeFilter = false;
       if (selectedTab === 'upcoming') {
-        return bookingDate >= now && booking.status !== BookingStatus.Completed && booking.status !== BookingStatus.Cancelled;
+        passesTimeFilter = bookingDate >= now && booking.status !== BookingStatus.Completed && booking.status !== BookingStatus.Cancelled;
       } else {
-        return bookingDate < now || booking.status === BookingStatus.Completed || booking.status === BookingStatus.Cancelled;
+        passesTimeFilter = bookingDate < now || booking.status === BookingStatus.Completed || booking.status === BookingStatus.Cancelled;
       }
+      
+      if (!passesTimeFilter) return false;
+
+      // Status filter
+      if (filters.status.length > 0 && !filters.status.includes(booking.status)) {
+        return false;
+      }
+
+      // Category filter
+      if (filters.categories.length > 0 && booking.service?.category) {
+        if (!filters.categories.includes(booking.service.category)) {
+          return false;
+        }
+      }
+
+      // Date range filter
+      if (filters.dateRange.start || filters.dateRange.end) {
+        if (filters.dateRange.start && bookingDate < filters.dateRange.start) {
+          return false;
+        }
+        if (filters.dateRange.end && bookingDate > filters.dateRange.end) {
+          return false;
+        }
+      }
+
+      // Price range filter
+      if (booking.totalAmount < filters.priceRange.min || booking.totalAmount > filters.priceRange.max) {
+        return false;
+      }
+
+      // Search term filter
+      if (filters.searchTerm.trim().length > 0) {
+        const searchLower = filters.searchTerm.toLowerCase();
+        const providerName = (booking.serviceProvider?.businessName || '').toLowerCase();
+        const serviceName = (booking.service?.name || '').toLowerCase();
+        
+        if (!providerName.includes(searchLower) && !serviceName.includes(searchLower)) {
+          return false;
+        }
+      }
+
+      return true;
     });
   };
 
@@ -92,12 +184,194 @@ const BookingsScreen: React.FC = () => {
     });
   };
 
-  const renderBookingCard = (booking: Booking) => (
-    <TouchableOpacity
-      key={booking.id}
-      style={styles.bookingCard}
-      onPress={() => navigation.navigate('BookingDetails', { bookingId: booking.id })}
+  const getUniqueCategories = () => {
+    const categories = new Set<string>();
+    bookings.forEach(booking => {
+      if (booking.service?.category) {
+        categories.add(booking.service.category);
+      }
+    });
+    return Array.from(categories).sort();
+  };
+
+  const toggleStatusFilter = (status: BookingStatus) => {
+    setFilters(prev => ({
+      ...prev,
+      status: prev.status.includes(status)
+        ? prev.status.filter(s => s !== status)
+        : [...prev.status, status]
+    }));
+  };
+
+  const toggleCategoryFilter = (category: string) => {
+    setFilters(prev => ({
+      ...prev,
+      categories: prev.categories.includes(category)
+        ? prev.categories.filter(c => c !== category)
+        : [...prev.categories, category]
+    }));
+  };
+
+  const clearAllFilters = () => {
+    setFilters({
+      status: [],
+      categories: [],
+      dateRange: { start: null, end: null },
+      priceRange: { min: 0, max: 1000 },
+      searchTerm: '',
+    });
+    setSearchTerm('');
+  };
+
+  const renderFilterModal = () => (
+    <Modal
+      visible={showFilters}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowFilters(false)}
     >
+      <View style={styles.modalOverlay}>
+        <BlurView intensity={20} style={styles.modalBlur}>
+          <View style={styles.modalContainer}>
+            <LinearGradient colors={['#667eea', '#764ba2']} style={styles.modalContent}>
+              {/* Modal Header */}
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Filter Bookings</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowFilters(false)}
+                  style={styles.modalCloseButton}
+                >
+                  <Ionicons name="close" size={24} color="white" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.filterContent} showsVerticalScrollIndicator={false}>
+                {/* Status Filter */}
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>Status</Text>
+                  <View style={styles.filterOptionsContainer}>
+                    {Object.values(BookingStatus).map((status) => (
+                      <TouchableOpacity
+                        key={status}
+                        style={[
+                          styles.filterOption,
+                          filters.status.includes(status) && styles.filterOptionActive
+                        ]}
+                        onPress={() => toggleStatusFilter(status)}
+                      >
+                        <Text style={[
+                          styles.filterOptionText,
+                          filters.status.includes(status) && styles.filterOptionTextActive
+                        ]}>
+                          {status}
+                        </Text>
+                        {filters.status.includes(status) && (
+                          <Ionicons name="checkmark" size={16} color="white" />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Category Filter */}
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>Service Categories</Text>
+                  <View style={styles.filterOptionsContainer}>
+                    {getUniqueCategories().map((category) => (
+                      <TouchableOpacity
+                        key={category}
+                        style={[
+                          styles.filterOption,
+                          filters.categories.includes(category) && styles.filterOptionActive
+                        ]}
+                        onPress={() => toggleCategoryFilter(category)}
+                      >
+                        <Text style={[
+                          styles.filterOptionText,
+                          filters.categories.includes(category) && styles.filterOptionTextActive
+                        ]}>
+                          {category}
+                        </Text>
+                        {filters.categories.includes(category) && (
+                          <Ionicons name="checkmark" size={16} color="white" />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Price Range Filter */}
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>Price Range</Text>
+                  <View style={styles.priceRangeContainer}>
+                    <View style={styles.priceInputContainer}>
+                      <Text style={styles.priceLabel}>Min: $</Text>
+                      <TextInput
+                        style={styles.priceInput}
+                        value={filters.priceRange.min.toString()}
+                        onChangeText={(text) => {
+                          const value = parseInt(text) || 0;
+                          setFilters(prev => ({
+                            ...prev,
+                            priceRange: { ...prev.priceRange, min: value }
+                          }));
+                        }}
+                        keyboardType="numeric"
+                        placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                      />
+                    </View>
+                    <View style={styles.priceInputContainer}>
+                      <Text style={styles.priceLabel}>Max: $</Text>
+                      <TextInput
+                        style={styles.priceInput}
+                        value={filters.priceRange.max.toString()}
+                        onChangeText={(text) => {
+                          const value = parseInt(text) || 1000;
+                          setFilters(prev => ({
+                            ...prev,
+                            priceRange: { ...prev.priceRange, max: value }
+                          }));
+                        }}
+                        keyboardType="numeric"
+                        placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                      />
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+
+              {/* Modal Actions */}
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.clearFiltersButton}
+                  onPress={clearAllFilters}
+                >
+                  <Text style={styles.clearFiltersText}>Clear All</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.applyFiltersButton}
+                  onPress={() => setShowFilters(false)}
+                >
+                  <Text style={styles.applyFiltersText}>Apply Filters</Text>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </BlurView>
+      </View>
+    </Modal>
+  );
+
+  const renderBookingCard = (booking: Booking) => (
+    <BlurView
+      key={booking.id}
+      intensity={80}
+      style={styles.bookingCard}
+    >
+      <TouchableOpacity
+        onPress={() => navigation.navigate('BookingDetails', { bookingId: booking.id })}
+        style={styles.bookingCardContent}
+      >
       <View style={styles.bookingHeader}>
         <Image
           source={{
@@ -160,22 +434,52 @@ const BookingsScreen: React.FC = () => {
         )}
       </View>
     </TouchableOpacity>
+    </BlurView>
   );
 
   const filteredBookings = getFilteredBookings();
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <BlurView intensity={80} style={styles.header}>
         <Text style={styles.headerTitle}>My Bookings</Text>
-        <TouchableOpacity style={styles.searchButton}>
-          <Ionicons name="search-outline" size={24} color="#333" />
-        </TouchableOpacity>
-      </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={styles.searchButton}
+            onPress={() => setShowFilters(true)}
+          >
+            <Ionicons name="filter" size={24} color="white" />
+            {activeFiltersCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+      </BlurView>
+
+      {/* Search Bar */}
+      <BlurView intensity={80} style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <Ionicons name="search-outline" size={20} color="rgba(255, 255, 255, 0.7)" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by provider or service..."
+            placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+          />
+          {searchTerm.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchTerm('')}>
+              <Ionicons name="close-circle" size={20} color="rgba(255, 255, 255, 0.7)" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </BlurView>
 
       {/* Tabs */}
-      <View style={styles.tabContainer}>
+      <BlurView intensity={80} style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tab, selectedTab === 'upcoming' && styles.activeTab]}
           onPress={() => setSelectedTab('upcoming')}
@@ -192,7 +496,7 @@ const BookingsScreen: React.FC = () => {
             Past
           </Text>
         </TouchableOpacity>
-      </View>
+      </BlurView>
 
       {/* Bookings List */}
       <ScrollView
@@ -226,204 +530,511 @@ const BookingsScreen: React.FC = () => {
           filteredBookings.map(renderBookingCard)
         )}
       </ScrollView>
-    </View>
+
+      {/* Filter Modal */}
+      {renderFilterModal()}
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
+  // Base Layout
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    paddingBottom: 100,
   },
+  
+  // Header Section
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    backgroundColor: 'white',
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 32,
+    fontWeight: '800',
+    color: 'white',
+    letterSpacing: -0.5,
   },
   searchButton: {
-    padding: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
+    position: 'relative',
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#FFD700',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  filterBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: 'white',
+  },
+  
+  // Search Section
+  searchContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    gap: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: 'white',
+    fontWeight: '500',
+  },
+  
+  // Filter Modal Styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBlur: {
+    flex: 1,
+  },
+  modalContainer: {
+    height: '80%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: 'hidden',
+    marginTop: 60, // Added margin to avoid dynamic island
+  },
+  modalContent: {
+    flex: 1,
+    paddingTop: 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: 'white',
+    letterSpacing: -0.3,
+  },
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  filterContent: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  filterSection: {
+    marginBottom: 32,
+  },
+  filterSectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 16,
+    letterSpacing: 0.2,
+  },
+  filterOptionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  filterOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    gap: 8,
+  },
+  filterOptionActive: {
+    backgroundColor: 'rgba(255, 215, 0, 0.3)',
+    borderColor: '#FFD700',
+  },
+  filterOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  filterOptionTextActive: {
+    color: 'white',
+    fontWeight: '700',
+  },
+  priceRangeContainer: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  priceInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  priceLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+    marginRight: 8,
+  },
+  priceInput: {
+    flex: 1,
+    fontSize: 16,
+    color: 'white',
+    fontWeight: '500',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.15)',
+    gap: 16,
+  },
+  clearFiltersButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+  },
+  clearFiltersText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  applyFiltersButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 215, 0, 0.9)',
+    borderWidth: 1,
+    borderColor: '#FFD700',
+    alignItems: 'center',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  applyFiltersText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: 'white',
+  },
+  
+  // Tab Section
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'white',
-    paddingHorizontal: 20,
-    paddingBottom: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 16,
     alignItems: 'center',
-    borderBottomWidth: 2,
+    borderBottomWidth: 3,
     borderBottomColor: 'transparent',
+    marginHorizontal: 8,
+    borderRadius: 8,
   },
   activeTab: {
-    borderBottomColor: '#FF6B6B',
+    borderBottomColor: '#FFD700',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   tabText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: 17,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.8)',
+    letterSpacing: 0.2,
   },
   activeTabText: {
-    color: '#FF6B6B',
+    color: 'white',
   },
+  
+  // Bookings List
   bookingsList: {
     flex: 1,
     padding: 20,
+    backgroundColor: 'transparent',
   },
   bookingCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    marginBottom: 20,
+    overflow: 'hidden',
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  bookingCardContent: {
+    padding: 20,
   },
   bookingHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    marginBottom: 16,
   },
   providerImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 12,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    marginRight: 16,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   bookingInfo: {
     flex: 1,
   },
   providerName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: 20,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 6,
+    letterSpacing: -0.3,
   },
   serviceName: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginBottom: 12,
+    fontWeight: '500',
   },
   dateTimeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   dateText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 4,
+    fontSize: 13,
+    color: 'white',
+    marginLeft: 6,
+    fontWeight: '600',
   },
   timeIcon: {
-    marginLeft: 12,
+    marginLeft: 16,
+    opacity: 0.9,
   },
   timeText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 4,
+    fontSize: 13,
+    color: 'white',
+    marginLeft: 6,
+    fontWeight: '600',
   },
   statusContainer: {
     alignItems: 'flex-end',
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   statusText: {
-    fontSize: 10,
-    fontWeight: 'bold',
+    fontSize: 12,
+    fontWeight: '800',
     color: 'white',
+    letterSpacing: 0.5,
   },
   priceText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFD700',
+    letterSpacing: 0.2,
   },
+  
+  // Notes Section
   notesContainer: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   notesLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#666',
-    marginBottom: 4,
+    fontSize: 13,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 6,
+    letterSpacing: 0.3,
+    opacity: 0.9,
   },
   notesText: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 15,
+    color: 'white',
+    lineHeight: 22,
+    fontWeight: '500',
+    opacity: 0.9,
   },
+  
+  // Action Buttons
   bookingActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 15,
-    gap: 10,
+    marginTop: 20,
+    gap: 12,
   },
   actionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   primaryAction: {
-    backgroundColor: '#FF6B6B',
-    borderColor: '#FF6B6B',
+    backgroundColor: 'rgba(255, 215, 0, 0.9)',
+    borderColor: '#FFD700',
   },
   actionButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: 15,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: 0.3,
+    opacity: 0.9,
   },
   primaryActionText: {
     color: 'white',
+    opacity: 1,
   },
+  
+  // Loading & Empty States
   loadingContainer: {
-    padding: 50,
+    padding: 60,
     alignItems: 'center',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 50,
+    paddingVertical: 80,
+    paddingHorizontal: 40,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#666',
-    marginTop: 15,
+    fontSize: 24,
+    fontWeight: '800',
+    color: 'white',
+    marginTop: 20,
+    textAlign: 'center',
+    letterSpacing: -0.3,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 5,
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 8,
     textAlign: 'center',
+    lineHeight: 24,
+    fontWeight: '500',
   },
   bookNowButton: {
-    backgroundColor: '#FF6B6B',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 28,
+    marginTop: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 8,
   },
   bookNowText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
 });
 

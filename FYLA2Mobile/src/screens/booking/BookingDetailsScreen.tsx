@@ -10,10 +10,12 @@ import {
   Image,
   Linking,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { apiService } from '../../services/api';
+import ApiService from '../../services/api';
 import { RootStackParamList } from '../../types';
 
 type BookingDetailsNavigationProp = StackNavigationProp<RootStackParamList, 'BookingDetails'>;
@@ -52,7 +54,7 @@ const BookingDetailsScreen: React.FC = () => {
   const loadBookingDetails = async () => {
     try {
       setLoading(true);
-      const details = await apiService.getBookingDetails(bookingId);
+      const details = await ApiService.getBookingDetails(bookingId);
       setBooking(details);
     } catch (error) {
       console.error('Error loading booking:', error);
@@ -162,7 +164,7 @@ const BookingDetailsScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await apiService.cancelBooking(bookingId);
+              await ApiService.cancelBooking(bookingId);
               Alert.alert('Cancelled', 'Your appointment has been cancelled.');
               navigation.goBack();
             } catch (error) {

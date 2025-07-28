@@ -8,8 +8,10 @@ import {
   Image,
   RefreshControl,
   Dimensions,
+  StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -34,8 +36,8 @@ const HomeScreen: React.FC = () => {
 
   const loadFeaturedProviders = async () => {
     try {
-      const providers = await ApiService.getFeaturedProviders(6);
-      setFeaturedProviders(providers);
+      const providers = await ApiService.getFeaturedProviders();
+      setFeaturedProviders(providers.slice(0, 6)); // Limit to 6 providers
     } catch (error) {
       console.error('Error loading featured providers:', error);
     } finally {
@@ -55,262 +57,361 @@ const HomeScreen: React.FC = () => {
 
   const categories = [
     { name: 'Hair', icon: 'cut-outline', color: '#FF6B6B' },
-    { name: 'Nails', icon: 'finger-print-outline', color: '#4ECDC4' },
-    { name: 'Makeup', icon: 'color-palette-outline', color: '#FFE66D' },
-    { name: 'Massage', icon: 'hand-left-outline', color: '#A8E6CF' },
-    { name: 'Skin Care', icon: 'water-outline', color: '#DDA0DD' },
-    { name: 'Fitness', icon: 'fitness-outline', color: '#FFA07A' },
+    { name: 'Nails', icon: 'hand-right-outline', color: '#4ECDC4' },
+    { name: 'Makeup', icon: 'brush-outline', color: '#FFE66D' },
+    { name: 'Massage', icon: 'body-outline', color: '#A8E6CF' },
+    { name: 'Skin Care', icon: 'flower-outline', color: '#DDA0DD' },
+    { name: 'Fitness', icon: 'barbell-outline', color: '#FFA07A' },
   ];
 
+  const handleCategoryPress = (category: { name: string; icon: string; color: string }) => {
+    // For now, navigate to search - could be enhanced later to pass category filter
+    navigation.navigate('Search');
+  };
+
   return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      {/* Header */}
-      <LinearGradient colors={['#FF6B6B', '#4ECDC4']} style={styles.header}>
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.greeting}>Hello, {user?.firstName}!</Text>
-            <Text style={styles.subGreeting}>Find your perfect look today</Text>
-          </View>
-          <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications-outline" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-
-      {/* Categories */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Categories</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
-          {categories.map((category, index) => (
-            <TouchableOpacity key={index} style={styles.categoryCard}>
-              <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
-                <Ionicons name={category.icon as any} size={24} color="white" />
-              </View>
-              <Text style={styles.categoryName}>{category.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Featured Providers */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Featured Providers</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
-        </View>
+    <>
+      <StatusBar barStyle="light-content" />
+      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
         
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <Text>Loading...</Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.greeting}>Hello, {user?.firstName}!</Text>
+              <Text style={styles.subGreeting}>Discover amazing services</Text>
+            </View>
+            <TouchableOpacity style={styles.notificationBtn}>
+              <Ionicons name="notifications-outline" size={24} color="white" />
+            </TouchableOpacity>
           </View>
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {featuredProviders.map((provider) => (
-              <TouchableOpacity 
-                key={provider.id} 
-                style={styles.providerCard}
-                onPress={() => handleProviderPress(provider)}
-              >
-                <Image
-                  source={{
-                    uri: provider.profilePictureUrl || 'https://via.placeholder.com/150',
-                  }}
-                  style={styles.providerImage}
-                />
-                <View style={styles.providerInfo}>
-                  <Text style={styles.providerName} numberOfLines={1}>
-                    {provider.businessName}
-                  </Text>
-                  <View style={styles.ratingContainer}>
-                    <Ionicons name="star" size={14} color="#FFD700" />
-                    <Text style={styles.rating}>{provider.averageRating.toFixed(1)}</Text>
-                    <Text style={styles.reviewCount}>({provider.totalReviews})</Text>
-                  </View>
-                  <Text style={styles.providerSpecialty} numberOfLines={1}>
-                    {provider.specialties?.join(', ') || 'Beauty Services'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
-      </View>
-
-      {/* Quick Actions */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionCard}>
-            <Ionicons name="calendar-outline" size={32} color="#FF6B6B" />
-            <Text style={styles.actionText}>Book Now</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionCard}>
-            <Ionicons name="time-outline" size={32} color="#4ECDC4" />
-            <Text style={styles.actionText}>My Bookings</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionCard}>
-            <Ionicons name="heart-outline" size={32} color="#FFE66D" />
-            <Text style={styles.actionText}>Favorites</Text>
-          </TouchableOpacity>
         </View>
-      </View>
-    </ScrollView>
+
+        {/* Content */}
+        <ScrollView 
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
+          
+          {/* Categories Section */}
+          <BlurView intensity={80} style={styles.section}>
+            <Text style={styles.sectionTitle}>Categories</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+              {categories.map((category, index) => (
+                <TouchableOpacity 
+                  key={index} 
+                  style={styles.categoryItem}
+                  onPress={() => handleCategoryPress(category)}
+                >
+                  <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
+                    <Ionicons name={category.icon as any} size={28} color="white" />
+                  </View>
+                  <Text style={styles.categoryText}>{category.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </BlurView>
+
+          {/* Featured Providers Section */}
+          <BlurView intensity={80} style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Featured Providers</Text>
+              <TouchableOpacity>
+                <Text style={styles.seeAllText}>See All</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {isLoading ? (
+              <View style={styles.loadingView}>
+                <Text style={styles.loadingText}>Loading...</Text>
+              </View>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                {featuredProviders.map((provider) => (
+                  <TouchableOpacity 
+                    key={provider.id} 
+                    style={styles.providerCard}
+                    onPress={() => handleProviderPress(provider)}
+                  >
+                    <Image
+                      source={{ uri: provider.profilePictureUrl || 'https://via.placeholder.com/150' }}
+                      style={styles.providerImage}
+                    />
+                    <View style={styles.providerInfo}>
+                      <Text style={styles.providerName} numberOfLines={1}>
+                        {provider.businessName}
+                      </Text>
+                      <View style={styles.ratingRow}>
+                        <Ionicons name="star" size={14} color="#FFD700" />
+                        <Text style={styles.rating}>{provider.averageRating.toFixed(1)}</Text>
+                        <Text style={styles.reviewCount}>({provider.totalReviews})</Text>
+                      </View>
+                      <Text style={styles.specialty} numberOfLines={1}>
+                        {provider.specialties?.join(', ') || 'Beauty Services'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </BlurView>
+
+          {/* Quick Actions Section */}
+          <BlurView intensity={80} style={styles.section}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.actionsGrid}>
+              <TouchableOpacity 
+                style={styles.actionCard}
+                onPress={() => navigation.navigate('Search')}
+              >
+                <Ionicons name="search-outline" size={32} color="white" />
+                <Text style={styles.actionText}>Find{'\n'}Services</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.actionCard}
+                onPress={() => navigation.navigate('Bookings')}
+              >
+                <Ionicons name="calendar-outline" size={32} color="white" />
+                <Text style={styles.actionText}>My{'\n'}Bookings</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.actionCard}
+                onPress={() => navigation.navigate('Analytics')}
+              >
+                <Ionicons name="analytics-outline" size={32} color="white" />
+                <Text style={styles.actionText}>Analytics</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.actionCard}
+                onPress={() => navigation.navigate('Profile')}
+              >
+                <Ionicons name="person-outline" size={32} color="white" />
+                <Text style={styles.actionText}>Profile</Text>
+              </TouchableOpacity>
+            </View>
+          </BlurView>
+
+          <View style={styles.bottomPadding} />
+        </ScrollView>
+      </LinearGradient>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
+  // Base Layout
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
+  
+  // Header Section
   header: {
-    paddingTop: 50,
+    paddingTop: 60,
     paddingBottom: 30,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
-  headerContent: {
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   greeting: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 32,
+    fontWeight: '800',
     color: 'white',
+    letterSpacing: -0.5,
   },
   subGreeting: {
-    fontSize: 16,
-    color: 'white',
-    opacity: 0.9,
-    marginTop: 5,
+    fontSize: 17,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 6,
+    fontWeight: '500',
   },
-  notificationButton: {
-    padding: 8,
+  notificationBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
+  
+  // Main Content
+  content: {
+    flex: 1,
+    paddingTop: 8,
+    paddingBottom: 100,
+  },
+  
+  // Section Containers
   section: {
-    marginTop: 20,
-    paddingHorizontal: 20,
+    marginHorizontal: 0,
+    marginBottom: 32,
+    borderRadius: 0,
+    padding: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 0,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 24,
+    fontWeight: '800',
+    color: 'white',
+    letterSpacing: -0.3,
   },
   seeAllText: {
     fontSize: 16,
-    color: '#FF6B6B',
+    color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '600',
+    textDecorationLine: 'underline',
   },
-  categoriesScroll: {
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
+  
+  // Categories Section
+  horizontalScroll: {
+    marginHorizontal: -24,
+    paddingHorizontal: 24,
   },
-  categoryCard: {
+  categoryItem: {
     alignItems: 'center',
-    marginRight: 20,
-    width: 70,
+    marginRight: 24,
+    width: 80,
   },
   categoryIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+    shadowColor: 'rgba(0, 0, 0, 0.3)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  categoryName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#333',
+  categoryText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'white',
     textAlign: 'center',
+    letterSpacing: 0.2,
   },
+  
+  // Provider Cards
   providerCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    marginRight: 15,
-    width: width * 0.4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginRight: 20,
+    width: width * 0.48,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    overflow: 'hidden',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   providerImage: {
     width: '100%',
-    height: 120,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    height: 140,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   providerInfo: {
-    padding: 12,
+    padding: 18,
   },
   providerName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: 18,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 8,
+    letterSpacing: -0.2,
   },
-  ratingContainer: {
+  ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   rating: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 4,
+    fontSize: 14,
+    fontWeight: '700',
+    color: 'white',
+    marginLeft: 6,
   },
   reviewCount: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 4,
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginLeft: 6,
+    fontWeight: '500',
   },
-  providerSpecialty: {
-    fontSize: 12,
-    color: '#666',
+  specialty: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+    lineHeight: 18,
   },
-  quickActions: {
+  
+  // Quick Actions
+  actionsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 30,
+    gap: 16,
   },
   actionCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
+    width: '47%',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    paddingVertical: 28,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 8,
+    marginBottom: 16,
   },
   actionText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 8,
+    fontWeight: '700',
+    color: 'white',
+    marginTop: 12,
     textAlign: 'center',
+    letterSpacing: 0.3,
+    lineHeight: 18,
   },
-  loadingContainer: {
-    padding: 20,
+  
+  // Loading State
+  loadingView: {
+    padding: 32,
     alignItems: 'center',
+  },
+  loadingText: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  
+  // Bottom Spacing
+  bottomPadding: {
+    height: 40,
   },
 });
 

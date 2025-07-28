@@ -11,6 +11,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 import { RevenueAnalytics, ClientAnalytics } from '../../types';
@@ -93,7 +94,7 @@ const AnalyticsScreen = () => {
                     styles.chartBar, 
                     { 
                       height: `${height}%`,
-                      backgroundColor: height > 70 ? '#4ECDC4' : height > 40 ? '#45B7D1' : '#96CEB4'
+                      backgroundColor: height > 70 ? 'rgba(255, 255, 255, 0.9)' : height > 40 ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.5)'
                     }
                   ]} 
                 />
@@ -122,8 +123,14 @@ const AnalyticsScreen = () => {
         <Text style={styles.sectionTitle}>Top Performing Services</Text>
         {revenueData.topServices.slice(0, 5).map((service, index) => (
           <View key={service.serviceId} style={styles.serviceItem}>
-            <View style={styles.serviceRank}>
-              <Text style={styles.rankNumber}>{index + 1}</Text>
+            <View style={[
+              styles.serviceRank,
+              { backgroundColor: index === 0 ? 'rgba(255, 215, 0, 0.3)' : index === 1 ? 'rgba(192, 192, 192, 0.3)' : index === 2 ? 'rgba(205, 127, 50, 0.3)' : 'rgba(255, 255, 255, 0.2)' }
+            ]}>
+              <Text style={[
+                styles.rankNumber,
+                { color: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : 'white' }
+              ]}>{index + 1}</Text>
             </View>
             <View style={styles.serviceInfo}>
               <Text style={styles.serviceName}>{service.serviceName}</Text>
@@ -132,7 +139,7 @@ const AnalyticsScreen = () => {
               </Text>
             </View>
             <View style={styles.serviceRevenue}>
-              <Text style={styles.revenueAmount}>{formatCurrency(service.totalRevenue)}</Text>
+              <Text style={[styles.revenueAmount, { color: '#4ECDC4' }]}>{formatCurrency(service.totalRevenue)}</Text>
             </View>
           </View>
         ))}
@@ -159,14 +166,14 @@ const AnalyticsScreen = () => {
         {/* Client Distribution */}
         <View style={styles.clientDistribution}>
           <View style={styles.clientTypeCard}>
-            <Text style={styles.clientTypeNumber}>{clientData.newClients}</Text>
+            <Text style={[styles.clientTypeNumber, { color: '#45B7D1' }]}>{clientData.newClients}</Text>
             <Text style={styles.clientTypeLabel}>New Clients</Text>
-            <Text style={styles.clientTypePercentage}>{newClientPercentage.toFixed(1)}%</Text>
+            <Text style={[styles.clientTypePercentage, { color: '#96CEB4' }]}>{newClientPercentage.toFixed(1)}%</Text>
           </View>
           <View style={styles.clientTypeCard}>
-            <Text style={styles.clientTypeNumber}>{clientData.returningClients}</Text>
+            <Text style={[styles.clientTypeNumber, { color: '#667eea' }]}>{clientData.returningClients}</Text>
             <Text style={styles.clientTypeLabel}>Returning</Text>
-            <Text style={styles.clientTypePercentage}>{returningClientPercentage.toFixed(1)}%</Text>
+            <Text style={[styles.clientTypePercentage, { color: '#96CEB4' }]}>{returningClientPercentage.toFixed(1)}%</Text>
           </View>
         </View>
 
@@ -176,8 +183,14 @@ const AnalyticsScreen = () => {
             <Text style={styles.subsectionTitle}>Top Clients</Text>
             {clientData.topClients.slice(0, 3).map((client, index) => (
               <View key={client.userId} style={styles.clientItem}>
-                <View style={styles.clientAvatar}>
-                  <Text style={styles.clientInitials}>
+                <View style={[
+                  styles.clientAvatar,
+                  { backgroundColor: index === 0 ? 'rgba(255, 215, 0, 0.2)' : index === 1 ? 'rgba(192, 192, 192, 0.2)' : 'rgba(205, 127, 50, 0.2)' }
+                ]}>
+                  <Text style={[
+                    styles.clientInitials,
+                    { color: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32' }
+                  ]}>
                     {client.clientName.split(' ').map(n => n[0]).join('')}
                   </Text>
                 </View>
@@ -188,7 +201,7 @@ const AnalyticsScreen = () => {
                   </Text>
                 </View>
                 <View style={styles.clientSpent}>
-                  <Text style={styles.spentAmount}>{formatCurrency(client.totalSpent)}</Text>
+                  <Text style={[styles.spentAmount, { color: '#4ECDC4' }]}>{formatCurrency(client.totalSpent)}</Text>
                 </View>
               </View>
             ))}
@@ -210,6 +223,15 @@ const AnalyticsScreen = () => {
         <Text style={styles.sectionTitle}>Popular Time Slots</Text>
         {clientData.popularTimeSlots.map((slot) => {
           const percentage = maxBookings > 0 ? (slot.bookingCount / maxBookings) * 100 : 0;
+          
+          // Dynamic color based on popularity
+          const getBarColor = (percentage: number) => {
+            if (percentage > 80) return '#4ECDC4'; // Highest demand - Teal
+            if (percentage > 60) return '#45B7D1'; // High demand - Blue  
+            if (percentage > 40) return '#FFD93D'; // Medium demand - Yellow
+            return '#96CEB4'; // Lower demand - Mint
+          };
+
           return (
             <View key={slot.hour} style={styles.timeSlotItem}>
               <Text style={styles.timeSlotLabel}>{slot.timeSlot}</Text>
@@ -219,12 +241,15 @@ const AnalyticsScreen = () => {
                     styles.timeSlotFill, 
                     { 
                       width: `${percentage}%`,
-                      backgroundColor: percentage > 80 ? '#FF6B6B' : percentage > 60 ? '#4ECDC4' : '#96CEB4'
+                      backgroundColor: getBarColor(percentage)
                     }
                   ]} 
                 />
               </View>
-              <Text style={styles.timeSlotCount}>{slot.bookingCount}</Text>
+              <Text style={[
+                styles.timeSlotCount,
+                { color: getBarColor(percentage) }
+              ]}>{slot.bookingCount}</Text>
             </View>
           );
         })}
@@ -234,59 +259,60 @@ const AnalyticsScreen = () => {
 
   if (loading && !revenueData && !clientData) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#667eea" />
-        <Text style={styles.loadingText}>Loading analytics...</Text>
-      </View>
+      <LinearGradient colors={['#667eea', '#764ba2']} style={[styles.container, styles.centered]}>
+        <BlurView intensity={20} style={styles.loadingCard}>
+          <ActivityIndicator size="large" color="white" />
+          <Text style={styles.loadingText}>Loading analytics...</Text>
+        </BlurView>
+      </LinearGradient>
     );
   }
 
   return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      {/* Header */}
-      <LinearGradient
-        colors={['#667eea', '#764ba2']}
-        style={styles.header}
+    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+      <ScrollView 
+        style={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="white" />
+        }
       >
-        <Text style={styles.headerTitle}>Business Analytics</Text>
-        <Text style={styles.headerSubtitle}>Track your performance</Text>
-      </LinearGradient>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Business Analytics</Text>
+          <Text style={styles.headerSubtitle}>Track your performance</Text>
+        </View>
 
-      {/* Period Selector */}
-      <View style={styles.periodSelector}>
-        {periods.map((period) => (
-          <TouchableOpacity
-            key={period.key}
-            style={[
-              styles.periodButton,
-              selectedPeriod === period.key && styles.activePeriodButton,
-            ]}
-            onPress={() => setSelectedPeriod(period.key as any)}
-          >
-            <Text
-              style={[
-                styles.periodButtonText,
-                selectedPeriod === period.key && styles.activePeriodButtonText,
-              ]}
-            >
-              {period.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Revenue Overview */}
+        {/* Period Selector */}
+        <BlurView intensity={80} style={styles.periodSelector}>
+          <View style={styles.periodButtonContainer}>
+            {periods.map((period) => (
+              <TouchableOpacity
+                key={period.key}
+                style={[
+                  styles.periodButton,
+                  selectedPeriod === period.key && styles.activePeriodButton,
+                ]}
+                onPress={() => setSelectedPeriod(period.key as any)}
+              >
+                <Text
+                  style={[
+                    styles.periodButtonText,
+                    selectedPeriod === period.key && styles.activePeriodButtonText,
+                  ]}
+                >
+                  {period.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </BlurView>      {/* Revenue Overview */}
       {revenueData && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Revenue Overview</Text>
           <View style={styles.overviewGrid}>
             <View style={styles.overviewCard}>
-              <Text style={styles.overviewValue}>{formatCurrency(revenueData.totalRevenue)}</Text>
+              <Text style={[styles.overviewValue, { color: '#4ECDC4' }]}>{formatCurrency(revenueData.totalRevenue)}</Text>
               <Text style={styles.overviewLabel}>Total Revenue</Text>
               <Text style={[
                 styles.overviewGrowth,
@@ -296,9 +322,9 @@ const AnalyticsScreen = () => {
               </Text>
             </View>
             <View style={styles.overviewCard}>
-              <Text style={styles.overviewValue}>{revenueData.totalBookings}</Text>
+              <Text style={[styles.overviewValue, { color: '#45B7D1' }]}>{revenueData.totalBookings}</Text>
               <Text style={styles.overviewLabel}>Total Bookings</Text>
-              <Text style={styles.overviewExtra}>
+              <Text style={[styles.overviewExtra, { color: '#96CEB4' }]}>
                 {formatCurrency(revenueData.averageBookingValue)} avg
               </Text>
             </View>
@@ -315,137 +341,194 @@ const AnalyticsScreen = () => {
       {/* Client Analytics */}
       {renderClientMetrics()}
 
-      {/* Time Slot Analysis */}
-      {renderTimeSlotAnalysis()}
-    </ScrollView>
+        {/* Time Slot Analysis */}
+        {renderTimeSlotAnalysis()}
+      </ScrollView>
+    </LinearGradient>
   );
-};
-
-const styles = StyleSheet.create({
+};const styles = StyleSheet.create({
+  // Base Layout
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+  },
+  scrollContainer: {
+    flex: 1,
+    paddingBottom: 100,
   },
   centered: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
+  loadingCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 18,
+    color: 'white',
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  
+  // Header Section
   header: {
-    padding: 20,
-    paddingTop: 50,
-    paddingBottom: 30,
+    paddingTop: 60,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
   },
   headerTitle: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: 'bold',
+    color: 'white',
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   headerSubtitle: {
-    color: '#fff',
+    color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 16,
-    opacity: 0.9,
-    marginTop: 5,
+    fontWeight: '500',
+    marginTop: 8,
+    letterSpacing: -0.2,
   },
+  
+  // Period Selector
   periodSelector: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginTop: -15,
-    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    marginHorizontal: 24,
+    marginBottom: 24,
+    borderRadius: 20,
     padding: 4,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  periodButtonContainer: {
+    flexDirection: 'row',
   },
   periodButton: {
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
-    borderRadius: 20,
+    borderRadius: 16,
   },
   activePeriodButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   periodButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.7)',
+    letterSpacing: -0.2,
   },
   activePeriodButtonText: {
-    color: '#fff',
+    color: 'white',
+    fontWeight: '700',
   },
+  
+  // Section Containers
   section: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    marginHorizontal: 24,
+    marginVertical: 12,
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 8,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
+    fontSize: 20,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 20,
+    letterSpacing: -0.3,
   },
   subsectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 12,
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'white',
+    marginTop: 20,
+    marginBottom: 16,
+    letterSpacing: -0.2,
   },
+  
+  // Overview Cards
   overviewGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 12,
   },
   overviewCard: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    padding: 16,
-    marginHorizontal: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   overviewValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 22,
+    fontWeight: '800',
+    color: 'white',
+    letterSpacing: -0.3,
   },
   overviewLabel: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 8,
     textAlign: 'center',
+    fontWeight: '600',
+    letterSpacing: -0.1,
   },
   overviewGrowth: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 6,
+    letterSpacing: -0.2,
   },
   overviewExtra: {
     fontSize: 11,
-    color: '#999',
-    marginTop: 2,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginTop: 4,
+    fontWeight: '500',
   },
+  
+  // Chart Styles
   chartContainer: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    marginHorizontal: 24,
+    marginVertical: 12,
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 8,
   },
   chartTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 20,
+    letterSpacing: -0.2,
   },
   chart: {
     flexDirection: 'row',
@@ -460,179 +543,215 @@ const styles = StyleSheet.create({
   },
   chartBar: {
     width: '80%',
-    backgroundColor: '#4ECDC4',
-    borderRadius: 2,
-    minHeight: 4,
+    borderRadius: 4,
+    minHeight: 6,
   },
   chartLabel: {
     fontSize: 10,
-    color: '#666',
-    marginTop: 4,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 8,
+    fontWeight: '500',
   },
+  
+  // Service Items
   serviceItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   serviceRank: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#667eea',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   rankNumber: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   serviceInfo: {
     flex: 1,
   },
   serviceName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 16,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: -0.2,
   },
   serviceStats: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 4,
+    fontWeight: '500',
   },
   serviceRevenue: {
     alignItems: 'flex-end',
   },
   revenueAmount: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#4ECDC4',
+    fontSize: 16,
+    fontWeight: '800',
+    color: 'white',
+    letterSpacing: -0.2,
   },
+  
+  // Client Analytics
   clientDistribution: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 20,
+    gap: 12,
   },
   clientTypeCard: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    padding: 16,
-    marginHorizontal: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   clientTypeNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 28,
+    fontWeight: '800',
+    color: 'white',
+    letterSpacing: -0.4,
   },
   clientTypeLabel: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 8,
+    fontWeight: '600',
+    letterSpacing: -0.1,
   },
   clientTypePercentage: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4ECDC4',
-    marginTop: 2,
+    fontSize: 16,
+    fontWeight: '700',
+    color: 'white',
+    marginTop: 4,
+    letterSpacing: -0.2,
   },
   clientItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   clientAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#667eea',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   clientInitials: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   clientInfo: {
     flex: 1,
   },
   clientName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 16,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: -0.2,
   },
   clientStats: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 4,
+    fontWeight: '500',
   },
   clientSpent: {
     alignItems: 'flex-end',
   },
   spentAmount: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#4ECDC4',
+    fontSize: 16,
+    fontWeight: '800',
+    color: 'white',
+    letterSpacing: -0.2,
   },
+  
+  // Time Slot Analysis
   timeSlotItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
   },
   timeSlotLabel: {
     width: 80,
-    fontSize: 12,
-    color: '#666',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '600',
   },
   timeSlotBar: {
     flex: 1,
-    height: 8,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 4,
+    height: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 5,
     marginHorizontal: 12,
   },
   timeSlotFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 5,
   },
   timeSlotCount: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'white',
     width: 30,
     textAlign: 'right',
+    letterSpacing: -0.2,
   },
+  
+  // Empty States
   emptyChart: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 12,
-    padding: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    marginHorizontal: 24,
+    marginVertical: 12,
+    borderRadius: 24,
+    padding: 40,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   emptyChartText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '600',
+    letterSpacing: -0.2,
   },
   emptySection: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 12,
-    padding: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    marginHorizontal: 24,
+    marginVertical: 12,
+    borderRadius: 24,
+    padding: 40,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   emptySectionText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '600',
+    letterSpacing: -0.2,
   },
 });
 
