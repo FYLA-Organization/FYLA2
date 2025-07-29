@@ -18,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Booking, BookingStatus, RootStackParamList } from '../../types';
 import ApiService from '../../services/api';
+import ReviewModal from '../../components/ReviewModal';
 
 type BookingsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -50,6 +51,9 @@ const BookingsScreen: React.FC = () => {
     searchTerm: '',
   });
   const [activeFiltersCount, setActiveFiltersCount] = useState(0);
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [selectedBookingForReview, setSelectedBookingForReview] = useState<Booking | null>(null);
+  const [bookingReviews, setBookingReviews] = useState<{[key: string]: boolean}>({});
   
   const navigation = useNavigation<BookingsScreenNavigationProp>();
 
@@ -64,6 +68,44 @@ const BookingsScreen: React.FC = () => {
   useEffect(() => {
     setFilters(prev => ({ ...prev, searchTerm }));
   }, [searchTerm]);
+
+  // Load existing reviews for completed bookings
+  useEffect(() => {
+    checkExistingReviews();
+  }, [bookings]);
+
+  const checkExistingReviews = async () => {
+    const completedBookings = bookings.filter(b => b.status === BookingStatus.Completed);
+    const reviewChecks: {[key: string]: boolean} = {};
+    
+    for (const booking of completedBookings) {
+      try {
+        const existingReview = await ApiService.getBookingReview(booking.id);
+        reviewChecks[booking.id] = !!existingReview;
+      } catch (error) {
+        console.error('Error checking review for booking:', booking.id, error);
+        reviewChecks[booking.id] = false;
+      }
+    }
+    
+    setBookingReviews(reviewChecks);
+  };
+
+  const handleReviewPress = (booking: Booking) => {
+    setSelectedBookingForReview(booking);
+    setReviewModalVisible(true);
+  };
+
+  const handleReviewSubmitted = () => {
+    if (selectedBookingForReview) {
+      setBookingReviews(prev => ({
+        ...prev,
+        [selectedBookingForReview.id]: true
+      }));
+    }
+    setReviewModalVisible(false);
+    setSelectedBookingForReview(null);
+  };
 
   const updateActiveFiltersCount = () => {
     let count = 0;
@@ -428,8 +470,14 @@ const BookingsScreen: React.FC = () => {
           </>
         )}
         {booking.status === BookingStatus.Completed && (
-          <TouchableOpacity style={[styles.actionButton, styles.primaryAction]}>
-            <Text style={[styles.actionButtonText, styles.primaryActionText]}>Review</Text>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.primaryAction, bookingReviews[booking.id] && styles.reviewedButton]}
+            onPress={() => handleReviewPress(booking)}
+            disabled={bookingReviews[booking.id]}
+          >
+            <Text style={[styles.actionButtonText, styles.primaryActionText, bookingReviews[booking.id] && styles.reviewedButtonText]}>
+              {bookingReviews[booking.id] ? 'Reviewed' : 'Review'}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -533,6 +581,16 @@ const BookingsScreen: React.FC = () => {
 
       {/* Filter Modal */}
       {renderFilterModal()}
+
+      {/* Review Modal */}
+      {selectedBookingForReview && (
+        <ReviewModal
+          visible={reviewModalVisible}
+          onClose={() => setReviewModalVisible(false)}
+          booking={selectedBookingForReview}
+          onReviewSubmitted={handleReviewSubmitted}
+        />
+      )}
     </LinearGradient>
   );
 };
@@ -987,6 +1045,14 @@ const styles = StyleSheet.create({
   primaryActionText: {
     color: 'white',
     opacity: 1,
+  },
+  reviewedButton: {
+    backgroundColor: 'rgba(76, 175, 80, 0.8)',
+    borderColor: '#4CAF50',
+  },
+  reviewedButtonText: {
+    color: 'white',
+    opacity: 0.9,
   },
   
   // Loading & Empty States

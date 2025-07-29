@@ -73,7 +73,7 @@ const CreatePostScreen: React.FC = () => {
     images: [],
     location: '',
     tags: [],
-    isBusinessPost: false,
+    isBusinessPost: user?.isServiceProvider || false,
     serviceCategory: '',
     priceRange: '',
     allowBooking: false,

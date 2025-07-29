@@ -370,6 +370,19 @@ const SocialFeedScreen = () => {
           </TouchableOpacity>
         </View>
       </Modal>
+
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate('CreatePost' as never)}
+      >
+        <LinearGradient
+          colors={[COLORS.primary, COLORS.accent]}
+          style={styles.fabGradient}
+        >
+          <Ionicons name="add" size={28} color="white" />
+        </LinearGradient>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -610,6 +623,26 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     borderRadius: 25,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 110,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    elevation: 8,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  fabGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

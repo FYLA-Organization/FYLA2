@@ -88,68 +88,6 @@ namespace FYLA2_Backend.Models
     public Subscription Subscription { get; set; } = null!;
   }
 
-  public class PaymentRecord
-  {
-    [Key]
-    public int Id { get; set; }
-
-    [Required]
-    public string UserId { get; set; } = string.Empty;
-
-    public int? SubscriptionId { get; set; }
-    public int? BookingId { get; set; }
-
-    [Required]
-    public string StripePaymentIntentId { get; set; } = string.Empty;
-
-    public string? StripeChargeId { get; set; }
-
-    [Required]
-    public decimal Amount { get; set; }
-
-    [Required]
-    public string Currency { get; set; } = "USD";
-
-    [Required]
-    public PaymentStatus Status { get; set; }
-
-    [Required]
-    public PaymentType Type { get; set; }
-
-    public string? Description { get; set; }
-    public string? FailureReason { get; set; }
-
-    public decimal? RefundAmount { get; set; }
-    public DateTime? RefundedAt { get; set; }
-
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-    // Navigation properties
-    public User User { get; set; } = null!;
-    public Subscription? Subscription { get; set; }
-    public Booking? Booking { get; set; }
-  }
-
-  public enum PaymentStatus
-  {
-    Pending = 0,
-    Succeeded = 1,
-    Failed = 2,
-    Cancelled = 3,
-    Refunded = 4,
-    PartiallyRefunded = 5
-  }
-
-  public enum PaymentType
-  {
-    Subscription = 0,
-    Booking = 1,
-    OneTime = 2,
-    Tip = 3,
-    Refund = 4
-  }
-
   // Subscription tier configurations
   public static class SubscriptionTierConfig
   {

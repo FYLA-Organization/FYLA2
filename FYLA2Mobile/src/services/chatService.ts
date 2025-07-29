@@ -1,6 +1,7 @@
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import { ChatMessage, ChatRoom, SendMessageRequest } from '../types';
 import ApiService from './api';
+import Config from '../config/environment';
 
 class ChatService {
   private connection: HubConnection | null = null;
@@ -16,13 +17,41 @@ class ChatService {
       return;
     }
 
+    // Ensure config is initialized
+    await Config.initialize();
+    
+    // Get the base URL and construct chat hub URL
+    const baseUrl = Config.baseURL;
+    const chatHubUrl = baseUrl.replace('/api', '/chathub');
+    
+    console.log('🔄 Connecting to chat hub:', chatHubUrl);
+
     this.connection = new HubConnectionBuilder()
-      .withUrl('http://10.0.12.121:5224/chathub', {
-        accessTokenFactory: () => token
+      .withUrl(chatHubUrl, {
+        accessTokenFactory: () => token,
+        timeout: 30000, // 30 second timeout
+        skipNegotiation: false, // Ensure proper negotiation
+        transport: 1 | 2 | 4, // WebSockets, ServerSentEvents, LongPolling
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       })
-      .withAutomaticReconnect()
+      .withAutomaticReconnect([0, 2000, 10000, 30000]) // Better reconnect strategy
       .configureLogging(LogLevel.Information)
       .build();
+
+    // Add connection state event handlers
+    this.connection.onreconnecting((error) => {
+      console.log('🔄 SignalR reconnecting...', error);
+    });
+
+    this.connection.onreconnected((connectionId) => {
+      console.log('✅ SignalR reconnected with connection ID:', connectionId);
+    });
+
+    this.connection.onclose((error) => {
+      console.log('❌ SignalR connection closed:', error);
+    });
 
     // Set up event handlers
     this.connection.on('ReceiveMessage', (message: ChatMessage) => {
@@ -56,10 +85,23 @@ class ChatService {
     });
 
     try {
+      console.log('🔄 Starting SignalR connection...');
       await this.connection.start();
-      console.log('SignalR Connected');
+      console.log('✅ SignalR Connected successfully');
+      
     } catch (error) {
-      console.error('SignalR Connection Error:', error);
+      console.error('❌ SignalR Connection Error:', error);
+      console.error('Connection state:', this.connection?.state);
+      
+      // Provide more specific error information
+      if (error instanceof Error) {
+        if (error.message.includes('Network request timed out')) {
+          console.error('🌐 Network timeout - check if backend server is running on:', chatHubUrl);
+        } else if (error.message.includes('Failed to complete negotiation')) {
+          console.error('🤝 Negotiation failed - check SignalR hub configuration on server');
+        }
+      }
+      
       throw error;
     }
   }

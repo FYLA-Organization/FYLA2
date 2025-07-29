@@ -12,10 +12,15 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import api from '../../services/api';
-import { ProviderDashboard } from '../../types';
+import { ProviderDashboard, RootStackParamList } from '../../types';
+
+type DashboardNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const DashboardScreen = () => {
+  const navigation = useNavigation<DashboardNavigationProp>();
   const [dashboardData, setDashboardData] = useState<ProviderDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -103,25 +108,25 @@ const DashboardScreen = () => {
         <View style={styles.statsContainer}>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Ionicons name="calendar-outline" size={28} color="#4ECDC4" />
-              <Text style={[styles.statNumber, { color: '#4ECDC4' }]}>{dashboardData?.todayAppointments || 0}</Text>
+              <Ionicons name="calendar-outline" size={28} color="#00FFF7" />
+              <Text style={[styles.statNumber, { color: '#00FFF7', textShadowColor: '#00FFF7', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 }]}>{dashboardData?.todayAppointments || 0}</Text>
               <Text style={styles.statLabel}>Today's Appointments</Text>
             </View>
             <View style={styles.statCard}>
-              <Ionicons name="time-outline" size={28} color="#FF6B6B" />
-              <Text style={[styles.statNumber, { color: '#FF6B6B' }]}>{dashboardData?.pendingAppointments || 0}</Text>
+              <Ionicons name="time-outline" size={28} color="#FF4081" />
+              <Text style={[styles.statNumber, { color: '#FF4081', textShadowColor: '#FF4081', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 }]}>{dashboardData?.pendingAppointments || 0}</Text>
               <Text style={styles.statLabel}>Pending Requests</Text>
             </View>
           </View>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Ionicons name="trending-up-outline" size={28} color="#45B7D1" />
-              <Text style={[styles.statNumber, { color: '#45B7D1' }]}>{formatCurrency(dashboardData?.weeklyRevenue || 0)}</Text>
+              <Ionicons name="trending-up-outline" size={28} color="#00E676" />
+              <Text style={[styles.statNumber, { color: '#00E676', textShadowColor: '#00E676', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 }]}>{formatCurrency(dashboardData?.weeklyRevenue || 0)}</Text>
               <Text style={styles.statLabel}>This Week</Text>
             </View>
             <View style={styles.statCard}>
-              <Ionicons name="cash-outline" size={28} color="#96CEB4" />
-              <Text style={[styles.statNumber, { color: '#96CEB4' }]}>{formatCurrency(dashboardData?.monthlyRevenue || 0)}</Text>
+              <Ionicons name="cash-outline" size={28} color="#7C4DFF" />
+              <Text style={[styles.statNumber, { color: '#7C4DFF', textShadowColor: '#7C4DFF', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 }]}>{formatCurrency(dashboardData?.monthlyRevenue || 0)}</Text>
               <Text style={styles.statLabel}>This Month</Text>
             </View>
           </View>
@@ -130,13 +135,13 @@ const DashboardScreen = () => {
         {/* Additional Stats Row */}
         <View style={styles.additionalStats}>
           <View style={styles.additionalStatCard}>
-            <Ionicons name="people-outline" size={24} color="#667eea" />
-            <Text style={[styles.additionalStatNumber, { color: '#667eea' }]}>{dashboardData?.totalClients || 0}</Text>
+            <Ionicons name="people-outline" size={24} color="#FF6D00" />
+            <Text style={[styles.additionalStatNumber, { color: '#FF6D00', textShadowColor: '#FF6D00', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }]}>{dashboardData?.totalClients || 0}</Text>
             <Text style={styles.additionalStatLabel}>Total Clients</Text>
           </View>
           <View style={styles.additionalStatCard}>
-            <Ionicons name="star-outline" size={24} color="#FFD93D" />
-            <Text style={[styles.additionalStatNumber, { color: '#FFD93D' }]}>{dashboardData?.averageRating?.toFixed(1) || '0.0'}</Text>
+            <Ionicons name="star-outline" size={24} color="#FFD700" />
+            <Text style={[styles.additionalStatNumber, { color: '#FFD700', textShadowColor: '#FFD700', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }]}>{dashboardData?.averageRating?.toFixed(1) || '0.0'}</Text>
             <Text style={styles.additionalStatLabel}>Rating</Text>
           </View>
         </View>
@@ -150,7 +155,7 @@ const DashboardScreen = () => {
               <Text style={styles.appointmentClient}>
                 {dashboardData.nextAppointment.clientName}
               </Text>
-              <Text style={styles.appointmentPrice}>
+              <Text style={[styles.appointmentPrice, { textShadowColor: '#00FFF7', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }]}>
                 {formatCurrency(dashboardData.nextAppointment.totalAmount)}
               </Text>
             </View>
@@ -158,7 +163,7 @@ const DashboardScreen = () => {
               {dashboardData.nextAppointment.serviceName}
             </Text>
             <View style={styles.appointmentTime}>
-              <Ionicons name="calendar-outline" size={16} color="#4ECDC4" />
+              <Ionicons name="calendar-outline" size={16} color="#00FFF7" />
               <Text style={styles.appointmentTimeText}>
                 {formatDate(dashboardData.nextAppointment.scheduledDate)} • {dashboardData.nextAppointment.duration} min
               </Text>
@@ -192,21 +197,77 @@ const DashboardScreen = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="add-circle-outline" size={24} color="#4ECDC4" />
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Analytics')}
+          >
+            <Ionicons name="stats-chart" size={24} color="#4ECDC4" />
+            <Text style={styles.actionButtonText}>Analytics</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Schedule')}
+          >
+            <Ionicons name="calendar" size={24} color="#45B7D1" />
+            <Text style={styles.actionButtonText}>Schedule</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Clients')}
+          >
+            <Ionicons name="people" size={24} color="#FF6B6B" />
+            <Text style={styles.actionButtonText}>Clients</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Reviews')}
+          >
+            <Ionicons name="star" size={24} color="#FFD93D" />
+            <Text style={styles.actionButtonText}>Reviews</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Business Actions */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Business Management</Text>
+        <View style={styles.quickActions}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => {
+              // TODO: Navigate to add service screen
+              Alert.alert('Coming Soon', 'Add service functionality will be implemented soon.');
+            }}
+          >
+            <Ionicons name="add-circle" size={24} color="#96CEB4" />
             <Text style={styles.actionButtonText}>Add Service</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="calendar-outline" size={24} color="#45B7D1" />
-            <Text style={styles.actionButtonText}>View Schedule</Text>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('CreatePost')}
+          >
+            <Ionicons name="create" size={24} color="#667eea" />
+            <Text style={styles.actionButtonText}>Create Post</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="chatbubble-outline" size={24} color="white" />
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => {
+              // TODO: Navigate to messages screen
+              Alert.alert('Coming Soon', 'Messages functionality will be implemented soon.');
+            }}
+          >
+            <Ionicons name="chatbubble" size={24} color="#764ba2" />
             <Text style={styles.actionButtonText}>Messages</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="stats-chart-outline" size={24} color="white" />
-            <Text style={styles.actionButtonText}>Analytics</Text>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => {
+              // TODO: Navigate to settings screen
+              Alert.alert('Coming Soon', 'Settings functionality will be implemented soon.');
+            }}
+          >
+            <Ionicons name="settings" size={24} color="#FFA726" />
+            <Text style={styles.actionButtonText}>Settings</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -255,11 +316,14 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '800',
     letterSpacing: -0.5,
+    textShadowColor: 'rgba(255, 255, 255, 0.3)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
   headerSubtitle: {
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255, 255, 255, 0.95)',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     marginTop: 8,
     letterSpacing: -0.2,
   },
@@ -356,6 +420,9 @@ const styles = StyleSheet.create({
     color: 'white',
     marginBottom: 20,
     letterSpacing: -0.3,
+    textShadowColor: 'rgba(255, 255, 255, 0.2)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   
   // Appointment Cards
@@ -381,14 +448,14 @@ const styles = StyleSheet.create({
   appointmentPrice: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#4ECDC4',
+    color: '#00FFF7',
     letterSpacing: -0.2,
   },
   appointmentService: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.9)',
     marginBottom: 12,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   appointmentTime: {
     flexDirection: 'row',
@@ -434,8 +501,11 @@ const styles = StyleSheet.create({
   appointmentItemPrice: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#4ECDC4',
+    color: '#00E676',
     letterSpacing: -0.2,
+    textShadowColor: '#00E676',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
   },
   
   // Activity Items
@@ -475,8 +545,11 @@ const styles = StyleSheet.create({
   activityAmount: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#96CEB4',
+    color: '#7C4DFF',
     letterSpacing: -0.2,
+    textShadowColor: '#7C4DFF',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
   },
   
   // Quick Actions

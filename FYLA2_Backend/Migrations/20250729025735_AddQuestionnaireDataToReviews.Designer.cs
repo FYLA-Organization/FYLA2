@@ -3,6 +3,7 @@ using System;
 using FYLA2_Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FYLA2_Backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250729025735_AddQuestionnaireDataToReviews")]
+    partial class AddQuestionnaireDataToReviews
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.0");
@@ -243,165 +246,6 @@ namespace FYLA2_Backend.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("PaymentRecords");
-                });
-
-            modelBuilder.Entity("FYLA2_Backend.Models.PaymentSettings", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("AcceptApplePay")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("AcceptBankTransfer")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("AcceptGooglePay")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("AcceptKlarna")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("AcceptPayPal")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("AcceptStripe")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("AutoRefundEnabled")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("DepositPercentage")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PayPalBusinessEmail")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("PaymentStructure")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ProviderId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("RefundTimeoutHours")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("StripeConnectAccountId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("TaxRate")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProviderId")
-                        .IsUnique();
-
-                    b.ToTable("PaymentSettings");
-                });
-
-            modelBuilder.Entity("FYLA2_Backend.Models.PaymentTransaction", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("BookingId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ExternalTransactionId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("FailureReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("OriginalTransactionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("PayPalTransactionId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("PaymentMethod")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("PlatformFeeAmount")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("ProcessedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ProviderId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("RefundedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("ServiceAmount")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("StripeChargeId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("StripePaymentIntentId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("TaxAmount")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BookingId");
-
-                    b.HasIndex("OriginalTransactionId");
-
-                    b.HasIndex("ProviderId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("PaymentTransactions");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.Post", b =>
@@ -1122,51 +966,6 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("FYLA2_Backend.Models.PaymentSettings", b =>
-                {
-                    b.HasOne("FYLA2_Backend.Models.User", "Provider")
-                        .WithOne()
-                        .HasForeignKey("FYLA2_Backend.Models.PaymentSettings", "ProviderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Provider");
-                });
-
-            modelBuilder.Entity("FYLA2_Backend.Models.PaymentTransaction", b =>
-                {
-                    b.HasOne("FYLA2_Backend.Models.Booking", "Booking")
-                        .WithMany()
-                        .HasForeignKey("BookingId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("FYLA2_Backend.Models.PaymentTransaction", "OriginalTransaction")
-                        .WithMany("RefundTransactions")
-                        .HasForeignKey("OriginalTransactionId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("FYLA2_Backend.Models.User", "Provider")
-                        .WithMany()
-                        .HasForeignKey("ProviderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("FYLA2_Backend.Models.User", "Client")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Booking");
-
-                    b.Navigation("Client");
-
-                    b.Navigation("OriginalTransaction");
-
-                    b.Navigation("Provider");
-                });
-
             modelBuilder.Entity("FYLA2_Backend.Models.Post", b =>
                 {
                     b.HasOne("FYLA2_Backend.Models.User", "User")
@@ -1367,11 +1166,6 @@ namespace FYLA2_Backend.Migrations
             modelBuilder.Entity("FYLA2_Backend.Models.Booking", b =>
                 {
                     b.Navigation("Reviews");
-                });
-
-            modelBuilder.Entity("FYLA2_Backend.Models.PaymentTransaction", b =>
-                {
-                    b.Navigation("RefundTransactions");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.Post", b =>

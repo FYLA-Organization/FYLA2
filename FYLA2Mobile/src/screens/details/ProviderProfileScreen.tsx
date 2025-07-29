@@ -124,7 +124,7 @@ const ProviderProfileScreen: React.FC = () => {
   );
 
   const renderReviewCard = (review: Review) => (
-    <View key={review.id} style={styles.reviewCard}>
+    <BlurView key={review.id} intensity={80} style={styles.reviewCard}>
       <View style={styles.reviewHeader}>
         <Image
           source={{ uri: review.reviewer?.profilePictureUrl || 'https://via.placeholder.com/40' }}
@@ -134,25 +134,59 @@ const ProviderProfileScreen: React.FC = () => {
           <Text style={styles.reviewerName}>
             {review.reviewer?.firstName} {review.reviewer?.lastName}
           </Text>
-          <View style={styles.reviewRating}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Ionicons
-                key={star}
-                name={star <= review.rating ? "star" : "star-outline"}
-                size={14}
-                color="#FFD700"
-              />
-            ))}
+          <View style={styles.reviewRatingContainer}>
+            <View style={styles.reviewRating}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Ionicons
+                  key={star}
+                  name={star <= review.rating ? "star" : "star-outline"}
+                  size={16}
+                  color="#FFD700"
+                />
+              ))}
+            </View>
+            <Text style={styles.reviewRatingText}>{review.rating.toFixed(1)}</Text>
           </View>
         </View>
         <Text style={styles.reviewDate}>
           {new Date(review.createdAt).toLocaleDateString()}
         </Text>
       </View>
+      
       {review.comment && (
-        <Text style={styles.reviewComment}>{review.comment}</Text>
+        <View style={styles.reviewCommentContainer}>
+          <Text style={styles.reviewComment}>{review.comment}</Text>
+        </View>
       )}
-    </View>
+      
+      {/* Show aggregated questionnaire insights to clients (but not detailed data) */}
+      {review.questionnaire && (
+        <View style={styles.publicInsights}>
+          <View style={styles.insightRow}>
+            <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+            <Text style={styles.insightText}>
+              Detailed service assessment completed
+            </Text>
+          </View>
+          {review.questionnaire.wouldRecommend && (
+            <View style={styles.insightRow}>
+              <Ionicons name="thumbs-up" size={16} color="#4CAF50" />
+              <Text style={styles.insightText}>
+                Would recommend this service
+              </Text>
+            </View>
+          )}
+          {review.questionnaire.wouldUseAgain && (
+            <View style={styles.insightRow}>
+              <Ionicons name="repeat" size={16} color="#4CAF50" />
+              <Text style={styles.insightText}>
+                Would use this service again
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+    </BlurView>
   );
 
   const renderGalleryImage = ({ item, index }: { item: string; index: number }) => (
@@ -753,15 +787,52 @@ const styles = StyleSheet.create({
   reviewRating: {
     flexDirection: 'row',
   },
+  reviewRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  reviewRatingText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFD700',
+  },
   reviewDate: {
     fontSize: 13,
     color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '600',
   },
+  reviewCommentContainer: {
+    marginTop: 12,
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
   reviewComment: {
     fontSize: 15,
     color: 'rgba(255, 255, 255, 0.9)',
     lineHeight: 22,
+    fontWeight: '500',
+  },
+  publicInsights: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.3)',
+  },
+  insightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 8,
+  },
+  insightText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '500',
   },
   // Gallery

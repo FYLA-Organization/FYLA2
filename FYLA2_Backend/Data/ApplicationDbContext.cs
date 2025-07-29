@@ -19,6 +19,8 @@ namespace FYLA2_Backend.Data
         public DbSet<PushToken> PushTokens { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
         public DbSet<PaymentRecord> PaymentRecords { get; set; }
+        public DbSet<PaymentSettings> PaymentSettings { get; set; }
+        public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
         public DbSet<ProviderSchedule> ProviderSchedules { get; set; }
         public DbSet<ProviderBlockedTime> ProviderBlockedTimes { get; set; }
 
@@ -118,6 +120,63 @@ namespace FYLA2_Backend.Data
             modelBuilder.Entity<PushToken>()
                 .HasIndex(pt => new { pt.UserId, pt.Platform })
                 .IsUnique();
+
+            // PaymentSettings relationships
+            modelBuilder.Entity<PaymentSettings>()
+                .HasOne(ps => ps.Provider)
+                .WithOne()
+                .HasForeignKey<PaymentSettings>(ps => ps.ProviderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // PaymentTransaction relationships
+            modelBuilder.Entity<PaymentTransaction>()
+                .HasOne(pt => pt.Booking)
+                .WithMany()
+                .HasForeignKey(pt => pt.BookingId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PaymentTransaction>()
+                .HasOne(pt => pt.Client)
+                .WithMany()
+                .HasForeignKey(pt => pt.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PaymentTransaction>()
+                .HasOne(pt => pt.Provider)
+                .WithMany()
+                .HasForeignKey(pt => pt.ProviderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PaymentTransaction>()
+                .HasOne(pt => pt.OriginalTransaction)
+                .WithMany(pt => pt.RefundTransactions)
+                .HasForeignKey(pt => pt.OriginalTransactionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Decimal precision for payment amounts
+            modelBuilder.Entity<PaymentTransaction>()
+                .Property(pt => pt.Amount)
+                .HasPrecision(10, 2);
+
+            modelBuilder.Entity<PaymentTransaction>()
+                .Property(pt => pt.ServiceAmount)
+                .HasPrecision(10, 2);
+
+            modelBuilder.Entity<PaymentTransaction>()
+                .Property(pt => pt.TaxAmount)
+                .HasPrecision(10, 2);
+
+            modelBuilder.Entity<PaymentTransaction>()
+                .Property(pt => pt.PlatformFeeAmount)
+                .HasPrecision(10, 2);
+
+            modelBuilder.Entity<PaymentSettings>()
+                .Property(ps => ps.DepositPercentage)
+                .HasPrecision(5, 2);
+
+            modelBuilder.Entity<PaymentSettings>()
+                .Property(ps => ps.TaxRate)
+                .HasPrecision(5, 2);
         }
     }
 }

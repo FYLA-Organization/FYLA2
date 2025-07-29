@@ -11,6 +11,7 @@ import {
   Booking,
   CreateBookingRequest,
   Review,
+  ReviewQuestionnaire,
   Post,
   Message,
   ChatRoom,
@@ -18,7 +19,14 @@ import {
   SendMessageRequest,
   ApiResponse,
   PaginatedResponse,
-  SearchFilters
+  SearchFilters,
+  PaymentMethod,
+  PaymentCalculation,
+  PaymentTransaction,
+  PaymentSettings,
+  CreatePaymentIntentRequest,
+  PaymentIntentResponse,
+  RefundRequest
 } from '../types';
 
 class ApiService {
@@ -292,7 +300,7 @@ class ApiService {
   // Review Methods
   async getReviews(providerId: string): Promise<Review[]> {
     try {
-      const response = await this.api.get(`/serviceprovider/${providerId}/reviews`);
+      const response = await this.api.get(`/review/${providerId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching reviews:', error);
@@ -300,16 +308,40 @@ class ApiService {
     }
   }
 
-  async createReview(providerId: string, rating: number, comment: string): Promise<Review> {
+  async createReview(bookingId: string, rating: number, comment: string, questionnaire?: ReviewQuestionnaire): Promise<Review> {
     try {
-      const response = await this.api.post('/reviews', {
-        serviceProviderId: providerId,
+      const response = await this.api.post('/review', {
+        bookingId,
         rating,
         comment,
+        questionnaire,
       });
       return response.data;
     } catch (error) {
       console.error('Error creating review:', error);
+      throw error;
+    }
+  }
+
+  async getBookingReview(bookingId: string): Promise<Review | null> {
+    try {
+      const response = await this.api.get(`/review/booking/${bookingId}`);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null; // No review exists for this booking
+      }
+      console.error('Error fetching booking review:', error);
+      throw error;
+    }
+  }
+
+  async getUserReviews(userId: string): Promise<Review[]> {
+    try {
+      const response = await this.api.get(`/reviews/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user reviews:', error);
       throw error;
     }
   }
@@ -587,6 +619,80 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('Error fetching client analytics:', error);
+      throw error;
+    }
+  }
+
+  // Enhanced Payment Methods
+  async calculatePayment(serviceId: number, providerId: string): Promise<PaymentCalculation> {
+    try {
+      const response = await this.api.get(`/enhancedpayment/calculate/${serviceId}/${providerId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error calculating payment:', error);
+      throw error;
+    }
+  }
+
+  async createPaymentIntent(request: CreatePaymentIntentRequest): Promise<PaymentIntentResponse> {
+    try {
+      const response = await this.api.post('/enhancedpayment/intent', request);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating payment intent:', error);
+      throw error;
+    }
+  }
+
+  async processPayment(paymentIntentId: string, paymentMethod: PaymentMethod): Promise<PaymentTransaction> {
+    try {
+      const response = await this.api.post('/enhancedpayment/process', {
+        paymentIntentId,
+        paymentMethod
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      throw error;
+    }
+  }
+
+  async getBookingTransactions(bookingId: number): Promise<PaymentTransaction[]> {
+    try {
+      const response = await this.api.get(`/enhancedpayment/booking/${bookingId}/transactions`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching booking transactions:', error);
+      throw error;
+    }
+  }
+
+  async requestRefund(request: RefundRequest): Promise<PaymentTransaction> {
+    try {
+      const response = await this.api.post('/enhancedpayment/refund', request);
+      return response.data;
+    } catch (error) {
+      console.error('Error requesting refund:', error);
+      throw error;
+    }
+  }
+
+  async getPaymentSettings(providerId: string): Promise<PaymentSettings> {
+    try {
+      const response = await this.api.get(`/enhancedpayment/settings/${providerId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching payment settings:', error);
+      throw error;
+    }
+  }
+
+  async updatePaymentSettings(providerId: string, settings: Partial<PaymentSettings>): Promise<PaymentSettings> {
+    try {
+      const response = await this.api.put(`/enhancedpayment/settings/${providerId}`, settings);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating payment settings:', error);
       throw error;
     }
   }

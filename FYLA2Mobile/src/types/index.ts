@@ -201,6 +201,16 @@ export interface ChatRoom {
 }
 
 // Review Types
+export interface ReviewQuestionnaire {
+  punctuality: number; // 1-5 scale
+  professionalism: number; // 1-5 scale
+  valueForMoney: number; // 1-5 scale
+  wouldRecommend: boolean; // yes/no
+  wouldUseAgain: boolean; // yes/no
+  communicationRating: number; // 1-5 scale
+  cleanlinessRating: number; // 1-5 scale (if applicable)
+}
+
 export interface Review {
   id: string;
   bookingId: string;
@@ -208,6 +218,7 @@ export interface Review {
   revieweeId: string;
   rating: number;
   comment?: string;
+  questionnaire?: ReviewQuestionnaire;
   createdAt: string;
   reviewer?: User;
   reviewee?: User;
@@ -322,6 +333,18 @@ export type RootStackParamList = {
   Auth: undefined;
   ClientMain: undefined;
   ProviderMain: undefined;
+  // Provider Dashboard Navigation
+  Analytics: undefined;
+  Schedule: undefined;
+  Clients: undefined;
+  Reviews: undefined;
+  // Social Media Screens
+  SocialFeed: undefined;
+  CreatePost: undefined;
+  PostComments: { postId: string };
+  UserProfile: { userId: string };
+  FollowingBookmarks: undefined;
+  EnhancedProviderProfile: { providerId: string };
 };
 
 export type AuthStackParamList = {
@@ -336,6 +359,7 @@ export type AuthStackParamList = {
 export type ClientTabParamList = {
   Home: undefined;
   Search: undefined;
+  Social: undefined;
   Bookings: undefined;
   Messages: undefined;
   Profile: undefined;
@@ -345,9 +369,7 @@ export type ClientTabParamList = {
 export type ProviderTabParamList = {
   Dashboard: undefined;
   Appointments: undefined;
-  Analytics: undefined;
-  Schedule: undefined;
-  Clients: undefined;
+  Social: undefined;
   Profile: undefined;
 };
 
@@ -460,4 +482,109 @@ export interface TimeSlot {
   hour: number;
   timeSlot: string;
   bookingCount: number;
+}
+
+// Enhanced Payment Types
+export enum PaymentMethod {
+  Stripe = 0,
+  PayPal = 1,
+  ApplePay = 2,
+  GooglePay = 3,
+  Klarna = 4,
+  BankTransfer = 5
+}
+
+export enum PaymentStructure {
+  FullPaymentUpfront = 0,
+  DepositThenRemainder = 1,
+  PaymentAfterService = 2
+}
+
+export enum TransactionType {
+  Payment = 0,
+  Deposit = 1,
+  FinalPayment = 2,
+  Refund = 3,
+  PartialRefund = 4
+}
+
+export enum PaymentStatus {
+  Pending = 0,
+  Processing = 1,
+  Succeeded = 2,
+  Failed = 3,
+  Cancelled = 4,
+  RequiresAction = 5
+}
+
+export interface PaymentSettings {
+  id: number;
+  providerId: string;
+  paymentStructure: PaymentStructure;
+  depositPercentage: number;
+  taxRate: number;
+  acceptStripe: boolean;
+  acceptPayPal: boolean;
+  acceptApplePay: boolean;
+  acceptGooglePay: boolean;
+  acceptKlarna: boolean;
+  acceptBankTransfer: boolean;
+  autoRefundEnabled: boolean;
+  refundTimeoutHours: number;
+  stripeConnectAccountId?: string;
+  payPalBusinessEmail?: string;
+}
+
+export interface PaymentCalculation {
+  serviceAmount: number;
+  taxAmount: number;
+  platformFeeAmount: number;
+  totalAmount: number;
+  paymentStructure: PaymentStructure;
+  depositAmount?: number;
+  remainingAmount?: number;
+  availablePaymentMethods: PaymentMethod[];
+}
+
+export interface PaymentTransaction {
+  id: number;
+  bookingId: number;
+  userId: string;
+  providerId: string;
+  type: TransactionType;
+  paymentMethod: PaymentMethod;
+  amount: number;
+  serviceAmount: number;
+  taxAmount: number;
+  platformFeeAmount: number;
+  currency: string;
+  status: PaymentStatus;
+  externalTransactionId?: string;
+  description?: string;
+  failureReason?: string;
+  processedAt?: string;
+  createdAt: string;
+}
+
+export interface CreatePaymentIntentRequest {
+  bookingId: number;
+  paymentMethod: PaymentMethod;
+  transactionType: TransactionType;
+  returnUrl?: string;
+}
+
+export interface PaymentIntentResponse {
+  paymentIntentId: string;
+  clientSecret?: string;
+  redirectUrl?: string;
+  amount: number;
+  currency: string;
+  paymentMethod: PaymentMethod;
+  additionalData?: any;
+}
+
+export interface RefundRequest {
+  transactionId: number;
+  refundAmount?: number;
+  reason: string;
 }

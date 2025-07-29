@@ -30,6 +30,7 @@ import AppointmentsScreen from '../screens/provider/AppointmentsScreenSimple';
 import AnalyticsScreen from '../screens/provider/AnalyticsScreen';
 import ScheduleScreen from '../screens/provider/ScheduleScreen';
 import ClientsScreen from '../screens/provider/ClientsScreen';
+import ReviewsScreen from '../screens/reviews/ReviewsScreen';
 
 // Detail Screens (Shared)
 import ServiceDetailsScreen from '../screens/details/ServiceDetailsScreen';
@@ -42,6 +43,14 @@ import UserSelectionScreen from '../screens/UserSelectionScreen';
 import NotificationSettingsScreen from '../screens/settings/NotificationSettingsScreen';
 import NotificationTestScreen from '../screens/testing/NotificationTestScreen';
 import EnhancedProfileScreen from '../screens/profile/EnhancedProfileScreen';
+
+// Social Media Screens
+import SocialFeedScreen from '../screens/social/SocialFeedScreen';
+import CreatePostScreen from '../screens/social/CreatePostScreen';
+import PostCommentsScreen from '../screens/social/PostCommentsScreen';
+import UserProfileScreen from '../screens/social/UserProfileScreen';
+import FollowingBookmarksScreen from '../screens/social/FollowingBookmarksScreen';
+import EnhancedProviderProfileScreen from '../screens/social/EnhancedProviderProfileScreen';
 
 const RootStack = createStackNavigator<RootStackParamList>();
 const AuthStack = createStackNavigator<AuthStackParamList>();
@@ -78,6 +87,9 @@ const ClientTabNavigator = () => {
             case 'Search':
               iconName = focused ? 'search' : 'search-outline';
               break;
+            case 'Social':
+              iconName = focused ? 'heart' : 'heart-outline';
+              break;
             case 'Bookings':
               iconName = focused ? 'calendar' : 'calendar-outline';
               break;
@@ -98,32 +110,16 @@ const ClientTabNavigator = () => {
         tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.6)',
         tabBarStyle: {
           position: 'absolute',
-          bottom: 20,
-          left: 20,
-          right: 20,
-          backgroundColor: 'transparent',
-          borderTopWidth: 0,
-          borderRadius: 24,
-          height: 70,
-          paddingBottom: 10,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.95)',
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(255, 255, 255, 0.1)',
+          height: 85,
+          paddingBottom: 20,
           paddingTop: 10,
-          elevation: 0,
-          shadowOpacity: 0,
         },
-        tabBarBackground: () => (
-          <BlurView
-            intensity={80}
-            tint="dark"
-            style={{
-              flex: 1,
-              borderRadius: 24,
-              backgroundColor: 'rgba(0, 0, 0, 0.2)',
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.1)',
-              overflow: 'hidden',
-            }}
-          />
-        ),
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
@@ -142,6 +138,11 @@ const ClientTabNavigator = () => {
         name="Search" 
         component={SearchScreen}
         options={{ tabBarLabel: 'Search' }}
+      />
+      <ClientTab.Screen 
+        name="Social" 
+        component={SocialFeedScreen}
+        options={{ tabBarLabel: 'Social' }}
       />
       <ClientTab.Screen 
         name="Bookings" 
@@ -176,14 +177,8 @@ const ProviderTabNavigator = () => {
             case 'Appointments':
               iconName = focused ? 'calendar' : 'calendar-outline';
               break;
-            case 'Analytics':
-              iconName = focused ? 'stats-chart' : 'stats-chart-outline';
-              break;
-            case 'Schedule':
-              iconName = focused ? 'time' : 'time-outline';
-              break;
-            case 'Clients':
-              iconName = focused ? 'people' : 'people-outline';
+            case 'Social':
+              iconName = focused ? 'heart' : 'heart-outline';
               break;
             case 'Profile':
               iconName = focused ? 'person' : 'person-outline';
@@ -199,32 +194,16 @@ const ProviderTabNavigator = () => {
         tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.6)',
         tabBarStyle: {
           position: 'absolute',
-          bottom: 20,
-          left: 20,
-          right: 20,
-          backgroundColor: 'transparent',
-          borderTopWidth: 0,
-          borderRadius: 24,
-          height: 70,
-          paddingBottom: 10,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.95)',
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(255, 255, 255, 0.1)',
+          height: 85,
+          paddingBottom: 20,
           paddingTop: 10,
-          elevation: 0,
-          shadowOpacity: 0,
         },
-        tabBarBackground: () => (
-          <BlurView
-            intensity={80}
-            tint="dark"
-            style={{
-              flex: 1,
-              borderRadius: 24,
-              backgroundColor: 'rgba(0, 0, 0, 0.2)',
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.1)',
-              overflow: 'hidden',
-            }}
-          />
-        ),
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
@@ -245,19 +224,9 @@ const ProviderTabNavigator = () => {
         options={{ tabBarLabel: 'Appointments' }}
       />
       <ProviderTab.Screen 
-        name="Analytics" 
-        component={AnalyticsScreen}
-        options={{ tabBarLabel: 'Analytics' }}
-      />
-      <ProviderTab.Screen 
-        name="Schedule" 
-        component={ScheduleScreen}
-        options={{ tabBarLabel: 'Schedule' }}
-      />
-      <ProviderTab.Screen 
-        name="Clients" 
-        component={ClientsScreen}
-        options={{ tabBarLabel: 'Clients' }}
+        name="Social" 
+        component={SocialFeedScreen}
+        options={{ tabBarLabel: 'Social' }}
       />
       <ProviderTab.Screen 
         name="Profile" 
@@ -413,6 +382,285 @@ const AppNavigator = () => {
               name="EnhancedProfile" 
               component={EnhancedProfileScreen}
               options={{ headerShown: false }}
+            />
+            
+            {/* Provider Dashboard Navigation Screens */}
+            <RootStack.Screen 
+              name="Analytics" 
+              component={AnalyticsScreen}
+              options={{ 
+                headerShown: true, 
+                title: 'Analytics',
+                headerStyle: {
+                  backgroundColor: 'transparent',
+                },
+                headerBackground: () => (
+                  <BlurView
+                    intensity={100}
+                    tint="dark"
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      borderBottomWidth: 1,
+                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                    }}
+                  />
+                ),
+                headerTintColor: 'white',
+                headerTitleStyle: {
+                  fontSize: 18,
+                  fontWeight: '700',
+                  letterSpacing: -0.3,
+                },
+                headerBackTitleVisible: false,
+              }}
+            />
+            <RootStack.Screen 
+              name="Schedule" 
+              component={ScheduleScreen}
+              options={{ 
+                headerShown: true, 
+                title: 'Schedule',
+                headerStyle: {
+                  backgroundColor: 'transparent',
+                },
+                headerBackground: () => (
+                  <BlurView
+                    intensity={100}
+                    tint="dark"
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      borderBottomWidth: 1,
+                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                    }}
+                  />
+                ),
+                headerTintColor: 'white',
+                headerTitleStyle: {
+                  fontSize: 18,
+                  fontWeight: '700',
+                  letterSpacing: -0.3,
+                },
+                headerBackTitleVisible: false,
+              }}
+            />
+            <RootStack.Screen 
+              name="Clients" 
+              component={ClientsScreen}
+              options={{ 
+                headerShown: true, 
+                title: 'Clients',
+                headerStyle: {
+                  backgroundColor: 'transparent',
+                },
+                headerBackground: () => (
+                  <BlurView
+                    intensity={100}
+                    tint="dark"
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      borderBottomWidth: 1,
+                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                    }}
+                  />
+                ),
+                headerTintColor: 'white',
+                headerTitleStyle: {
+                  fontSize: 18,
+                  fontWeight: '700',
+                  letterSpacing: -0.3,
+                },
+                headerBackTitleVisible: false,
+              }}
+            />
+            <RootStack.Screen 
+              name="Reviews" 
+              component={ReviewsScreen}
+              options={{ 
+                headerShown: true, 
+                title: 'Reviews',
+                headerStyle: {
+                  backgroundColor: 'transparent',
+                },
+                headerBackground: () => (
+                  <BlurView
+                    intensity={100}
+                    tint="dark"
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      borderBottomWidth: 1,
+                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                    }}
+                  />
+                ),
+                headerTintColor: 'white',
+                headerTitleStyle: {
+                  fontSize: 18,
+                  fontWeight: '700',
+                  letterSpacing: -0.3,
+                },
+                headerBackTitleVisible: false,
+              }}
+            />
+            
+            {/* Social Media Screens */}
+            <RootStack.Screen 
+              name="SocialFeed" 
+              component={SocialFeedScreen}
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
+              name="CreatePost" 
+              component={CreatePostScreen}
+              options={{ 
+                headerShown: true, 
+                title: 'Create Post',
+                headerStyle: {
+                  backgroundColor: 'transparent',
+                },
+                headerBackground: () => (
+                  <BlurView
+                    intensity={100}
+                    tint="dark"
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      borderBottomWidth: 1,
+                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                    }}
+                  />
+                ),
+                headerTintColor: 'white',
+                headerTitleStyle: {
+                  fontSize: 18,
+                  fontWeight: '700',
+                  letterSpacing: -0.3,
+                },
+                headerBackTitleVisible: false,
+              }}
+            />
+            <RootStack.Screen 
+              name="PostComments" 
+              component={PostCommentsScreen}
+              options={{ 
+                headerShown: true, 
+                title: 'Comments',
+                headerStyle: {
+                  backgroundColor: 'transparent',
+                },
+                headerBackground: () => (
+                  <BlurView
+                    intensity={100}
+                    tint="dark"
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      borderBottomWidth: 1,
+                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                    }}
+                  />
+                ),
+                headerTintColor: 'white',
+                headerTitleStyle: {
+                  fontSize: 18,
+                  fontWeight: '700',
+                  letterSpacing: -0.3,
+                },
+                headerBackTitleVisible: false,
+              }}
+            />
+            <RootStack.Screen 
+              name="UserProfile" 
+              component={UserProfileScreen}
+              options={{ 
+                headerShown: true, 
+                title: 'Profile',
+                headerStyle: {
+                  backgroundColor: 'transparent',
+                },
+                headerBackground: () => (
+                  <BlurView
+                    intensity={100}
+                    tint="dark"
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      borderBottomWidth: 1,
+                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                    }}
+                  />
+                ),
+                headerTintColor: 'white',
+                headerTitleStyle: {
+                  fontSize: 18,
+                  fontWeight: '700',
+                  letterSpacing: -0.3,
+                },
+                headerBackTitleVisible: false,
+              }}
+            />
+            <RootStack.Screen 
+              name="FollowingBookmarks" 
+              component={FollowingBookmarksScreen}
+              options={{ 
+                headerShown: true, 
+                title: 'Following & Bookmarks',
+                headerStyle: {
+                  backgroundColor: 'transparent',
+                },
+                headerBackground: () => (
+                  <BlurView
+                    intensity={100}
+                    tint="dark"
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      borderBottomWidth: 1,
+                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                    }}
+                  />
+                ),
+                headerTintColor: 'white',
+                headerTitleStyle: {
+                  fontSize: 18,
+                  fontWeight: '700',
+                  letterSpacing: -0.3,
+                },
+                headerBackTitleVisible: false,
+              }}
+            />
+            <RootStack.Screen 
+              name="EnhancedProviderProfile" 
+              component={EnhancedProviderProfileScreen}
+              options={{ 
+                headerShown: true, 
+                title: 'Provider Profile',
+                headerStyle: {
+                  backgroundColor: 'transparent',
+                },
+                headerBackground: () => (
+                  <BlurView
+                    intensity={100}
+                    tint="dark"
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      borderBottomWidth: 1,
+                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                    }}
+                  />
+                ),
+                headerTintColor: 'white',
+                headerTitleStyle: {
+                  fontSize: 18,
+                  fontWeight: '700',
+                  letterSpacing: -0.3,
+                },
+                headerBackTitleVisible: false,
+              }}
             />
           </>
         ) : (

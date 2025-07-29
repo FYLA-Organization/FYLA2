@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { ChatMessage, FileUploadResponse } from '../types';
 import { useChat } from '../contexts/ChatContext';
@@ -101,6 +101,11 @@ const ChatScreen: React.FC = () => {
     const messageText = inputText.trim();
     setInputText('');
     setSending(true);
+
+    // Immediately scroll to bottom for better UX
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 50);
 
     try {
       await sendMessage({
@@ -317,10 +322,15 @@ const ChatScreen: React.FC = () => {
   };  const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isOwnMessage = item.senderId === currentUser?.id;
     const hasAttachment = item.attachmentUrl && item.attachmentType;
+    const isTemporary = item.id.startsWith('temp_');
     
     return (
       <View style={[styles.messageContainer, isOwnMessage ? styles.ownMessage : styles.otherMessage]}>
-        <View style={[styles.messageBubble, isOwnMessage ? styles.ownBubble : styles.otherBubble]}>
+        <View style={[
+          styles.messageBubble, 
+          isOwnMessage ? styles.ownBubble : styles.otherBubble,
+          isTemporary && styles.temporaryMessage
+        ]}>
           {/* Image Attachment */}
           {hasAttachment && item.messageType === 'image' && (
             <TouchableOpacity 
@@ -341,7 +351,7 @@ const ChatScreen: React.FC = () => {
           {/* Document Attachment */}
           {hasAttachment && item.messageType === 'file' && (
             <TouchableOpacity style={styles.documentContainer}>
-              <Icon name="document" size={24} color="#667eea" />
+              <Ionicons name="document" size={24} color="#667eea" />
               <View style={styles.documentInfo}>
                 <Text style={styles.documentName} numberOfLines={1}>
                   {item.attachmentName || 'Document'}
@@ -366,14 +376,17 @@ const ChatScreen: React.FC = () => {
             </Text>
             {isOwnMessage && (
               <View style={styles.messageStatus}>
-                {item.status === 'Sent' && (
-                  <Icon name="checkmark" size={14} color="#999" style={styles.readIcon} />
+                {isTemporary && (
+                  <Ionicons name="time" size={14} color="#999" style={styles.readIcon} />
                 )}
-                {item.status === 'Delivered' && (
-                  <Icon name="checkmark-done" size={14} color="#999" style={styles.readIcon} />
+                {!isTemporary && item.status === 'Sent' && (
+                  <Ionicons name="checkmark" size={14} color="#999" style={styles.readIcon} />
                 )}
-                {item.status === 'Read' && (
-                  <Icon name="checkmark-done" size={14} color="#4CAF50" style={styles.readIcon} />
+                {!isTemporary && item.status === 'Delivered' && (
+                  <Ionicons name="checkmark-done" size={14} color="#999" style={styles.readIcon} />
+                )}
+                {!isTemporary && item.status === 'Read' && (
+                  <Ionicons name="checkmark-done" size={14} color="#4CAF50" style={styles.readIcon} />
                 )}
               </View>
             )}
@@ -396,7 +409,7 @@ const ChatScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         
         <View style={styles.headerUserInfo}>
@@ -456,7 +469,7 @@ const ChatScreen: React.FC = () => {
             onPress={showAttachmentOptions}
             disabled={!isConnected}
           >
-            <Icon 
+            <Ionicons 
               name="attach" 
               size={20} 
               color={isConnected ? '#667eea' : '#ccc'} 
@@ -476,7 +489,7 @@ const ChatScreen: React.FC = () => {
             onPress={handleSendMessage}
             disabled={!inputText.trim() || sending || !isConnected}
           >
-            <Icon 
+            <Ionicons 
               name={sending ? 'hourglass' : 'send'} 
               size={20} 
               color={(!inputText.trim() || sending || !isConnected) ? '#ccc' : '#fff'} 
@@ -567,6 +580,10 @@ const styles = StyleSheet.create({
   ownBubble: {
     backgroundColor: '#667eea',
     borderBottomRightRadius: 4,
+  },
+  temporaryMessage: {
+    opacity: 0.7,
+    backgroundColor: '#999',
   },
   otherBubble: {
     backgroundColor: '#f0f0f0',
