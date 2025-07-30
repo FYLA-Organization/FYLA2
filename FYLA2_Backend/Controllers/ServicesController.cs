@@ -62,7 +62,7 @@ namespace FYLA2_Backend.Controllers
               businessName = $"{s.Provider.FirstName} {s.Provider.LastName}",
               averageRating = 4.5, // TODO: Calculate from reviews
               totalReviews = 0, // TODO: Count from reviews
-              profilePictureUrl = s.Provider.ProfileImageUrl
+              profilePictureUrl = s.Provider.ProfilePictureUrl
             }
           })
           .ToListAsync();
@@ -97,7 +97,7 @@ namespace FYLA2_Backend.Controllers
               businessName = $"{s.Provider.FirstName} {s.Provider.LastName}",
               averageRating = s.Reviews.Any() ? s.Reviews.Average(r => r.Rating) : 0,
               totalReviews = s.Reviews.Count(),
-              profilePictureUrl = s.Provider.ProfileImageUrl,
+              profilePictureUrl = s.Provider.ProfilePictureUrl,
               bio = s.Provider.Bio
             },
             reviews = s.Reviews.Take(5).Select(r => new
@@ -110,7 +110,7 @@ namespace FYLA2_Backend.Controllers
               {
                 firstName = r.Reviewer.FirstName,
                 lastName = r.Reviewer.LastName,
-                profilePictureUrl = r.Reviewer.ProfileImageUrl
+                profilePictureUrl = r.Reviewer.ProfilePictureUrl
               }
             }).ToList()
           })
@@ -187,7 +187,7 @@ namespace FYLA2_Backend.Controllers
               businessName = $"{s.Provider.FirstName} {s.Provider.LastName}",
               averageRating = 4.5, // TODO: Calculate from reviews
               totalReviews = 0, // TODO: Count from reviews
-              profilePictureUrl = s.Provider.ProfileImageUrl
+              profilePictureUrl = s.Provider.ProfilePictureUrl
             }
           })
           .ToListAsync();

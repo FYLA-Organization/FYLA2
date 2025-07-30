@@ -365,31 +365,46 @@ class ApiService {
     }
   }
 
+    // Test connectivity methods
+  async testConnection(): Promise<any> {
+    console.log('🔄 Testing basic API connectivity...');
+    const response = await this.api.get('/Test');
+    return response.data;
+  }
+
+  async testProviders(): Promise<any> {
+    console.log('🔄 Testing providers endpoint...');
+    const response = await this.api.get('/Test/providers');
+    return response.data;
+  }
+
+  async testSocialFeed(): Promise<any> {
+    console.log('🔄 Testing social feed endpoint...');
+    const response = await this.api.get('/Test/social-feed');
+    return response.data;
+  }
+
   // Social Media Methods
   async getSocialFeed(page: number = 1, pageSize: number = 20, filter: 'all' | 'following' | 'nearby' = 'all'): Promise<{ posts: any[], hasMore: boolean }> {
     try {
-      const params = { page, pageSize, filter };
-      const response = await this.api.get('/social/feed', { params });
+      const response = await this.api.get(`/Social/feed?page=${page}&pageSize=${pageSize}&filter=${filter}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching social feed:', error);
-      // Return mock data for development
-      return {
-        posts: [],
-        hasMore: false,
-      };
+      // Return empty array structure to prevent .map errors
+      return { posts: [], hasMore: false };
     }
   }
 
   async createSocialPost(postData: {
-    caption: string;
-    imageUrls: string[];
-    serviceCategories: string[];
-    tags: string[];
+    content: string;
+    imageUrls?: string[];
+    serviceId?: string;
+    isBusinessPost?: boolean;
     location?: string;
   }): Promise<any> {
     try {
-      const response = await this.api.post('/social/posts', postData);
+      const response = await this.api.post('/Social/posts', postData);
       return response.data;
     } catch (error) {
       console.error('Error creating social post:', error);
@@ -399,7 +414,7 @@ class ApiService {
 
   async likePost(postId: string): Promise<void> {
     try {
-      await this.api.post(`/social/posts/${postId}/like`);
+      await this.api.post(`/Social/posts/${postId}/like`);
     } catch (error) {
       console.error('Error liking post:', error);
     }
@@ -407,9 +422,100 @@ class ApiService {
 
   async unlikePost(postId: string): Promise<void> {
     try {
-      await this.api.delete(`/social/posts/${postId}/like`);
+      await this.api.delete(`/Social/posts/${postId}/like`);
     } catch (error) {
       console.error('Error unliking post:', error);
+    }
+  }
+
+  async getFollowStatus(userId: string): Promise<{ isFollowing: boolean; followersCount: number }> {
+    try {
+      const response = await this.api.get(`/Social/users/${userId}/follow-status`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting follow status:', error);
+      // Return fallback data on error
+      return { isFollowing: false, followersCount: 0 };
+    }
+  }
+
+  async unfollowUser(userId: string): Promise<{ isFollowing: boolean; followersCount: number }> {
+    try {
+      const response = await this.api.delete(`/Social/users/${userId}/follow`);
+      return response.data;
+    } catch (error) {
+      console.error('Error unfollowing user:', error);
+      throw error;
+    }
+  }
+
+  async followUser(userId: string): Promise<{ isFollowing: boolean; followersCount: number }> {
+    try {
+      const response = await this.api.post(`/Social/users/${userId}/follow`);
+      return response.data;
+    } catch (error) {
+      console.error('Error following user:', error);
+      throw error;
+    }
+  }
+
+  async getUserProfile(userId: string): Promise<any> {
+    try {
+      const response = await this.api.get(`/Social/users/${userId}/profile`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting user profile:', error);
+      throw error;
+    }
+  }
+
+  async getMyProfile(): Promise<any> {
+    try {
+      const response = await this.api.get('/Social/users/me/profile');
+      return response.data;
+    } catch (error) {
+      console.error('Error getting my profile:', error);
+      throw error;
+    }
+  }
+
+  async getUserPosts(userId: string, page: number = 1, pageSize: number = 20): Promise<any[]> {
+    try {
+      const response = await this.api.get(`/Social/users/${userId}/posts?page=${page}&pageSize=${pageSize}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting user posts:', error);
+      return [];
+    }
+  }
+
+  async getServiceProvider(providerId: string): Promise<any> {
+    try {
+      const response = await this.api.get(`/ServiceProvider/${providerId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting service provider:', error);
+      throw error;
+    }
+  }
+
+  async getServicesByProvider(providerId: string): Promise<any[]> {
+    try {
+      const response = await this.api.get(`/ServiceProvider/${providerId}/services`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting services by provider:', error);
+      return [];
+    }
+  }
+
+  async getReviews(providerId: string): Promise<any[]> {
+    try {
+      const response = await this.api.get(`/ServiceProvider/${providerId}/reviews`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting reviews:', error);
+      return [];
     }
   }
 
@@ -427,7 +533,21 @@ class ApiService {
     openNow?: boolean;
   }) {
     try {
-      return await this.api.post('/search/advanced', searchParams);
+      // Use ServiceProvider endpoint for search
+      const params = new URLSearchParams();
+      if (searchParams.query) params.append('query', searchParams.query);
+      if (searchParams.category) params.append('category', searchParams.category);
+      if (searchParams.location) params.append('location', searchParams.location);
+      if (searchParams.rating) params.append('minRating', searchParams.rating.toString());
+      if (searchParams.priceRange) {
+        params.append('priceMin', searchParams.priceRange.min.toString());
+        params.append('priceMax', searchParams.priceRange.max.toString());
+      }
+      params.append('page', '1');
+      params.append('pageSize', '20');
+
+      const response = await this.api.get(`/ServiceProvider?${params.toString()}`);
+      return { data: response.data };
     } catch (error) {
       console.error('Error performing advanced search:', error);
       return { data: [] };

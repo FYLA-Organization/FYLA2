@@ -60,16 +60,83 @@ const SocialFeedScreen = () => {
         setLoading(true);
       }
 
-      // Mock API call - replace with actual API
-      const mockFeed = await getMockSocialFeed(refresh ? 1 : feed.nextPage);
+      console.log('🔄 Testing social feed API connectivity...');
       
-      if (refresh) {
-        setFeed(mockFeed);
-      } else {
-        setFeed(prev => ({
-          ...mockFeed,
-          posts: [...prev.posts, ...mockFeed.posts],
-        }));
+      // Try to load from real API first
+      try {
+        const ApiService = require('../../services/ApiService').default;
+        const feedData = await ApiService.getSocialFeed(refresh ? 0 : feed.nextPage - 1, 20);
+        console.log('✅ Social Feed API Response:', feedData);
+        
+        // Handle the {posts: [], hasMore: boolean} structure
+        const posts = feedData && feedData.posts ? feedData.posts : [];
+        
+        if (Array.isArray(posts) && posts.length > 0) {
+          // Transform API posts to match expected format
+          const transformedPosts: SocialPost[] = posts.map((post: any) => ({
+            id: post.id || Math.random().toString(),
+            providerId: post.providerId || post.userId,
+            provider: {
+              id: post.providerId || post.userId,
+              userId: post.userId,
+              businessName: post.userName || post.businessName || 'Unknown Provider',
+              profilePictureUrl: post.userAvatar || post.profilePictureUrl || 'https://via.placeholder.com/40',
+              isVerified: post.isVerified || false,
+              averageRating: post.averageRating || 4.5,
+              totalReviews: post.totalReviews || 0,
+              followersCount: post.followersCount || 0,
+              followingCount: post.followingCount || 0,
+              postsCount: post.postsCount || 0,
+              isFollowedByCurrentUser: post.isFollowedByCurrentUser || false,
+              isBookmarkedByCurrentUser: post.isBookmarkedByCurrentUser || false,
+            },
+            imageUrls: post.imageUrl ? [post.imageUrl] : [],
+            caption: post.content || '',
+            tags: post.hashtags || [],
+            serviceCategories: post.serviceCategories || ['Beauty'],
+            location: post.location || '',
+            likesCount: post.likesCount || 0,
+            commentsCount: post.commentsCount || 0,
+            isLikedByCurrentUser: post.isLiked || false,
+            isBookmarkByCurrentUser: post.isBookmarked || false,
+            createdAt: post.createdAt || new Date().toISOString(),
+            updatedAt: post.updatedAt || new Date().toISOString(),
+          }));
+
+          const newFeed = {
+            posts: transformedPosts,
+            hasMore: feedData.hasMore || false,
+            nextPage: (refresh ? 1 : feed.nextPage) + 1,
+          };
+
+          if (refresh) {
+            setFeed(newFeed);
+          } else {
+            setFeed(prev => ({
+              ...newFeed,
+              posts: [...prev.posts, ...newFeed.posts],
+            }));
+          }
+          
+          console.log('✅ Loaded real API data:', transformedPosts.length, 'posts');
+          return;
+        }
+        
+        throw new Error('No posts in API response');
+      } catch (apiError) {
+        console.error('❌ API call failed, falling back to mock data:', apiError);
+        
+        // Fallback to mock data
+        const mockFeed = await getMockSocialFeed(refresh ? 1 : feed.nextPage);
+        
+        if (refresh) {
+          setFeed(mockFeed);
+        } else {
+          setFeed(prev => ({
+            ...mockFeed,
+            posts: [...prev.posts, ...mockFeed.posts],
+          }));
+        }
       }
     } catch (error) {
       console.error('Error loading feed:', error);
@@ -370,19 +437,6 @@ const SocialFeedScreen = () => {
           </TouchableOpacity>
         </View>
       </Modal>
-
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('CreatePost' as never)}
-      >
-        <LinearGradient
-          colors={[COLORS.primary, COLORS.accent]}
-          style={styles.fabGradient}
-        >
-          <Ionicons name="add" size={28} color="white" />
-        </LinearGradient>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -623,26 +677,6 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     borderRadius: 25,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 110,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    elevation: 8,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  fabGradient: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });
 

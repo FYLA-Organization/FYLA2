@@ -19,7 +19,7 @@ import PrivacyPolicyScreen from '../screens/legal/PrivacyPolicyScreen';
 
 // Client Screens (Consumer-focused)
 import HomeScreen from '../screens/main/HomeScreen';
-import SearchScreen from '../screens/main/EnhancedSearchScreen';
+import SearchScreen from '../screens/main/SearchScreen';
 import BookingsScreen from '../screens/main/BookingsScreen';
 import MessagesScreen from '../screens/main/MessagesScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
@@ -50,7 +50,10 @@ import CreatePostScreen from '../screens/social/CreatePostScreen';
 import PostCommentsScreen from '../screens/social/PostCommentsScreen';
 import UserProfileScreen from '../screens/social/UserProfileScreen';
 import FollowingBookmarksScreen from '../screens/social/FollowingBookmarksScreen';
-import EnhancedProviderProfileScreen from '../screens/social/EnhancedProviderProfileScreen';
+import EnhancedProviderProfileScreen from '../screens/provider/EnhancedProviderProfileScreen';
+
+// Instagram-style Search
+import InstagramSearchScreen from '../screens/main/InstagramSearchScreen';
 
 const RootStack = createStackNavigator<RootStackParamList>();
 const AuthStack = createStackNavigator<AuthStackParamList>();
@@ -87,14 +90,11 @@ const ClientTabNavigator = () => {
             case 'Search':
               iconName = focused ? 'search' : 'search-outline';
               break;
-            case 'Social':
-              iconName = focused ? 'heart' : 'heart-outline';
+            case 'AddPost':
+              iconName = focused ? 'add-circle' : 'add-circle-outline';
               break;
             case 'Bookings':
               iconName = focused ? 'calendar' : 'calendar-outline';
-              break;
-            case 'Messages':
-              iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
               break;
             case 'Profile':
               iconName = focused ? 'person' : 'person-outline';
@@ -106,16 +106,16 @@ const ClientTabNavigator = () => {
           const iconSize = focused ? 26 : 24;
           return <Ionicons name={iconName as any} size={iconSize} color={color} />;
         },
-        tabBarActiveTintColor: 'white',
-        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.6)',
+        tabBarActiveTintColor: '#3797F0',
+        tabBarInactiveTintColor: '#8E8E8E',
         tabBarStyle: {
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.95)',
+          backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
-          borderTopColor: 'rgba(255, 255, 255, 0.1)',
+          borderTopColor: '#DBDBDB',
           height: 85,
           paddingBottom: 20,
           paddingTop: 10,
@@ -136,23 +136,18 @@ const ClientTabNavigator = () => {
       />
       <ClientTab.Screen 
         name="Search" 
-        component={SearchScreen}
-        options={{ tabBarLabel: 'Search' }}
+        component={InstagramSearchScreen}
+        options={{ tabBarLabel: 'Discover' }}
       />
       <ClientTab.Screen 
-        name="Social" 
-        component={SocialFeedScreen}
-        options={{ tabBarLabel: 'Social' }}
+        name="AddPost" 
+        component={CreatePostScreen}
+        options={{ tabBarLabel: 'Add Post' }}
       />
       <ClientTab.Screen 
         name="Bookings" 
         component={BookingsScreen}
         options={{ tabBarLabel: 'Bookings' }}
-      />
-      <ClientTab.Screen 
-        name="Messages" 
-        component={ChatListScreen}
-        options={{ tabBarLabel: 'Messages' }}
       />
       <ClientTab.Screen 
         name="Profile" 
@@ -359,6 +354,11 @@ const AppNavigator = () => {
               options={{ headerShown: false }}
             />
             <RootStack.Screen 
+              name="Messages" 
+              component={ChatListScreen}
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
               name="ChatScreen" 
               component={ChatScreen}
               options={{ headerShown: false }}
@@ -511,6 +511,36 @@ const AppNavigator = () => {
               name="SocialFeed" 
               component={SocialFeedScreen}
               options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
+              name="InstagramSearch" 
+              component={InstagramSearchScreen}
+              options={{ 
+                headerShown: true, 
+                title: 'Discover Providers',
+                headerStyle: {
+                  backgroundColor: 'transparent',
+                },
+                headerBackground: () => (
+                  <BlurView
+                    intensity={100}
+                    tint="dark"
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      borderBottomWidth: 1,
+                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                    }}
+                  />
+                ),
+                headerTintColor: 'white',
+                headerTitleStyle: {
+                  fontSize: 18,
+                  fontWeight: '700',
+                  letterSpacing: -0.3,
+                },
+                headerBackTitleVisible: false,
+              }}
             />
             <RootStack.Screen 
               name="CreatePost" 

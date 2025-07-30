@@ -22,6 +22,25 @@ import { AuthStackParamList } from '../../types';
 
 const { width, height } = Dimensions.get('window');
 
+// Instagram-style Color Palette
+const COLORS = {
+  background: '#FAFAFA',
+  surface: '#FFFFFF',
+  text: '#262626',
+  textSecondary: '#8E8E8E',
+  border: '#DBDBDB',
+  borderLight: '#EFEFEF',
+  primary: '#3797F0',
+  accent: '#FF3040',
+  success: '#00D26A',
+  warning: '#FFB800',
+  verified: '#3797F0',
+  instagram: '#E1306C',
+  instagramBlue: '#4267B2',
+  gradient1: '#667eea',
+  gradient2: '#764ba2',
+};
+
 type LoginScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Login'>;
 
 const LoginScreen: React.FC = () => {
@@ -79,24 +98,12 @@ const LoginScreen: React.FC = () => {
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} translucent />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <LinearGradient
-          colors={['#667eea', '#764ba2', '#f093fb']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradient}
-        >
-          {/* Background shapes for visual interest */}
-          <View style={styles.backgroundShapes}>
-            <View style={[styles.shape, styles.shape1]} />
-            <View style={[styles.shape, styles.shape2]} />
-            <View style={[styles.shape, styles.shape3]} />
-          </View>
-
+        <View style={styles.background}>
           <ScrollView 
             contentContainerStyle={styles.scrollContainer}
             showsVerticalScrollIndicator={false}
@@ -109,7 +116,7 @@ const LoginScreen: React.FC = () => {
             </View>
 
             {/* Form Section */}
-            <BlurView intensity={20} tint="light" style={styles.formContainer}>
+            <View style={styles.formContainer}>
               <View style={styles.formInner}>
                 {/* Email Input */}
                 <View style={styles.inputWrapper}>
@@ -120,13 +127,13 @@ const LoginScreen: React.FC = () => {
                     <Ionicons 
                       name="mail-outline" 
                       size={20} 
-                      color={focusedInput === 'email' ? '#667eea' : '#9CA3AF'} 
+                      color={focusedInput === 'email' ? COLORS.primary : COLORS.textSecondary} 
                       style={styles.inputIcon}
                     />
                     <TextInput
                       style={styles.input}
                       placeholder="Email address"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={COLORS.textSecondary}
                       value={email}
                       onChangeText={setEmail}
                       keyboardType="email-address"
@@ -147,13 +154,13 @@ const LoginScreen: React.FC = () => {
                     <Ionicons 
                       name="lock-closed-outline" 
                       size={20} 
-                      color={focusedInput === 'password' ? '#667eea' : '#9CA3AF'} 
+                      color={focusedInput === 'password' ? COLORS.primary : COLORS.textSecondary} 
                       style={styles.inputIcon}
                     />
                     <TextInput
                       style={styles.input}
                       placeholder="Password"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={COLORS.textSecondary}
                       value={password}
                       onChangeText={setPassword}
                       secureTextEntry={!showPassword}
@@ -168,7 +175,7 @@ const LoginScreen: React.FC = () => {
                       <Ionicons 
                         name={showPassword ? "eye-outline" : "eye-off-outline"} 
                         size={20} 
-                        color="#9CA3AF" 
+                        color={COLORS.textSecondary} 
                       />
                     </TouchableOpacity>
                   </View>
@@ -177,7 +184,7 @@ const LoginScreen: React.FC = () => {
                 {/* Error Message */}
                 {error && (
                   <View style={styles.errorContainer}>
-                    <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                    <Ionicons name="alert-circle" size={16} color={COLORS.accent} />
                     <Text style={styles.errorText}>{error}</Text>
                   </View>
                 )}
@@ -189,12 +196,7 @@ const LoginScreen: React.FC = () => {
                   disabled={isLoading}
                   activeOpacity={0.8}
                 >
-                  <LinearGradient
-                    colors={isLoading ? ['#9CA3AF', '#9CA3AF'] : ['#667eea', '#764ba2']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.buttonGradient}
-                  >
+                  <View style={styles.buttonBackground}>
                     {isLoading ? (
                       <View style={styles.loadingContainer}>
                         <Text style={styles.loginButtonText}>Signing In...</Text>
@@ -202,7 +204,7 @@ const LoginScreen: React.FC = () => {
                     ) : (
                       <Text style={styles.loginButtonText}>Sign In</Text>
                     )}
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
 
                 {/* Forgot Password */}
@@ -218,7 +220,7 @@ const LoginScreen: React.FC = () => {
                   </TouchableOpacity>
                 </View>
               </View>
-            </BlurView>
+            </View>
 
             {/* Development Login Section */}
             <View style={styles.devSection}>
@@ -231,13 +233,10 @@ const LoginScreen: React.FC = () => {
                   disabled={isLoading}
                   activeOpacity={0.8}
                 >
-                  <LinearGradient
-                    colors={['rgba(52, 211, 153, 0.8)', 'rgba(34, 197, 94, 0.8)']}
-                    style={styles.devButtonGradient}
-                  >
-                    <Ionicons name="person-outline" size={16} color="white" />
+                  <View style={styles.devButtonBackground}>
+                    <Ionicons name="person-outline" size={16} color={COLORS.surface} />
                     <Text style={styles.devButtonText}>Client</Text>
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -246,18 +245,15 @@ const LoginScreen: React.FC = () => {
                   disabled={isLoading}
                   activeOpacity={0.8}
                 >
-                  <LinearGradient
-                    colors={['rgba(249, 115, 22, 0.8)', 'rgba(234, 88, 12, 0.8)']}
-                    style={styles.devButtonGradient}
-                  >
-                    <Ionicons name="briefcase-outline" size={16} color="white" />
+                  <View style={styles.devButtonBackground}>
+                    <Ionicons name="briefcase-outline" size={16} color={COLORS.surface} />
                     <Text style={styles.devButtonText}>Provider</Text>
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               </View>
             </View>
           </ScrollView>
-        </LinearGradient>
+        </View>
       </KeyboardAvoidingView>
     </>
   );
@@ -267,39 +263,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  gradient: {
+  background: {
     flex: 1,
-  },
-  backgroundShapes: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-  },
-  shape: {
-    position: 'absolute',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 50,
-  },
-  shape1: {
-    width: 200,
-    height: 200,
-    top: -50,
-    right: -50,
-    transform: [{ rotate: '45deg' }],
-  },
-  shape2: {
-    width: 150,
-    height: 150,
-    bottom: 100,
-    left: -30,
-    borderRadius: 75,
-  },
-  shape3: {
-    width: 100,
-    height: 100,
-    top: height * 0.3,
-    right: 30,
-    transform: [{ rotate: '30deg' }],
+    backgroundColor: COLORS.background,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -309,37 +275,40 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 40,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: 36,
+    fontWeight: '800',
+    color: COLORS.text,
     textAlign: 'center',
-    marginBottom: 6,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    marginBottom: 8,
+    letterSpacing: -1,
   },
   subtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 16,
+    color: COLORS.textSecondary,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
+    fontWeight: '600',
   },
   welcomeText: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    color: COLORS.textSecondary,
     textAlign: 'center',
   },
   formContainer: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    marginBottom: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   formInner: {
     padding: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   inputWrapper: {
     marginBottom: 16,
@@ -347,22 +316,16 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: COLORS.background,
     borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 2,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   inputContainerFocused: {
-    borderColor: '#667eea',
-    backgroundColor: 'rgba(255, 255, 255, 1)',
-    shadowOpacity: 0.2,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
   },
   inputIcon: {
     marginRight: 12,
@@ -370,8 +333,8 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#374151',
-    paddingVertical: 12,
+    color: COLORS.text,
+    fontWeight: '400',
   },
   eyeIcon: {
     padding: 4,
@@ -379,57 +342,45 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    paddingHorizontal: 4,
   },
   errorText: {
-    color: '#EF4444',
     fontSize: 14,
+    color: COLORS.accent,
     marginLeft: 8,
-    flex: 1,
+    fontWeight: '500',
   },
   loginButton: {
-    borderRadius: 16,
+    borderRadius: 12,
+    marginBottom: 16,
     overflow: 'hidden',
-    marginTop: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
   },
-  disabledButton: {
-    shadowOpacity: 0.1,
-    elevation: 2,
-  },
-  buttonGradient: {
-    paddingVertical: 18,
+  buttonBackground: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  disabledButton: {
+    opacity: 0.6,
+  },
   loadingContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
   },
   loginButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.surface,
   },
   forgotPassword: {
     alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 8,
+    marginBottom: 20,
   },
   forgotPasswordText: {
-    color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 14,
-    fontWeight: '500',
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   registerContainer: {
     flexDirection: 'row',
@@ -437,49 +388,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   registerText: {
-    color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 14,
+    color: COLORS.textSecondary,
   },
   registerLink: {
-    color: 'white',
     fontSize: 14,
-    fontWeight: '600',
+    color: COLORS.primary,
+    fontWeight: '700',
   },
   devSection: {
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   devTitle: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 11,
-    fontWeight: '500',
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 16,
   },
   devButtonsRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     gap: 12,
   },
   devButton: {
+    flex: 1,
     borderRadius: 12,
     overflow: 'hidden',
-    minWidth: 100,
   },
-  devButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  devButtonBackground: {
+    backgroundColor: COLORS.success,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    gap: 6,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
   },
   devButtonText: {
-    color: 'white',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
+    color: COLORS.surface,
   },
 });
 

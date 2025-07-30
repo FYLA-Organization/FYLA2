@@ -26,7 +26,11 @@ import {
   PaymentSettings,
   CreatePaymentIntentRequest,
   PaymentIntentResponse,
-  RefundRequest
+  RefundRequest,
+  FileUploadResponse,
+  ProviderDashboard,
+  RevenueAnalytics,
+  ClientAnalytics
 } from '../types';
 
 class ApiService {
@@ -511,7 +515,7 @@ class ApiService {
 
   async likePost(postId: string): Promise<void> {
     try {
-      await this.api.post(`/posts/${postId}/like`);
+      await this.api.post(`/social/posts/${postId}/like`);
     } catch (error) {
       console.error('Error liking post:', error);
       throw error;
@@ -520,9 +524,67 @@ class ApiService {
 
   async unlikePost(postId: string): Promise<void> {
     try {
-      await this.api.delete(`/posts/${postId}/like`);
+      await this.api.delete(`/social/posts/${postId}/like`);
     } catch (error) {
       console.error('Error unliking post:', error);
+      throw error;
+    }
+  }
+
+  async addPostComment(postId: string, content: string): Promise<any> {
+    try {
+      const response = await this.api.post(`/social/posts/${postId}/comments`, {
+        content
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      throw error;
+    }
+  }
+
+  async getPostComments(postId: string): Promise<any[]> {
+    try {
+      const response = await this.api.get(`/social/posts/${postId}/comments`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      throw error;
+    }
+  }
+
+  async bookmarkPost(postId: string): Promise<void> {
+    try {
+      await this.api.post(`/social/posts/${postId}/bookmark`);
+    } catch (error) {
+      console.error('Error bookmarking post:', error);
+      throw error;
+    }
+  }
+
+  async unbookmarkPost(postId: string): Promise<void> {
+    try {
+      await this.api.delete(`/social/posts/${postId}/bookmark`);
+    } catch (error) {
+      console.error('Error unbookmarking post:', error);
+      throw error;
+    }
+  }
+
+  async followProvider(providerId: string): Promise<void> {
+    try {
+      await this.api.post(`/social/follow/${providerId}`);
+    } catch (error) {
+      console.error('Error following provider:', error);
+      throw error;
+    }
+  }
+
+  async unfollowProvider(providerId: string): Promise<void> {
+    try {
+      await this.api.delete(`/social/follow/${providerId}`);
+    } catch (error) {
+      console.error('Error unfollowing provider:', error);
       throw error;
     }
   }

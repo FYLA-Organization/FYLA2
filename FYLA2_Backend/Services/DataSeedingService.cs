@@ -18,10 +18,13 @@ namespace FYLA2_Backend.Services
 
     public async Task SeedDataAsync()
     {
-      // Check if data already exists
+      // Always ensure dev users exist, regardless of user count
+      await EnsureDevUsersExist();
+
+      // Check if data already exists for bulk seeding
       if (await _context.Users.CountAsync() > 2)
       {
-        return; // Data already seeded
+        return; // Bulk data already seeded
       }
 
       // Seed Client Users
@@ -140,6 +143,51 @@ namespace FYLA2_Backend.Services
       }
 
       _context.Services.AddRange(services);
+    }
+
+    private async Task EnsureDevUsersExist()
+    {
+      // Ensure client1@fyla2.com exists
+      var client = await _userManager.FindByEmailAsync("client1@fyla2.com");
+      if (client == null)
+      {
+        client = new User
+        {
+          UserName = "client1@fyla2.com",
+          Email = "client1@fyla2.com",
+          FirstName = "Test",
+          LastName = "Client",
+          DateOfBirth = DateTime.Now.AddYears(-25),
+          IsServiceProvider = false,
+          Bio = "Test client for development",
+          CreatedAt = DateTime.UtcNow,
+          UpdatedAt = DateTime.UtcNow,
+          EmailConfirmed = true
+        };
+
+        await _userManager.CreateAsync(client, "Password123!");
+      }
+
+      // Ensure provider1@fyla2.com exists
+      var provider = await _userManager.FindByEmailAsync("provider1@fyla2.com");
+      if (provider == null)
+      {
+        provider = new User
+        {
+          UserName = "provider1@fyla2.com",
+          Email = "provider1@fyla2.com",
+          FirstName = "Test",
+          LastName = "Provider",
+          DateOfBirth = DateTime.Now.AddYears(-30),
+          IsServiceProvider = true,
+          Bio = "Test provider for development",
+          CreatedAt = DateTime.UtcNow,
+          UpdatedAt = DateTime.UtcNow,
+          EmailConfirmed = true
+        };
+
+        await _userManager.CreateAsync(provider, "Password123!");
+      }
     }
   }
 }

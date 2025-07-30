@@ -77,13 +77,13 @@ namespace FYLA2_Backend.Controllers
               email = b.Client.Email,
               firstName = b.Client.FirstName,
               lastName = b.Client.LastName,
-              profilePictureUrl = b.Client.ProfileImageUrl
+              profilePictureUrl = b.Client.ProfilePictureUrl
             } : null,
             serviceProvider = !user.IsServiceProvider ? new
             {
               id = b.Provider.Id,
               businessName = $"{b.Provider.FirstName} {b.Provider.LastName}", // TODO: Add business name field
-              profilePictureUrl = b.Provider.ProfileImageUrl
+              profilePictureUrl = b.Provider.ProfilePictureUrl
             } : null,
             service = new
             {
@@ -132,13 +132,13 @@ namespace FYLA2_Backend.Controllers
               email = b.Client.Email,
               firstName = b.Client.FirstName,
               lastName = b.Client.LastName,
-              profilePictureUrl = b.Client.ProfileImageUrl
+              profilePictureUrl = b.Client.ProfilePictureUrl
             },
             serviceProvider = new
             {
               id = b.Provider.Id,
               businessName = $"{b.Provider.FirstName} {b.Provider.LastName}",
-              profilePictureUrl = b.Provider.ProfileImageUrl
+              profilePictureUrl = b.Provider.ProfilePictureUrl
             },
             service = new
             {

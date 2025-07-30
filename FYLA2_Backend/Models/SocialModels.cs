@@ -12,6 +12,8 @@ namespace FYLA2_Backend.Models
 
     public string? ImageUrl { get; set; }
 
+    public bool IsBusinessPost { get; set; } = false;
+
     // Foreign Keys
     [Required]
     public string UserId { get; set; } = string.Empty;
@@ -23,6 +25,7 @@ namespace FYLA2_Backend.Models
     // Navigation properties
     public virtual User User { get; set; } = null!;
     public virtual ICollection<PostLike> Likes { get; set; } = new List<PostLike>();
+    public virtual ICollection<PostBookmark> Bookmarks { get; set; } = new List<PostBookmark>();
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
   }
 
@@ -52,6 +55,8 @@ namespace FYLA2_Backend.Models
     [MaxLength(500)]
     public string Content { get; set; } = string.Empty;
 
+    public bool IsPinned { get; set; } = false;
+
     // Foreign Keys
     [Required]
     public int PostId { get; set; }
@@ -63,6 +68,43 @@ namespace FYLA2_Backend.Models
 
     // Navigation properties
     public virtual Post Post { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
+    public virtual ICollection<CommentLike> Likes { get; set; } = new List<CommentLike>();
+  }
+
+  public class PostBookmark
+  {
+    public int Id { get; set; }
+
+    // Foreign Keys
+    [Required]
+    public int PostId { get; set; }
+
+    [Required]
+    public string UserId { get; set; } = string.Empty;
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation properties
+    public virtual Post Post { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
+  }
+
+  public class CommentLike
+  {
+    public int Id { get; set; }
+
+    // Foreign Keys
+    [Required]
+    public int CommentId { get; set; }
+
+    [Required]
+    public string UserId { get; set; } = string.Empty;
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation properties
+    public virtual Comment Comment { get; set; } = null!;
     public virtual User User { get; set; } = null!;
   }
 }

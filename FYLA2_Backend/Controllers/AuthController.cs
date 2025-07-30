@@ -63,7 +63,7 @@ namespace FYLA2_Backend.Controllers
         FirstName = user.FirstName,
         LastName = user.LastName,
         Bio = user.Bio,
-        ProfileImageUrl = user.ProfileImageUrl,
+        ProfilePictureUrl = user.ProfilePictureUrl,
         DateOfBirth = user.DateOfBirth,
         IsServiceProvider = user.IsServiceProvider,
         CreatedAt = user.CreatedAt
@@ -99,7 +99,7 @@ namespace FYLA2_Backend.Controllers
         FirstName = user.FirstName,
         LastName = user.LastName,
         Bio = user.Bio,
-        ProfileImageUrl = user.ProfileImageUrl,
+        ProfilePictureUrl = user.ProfilePictureUrl,
         DateOfBirth = user.DateOfBirth,
         IsServiceProvider = user.IsServiceProvider,
         CreatedAt = user.CreatedAt
@@ -167,7 +167,7 @@ namespace FYLA2_Backend.Controllers
         FirstName = user.FirstName,
         LastName = user.LastName,
         Bio = user.Bio,
-        ProfileImageUrl = user.ProfileImageUrl,
+        ProfilePictureUrl = user.ProfilePictureUrl,
         DateOfBirth = user.DateOfBirth,
         IsServiceProvider = user.IsServiceProvider,
         CreatedAt = user.CreatedAt
@@ -202,7 +202,7 @@ namespace FYLA2_Backend.Controllers
         FirstName = user.FirstName,
         LastName = user.LastName,
         Bio = user.Bio,
-        ProfileImageUrl = user.ProfileImageUrl,
+        ProfilePictureUrl = user.ProfilePictureUrl,
         DateOfBirth = user.DateOfBirth,
         IsServiceProvider = user.IsServiceProvider,
         CreatedAt = user.CreatedAt
@@ -241,8 +241,8 @@ namespace FYLA2_Backend.Controllers
       if (model.Bio != null)
         user.Bio = model.Bio;
 
-      if (model.ProfileImageUrl != null)
-        user.ProfileImageUrl = model.ProfileImageUrl;
+      if (model.ProfilePictureUrl != null)
+        user.ProfilePictureUrl = model.ProfilePictureUrl;
 
       if (model.DateOfBirth.HasValue)
         user.DateOfBirth = model.DateOfBirth.Value;
@@ -266,7 +266,7 @@ namespace FYLA2_Backend.Controllers
         FirstName = user.FirstName,
         LastName = user.LastName,
         Bio = user.Bio,
-        ProfileImageUrl = user.ProfileImageUrl,
+        ProfilePictureUrl = user.ProfilePictureUrl,
         DateOfBirth = user.DateOfBirth,
         IsServiceProvider = user.IsServiceProvider,
         CreatedAt = user.CreatedAt

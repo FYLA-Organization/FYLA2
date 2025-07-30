@@ -4,7 +4,7 @@ namespace FYLA2_Backend.Models
 {
   public class Review
   {
-    public string Id { get; set; } = string.Empty;
+    public int Id { get; set; }
 
     [Required]
     [Range(1, 5)]
@@ -13,9 +13,6 @@ namespace FYLA2_Backend.Models
     [MaxLength(1000)]
     public string? Comment { get; set; }
 
-    // Questionnaire data stored as JSON
-    public string? QuestionnaireData { get; set; }
-
     // Foreign Keys
     [Required]
     public string ReviewerId { get; set; } = string.Empty;
@@ -23,7 +20,7 @@ namespace FYLA2_Backend.Models
     [Required]
     public string RevieweeId { get; set; } = string.Empty;
 
-    public string? ServiceId { get; set; }
+    public int? ServiceId { get; set; }
 
     public int? BookingId { get; set; }
 

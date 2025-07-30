@@ -2,45 +2,34 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FYLA2_Backend.Models
 {
-  public enum TransactionType
-  {
-    Payment = 0,
-    Refund = 1,
-    PartialRefund = 2,
-    Deposit = 3,
-    FinalPayment = 4,
-    Fee = 5
-  }
-
   public class PaymentTransaction
   {
+    [Key]
     public int Id { get; set; }
 
     [Required]
-    public int BookingId { get; set; }
+    public string UserId { get; set; } = string.Empty;
+
+    public string? ClientId { get; set; }
+
+    public int? ProviderId { get; set; }
+
+    public int? OriginalTransactionId { get; set; }
+
+    public int? BookingId { get; set; }
 
     [Required]
-    public string UserId { get; set; } = string.Empty; // Client who made the payment
+    public string StripePaymentIntentId { get; set; } = string.Empty;
 
-    [Required]
-    public string ProviderId { get; set; } = string.Empty; // Provider receiving the payment
-
-    [Required]
-    public TransactionType Type { get; set; }
-
-    [Required]
-    public PaymentMethod PaymentMethod { get; set; }
+    public string? StripeChargeId { get; set; }
 
     [Required]
     public decimal Amount { get; set; }
 
-    [Required]
-    public decimal ServiceAmount { get; set; } // Amount for the service (before tax/fees)
+    public decimal ServiceAmount { get; set; } = 0;
 
-    [Required]
     public decimal TaxAmount { get; set; } = 0;
 
-    [Required]
     public decimal PlatformFeeAmount { get; set; } = 0;
 
     [Required]
@@ -49,14 +38,8 @@ namespace FYLA2_Backend.Models
     [Required]
     public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
 
-    // External payment system IDs
-    public string? StripePaymentIntentId { get; set; }
-    public string? StripeChargeId { get; set; }
-    public string? PayPalTransactionId { get; set; }
-    public string? ExternalTransactionId { get; set; }
-
-    // For refunds - reference to original transaction
-    public int? OriginalTransactionId { get; set; }
+    [Required]
+    public PaymentType Type { get; set; } = PaymentType.Booking;
 
     [MaxLength(1000)]
     public string? Description { get; set; }
@@ -64,17 +47,24 @@ namespace FYLA2_Backend.Models
     [MaxLength(500)]
     public string? FailureReason { get; set; }
 
-    public DateTime? ProcessedAt { get; set; }
+    public decimal ServiceFee { get; set; } = 0;
+
+    public decimal NetAmount { get; set; } = 0;
+
+    public decimal? RefundAmount { get; set; }
+
     public DateTime? RefundedAt { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation properties
-    public virtual Booking Booking { get; set; } = null!;
-    public virtual User Client { get; set; } = null!;
-    public virtual User Provider { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
+    public virtual User? Client { get; set; }
+    public virtual Models.ServiceProvider? Provider { get; set; }
     public virtual PaymentTransaction? OriginalTransaction { get; set; }
     public virtual ICollection<PaymentTransaction> RefundTransactions { get; set; } = new List<PaymentTransaction>();
+    public virtual Booking? Booking { get; set; }
   }
 }

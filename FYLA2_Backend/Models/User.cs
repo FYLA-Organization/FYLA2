@@ -16,7 +16,7 @@ namespace FYLA2_Backend.Models
     [MaxLength(500)]
     public string? Bio { get; set; }
 
-    public string? ProfileImageUrl { get; set; }
+    public string? ProfilePictureUrl { get; set; }
 
     public DateTime? DateOfBirth { get; set; }
 
@@ -38,6 +38,10 @@ namespace FYLA2_Backend.Models
     public virtual ICollection<UserFollow> Followers { get; set; } = new List<UserFollow>();
     public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
     public virtual ICollection<PostLike> PostLikes { get; set; } = new List<PostLike>();
+    public virtual ICollection<PostBookmark> PostBookmarks { get; set; } = new List<PostBookmark>();
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
+    public virtual ICollection<CommentLike> CommentLikes { get; set; } = new List<CommentLike>();
+    public virtual ServiceProvider? ServiceProvider { get; set; }
+    public virtual PaymentSettings? PaymentSettings { get; set; }
   }
 }

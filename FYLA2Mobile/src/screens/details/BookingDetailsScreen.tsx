@@ -9,12 +9,11 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  StatusBar,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Booking, BookingStatus, RootStackParamList } from '../../types';
 import ApiService from '../../services/api';
 
@@ -167,7 +166,7 @@ const BookingDetailsScreen: React.FC = () => {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6B6B" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.loadingText}>Loading booking details...</Text>
       </View>
     );
@@ -186,17 +185,18 @@ const BookingDetailsScreen: React.FC = () => {
   }
 
   return (
-    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       {/* Header */}
-      <BlurView intensity={80} style={styles.header}>
+      <View style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <Ionicons name="arrow-back" size={24} color="#262626" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Booking Details</Text>
           <View style={styles.placeholder} />
         </View>
-      </BlurView>
+      </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Status Card */}
@@ -334,7 +334,7 @@ const BookingDetailsScreen: React.FC = () => {
                 disabled={isUpdating}
               >
                 {isUpdating ? (
-                  <ActivityIndicator size="small" color="white" />
+                  <ActivityIndicator size="small" color={COLORS.primary} />
                 ) : (
                   <Text style={styles.modalConfirmText}>Cancel Booking</Text>
                 )}
@@ -343,14 +343,29 @@ const BookingDetailsScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </LinearGradient>
+    </View>
   );
+};
+
+// Instagram-style Color Palette
+const COLORS = {
+  primary: '#3797F0',
+  background: '#FFFFFF',
+  surface: '#FFFFFF',
+  text: '#262626',
+  textSecondary: '#8E8E8E',
+  border: '#DBDBDB',
+  borderLight: '#EFEFEF',
+  error: '#ED4956',
+  success: '#00C851',
+  warning: '#FF6900',
 };
 
 const styles = StyleSheet.create({
   // Base Layout
   container: {
     flex: 1,
+    backgroundColor: COLORS.background,
   },
   
   // Header Section
@@ -358,9 +373,9 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 24,
     paddingHorizontal: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
+    borderBottomColor: COLORS.border,
   },
   headerContent: {
     flexDirection: 'row',
@@ -371,22 +386,22 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: COLORS.border,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: 'white',
-    letterSpacing: -0.5,
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    letterSpacing: -0.3,
   },
   placeholder: {
     width: 44,
@@ -395,9 +410,9 @@ const styles = StyleSheet.create({
   // Content Section
   content: {
     flex: 1,
-    backgroundColor: 'transparent',
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   
   // Status Section
@@ -413,40 +428,41 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    shadowColor: 'rgba(0, 0, 0, 0.15)',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 8,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   statusText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
     letterSpacing: -0.3,
   },
   
   // Card Section
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    borderRadius: 24,
+    borderColor: COLORS.border,
+    borderRadius: 12,
     padding: 24,
-    marginBottom: 20,
-    shadowColor: 'rgba(0, 0, 0, 0.15)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 10,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   cardTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: 'white',
-    marginBottom: 20,
-    letterSpacing: -0.4,
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 16,
+    letterSpacing: -0.3,
   },
   // Service Info Section
   serviceInfo: {
@@ -455,32 +471,32 @@ const styles = StyleSheet.create({
   serviceImage: {
     width: 90,
     height: 90,
-    borderRadius: 16,
-    marginRight: 20,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    shadowColor: 'rgba(0, 0, 0, 0.2)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 6,
+    borderRadius: 12,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   serviceDetails: {
     flex: 1,
   },
   serviceName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: 'white',
-    marginBottom: 8,
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
     letterSpacing: -0.3,
   },
   serviceDescription: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 14,
+    color: COLORS.textSecondary,
     marginBottom: 8,
-    lineHeight: 22,
-    fontWeight: '500',
+    lineHeight: 20,
+    fontWeight: '400',
   },
   serviceCategory: {
     fontSize: 14,
@@ -517,36 +533,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   providerName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: 'white',
-    marginBottom: 6,
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
     letterSpacing: -0.3,
   },
   providerDescription: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.8)',
-    lineHeight: 22,
-    fontWeight: '500',
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+    fontWeight: '400',
   },
   appointmentDetails: {
-    gap: 20,
+    gap: 16,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   detailLabel: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 14,
+    color: COLORS.textSecondary,
     marginLeft: 12,
     flex: 1,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   detailValue: {
-    fontSize: 16,
-    color: 'white',
-    fontWeight: '700',
+    fontSize: 14,
+    color: COLORS.text,
+    fontWeight: '600',
     letterSpacing: -0.2,
   },
   priceRow: {
@@ -581,23 +597,23 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 107, 107, 0.3)',
     borderRadius: 20,
     padding: 16,
-    gap: 10,
-    shadowColor: 'rgba(255, 107, 107, 0.3)',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 8,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   disabledButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: COLORS.borderLight,
+    borderColor: COLORS.border,
+    shadowColor: '#000',
     opacity: 0.6,
   },
   actionButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
     letterSpacing: -0.2,
   },
   
@@ -606,32 +622,32 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: COLORS.background,
   },
   loadingText: {
-    marginTop: 20,
-    fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '600',
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: COLORS.background,
     padding: 20,
   },
   errorText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
     marginTop: 16,
     marginBottom: 24,
     textAlign: 'center',
   },
   backButtonText: {
-    color: 'white',
-    fontSize: 16,
+    color: COLORS.text,
+    fontSize: 14,
     fontWeight: '700',
   },
   
@@ -701,8 +717,8 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   modalConfirmText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: 'white',
   },
 });

@@ -99,6 +99,15 @@ export interface ServiceProvider {
   priceRange?: string;
   user?: User;
   services?: Service[];
+  // Follow-related properties
+  followersCount?: number;
+  followingCount?: number;
+  isFollowing?: boolean;
+  // Location properties
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 // Service Types
@@ -233,7 +242,10 @@ export interface Post {
   videoUrl?: string;
   likesCount: number;
   commentsCount: number;
+  bookmarksCount?: number;
   isLikedByCurrentUser?: boolean;
+  isBookmarkedByCurrentUser?: boolean;
+  isBusinessPost?: boolean;
   createdAt: string;
   user?: User;
   comments?: Comment[];
@@ -317,6 +329,7 @@ export type RootStackParamList = {
     userName: string;
     userImage?: string;
   };
+  Messages: undefined;
   ChatScreen: {
     userId: string;
     user: {
@@ -340,6 +353,7 @@ export type RootStackParamList = {
   Reviews: undefined;
   // Social Media Screens
   SocialFeed: undefined;
+  InstagramSearch: undefined;
   CreatePost: undefined;
   PostComments: { postId: string };
   UserProfile: { userId: string };
@@ -359,9 +373,8 @@ export type AuthStackParamList = {
 export type ClientTabParamList = {
   Home: undefined;
   Search: undefined;
-  Social: undefined;
+  AddPost: undefined;
   Bookings: undefined;
-  Messages: undefined;
   Profile: undefined;
 };
 
@@ -587,4 +600,21 @@ export interface RefundRequest {
   transactionId: number;
   refundAmount?: number;
   reason: string;
+}
+
+// Follow-related types
+export interface UserFollow {
+  id: number;
+  followerId: string;
+  followingId: string;
+  createdAt: string;
+  follower?: User;
+  following?: User;
+}
+
+export interface FollowResponse {
+  success: boolean;
+  isFollowing: boolean;
+  followerCount: number;
+  message: string;
 }

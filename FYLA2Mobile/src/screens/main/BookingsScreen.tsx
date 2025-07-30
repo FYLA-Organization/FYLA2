@@ -10,6 +10,7 @@ import {
   TextInput,
   Modal,
   Animated,
+  StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -21,6 +22,25 @@ import ApiService from '../../services/api';
 import ReviewModal from '../../components/ReviewModal';
 
 type BookingsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+
+// Instagram-style Color Palette
+const COLORS = {
+  background: '#FAFAFA',
+  surface: '#FFFFFF',
+  text: '#262626',
+  textSecondary: '#8E8E8E',
+  border: '#DBDBDB',
+  borderLight: '#EFEFEF',
+  primary: '#3797F0',
+  accent: '#FF3040',
+  success: '#00D26A',
+  warning: '#FFB800',
+  verified: '#3797F0',
+  instagram: '#E1306C',
+  instagramBlue: '#4267B2',
+  gradient1: '#667eea',
+  gradient2: '#764ba2',
+};
 
 interface FilterOptions {
   status: BookingStatus[];
@@ -488,16 +508,16 @@ const BookingsScreen: React.FC = () => {
   const filteredBookings = getFilteredBookings();
 
   return (
-    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
-      <BlurView intensity={80} style={styles.header}>
+      <View style={styles.header}>
         <Text style={styles.headerTitle}>My Bookings</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity 
             style={styles.searchButton}
             onPress={() => setShowFilters(true)}
           >
-            <Ionicons name="filter" size={24} color="white" />
+            <Ionicons name="filter" size={24} color={COLORS.text} />
             {activeFiltersCount > 0 && (
               <View style={styles.filterBadge}>
                 <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
@@ -505,29 +525,29 @@ const BookingsScreen: React.FC = () => {
             )}
           </TouchableOpacity>
         </View>
-      </BlurView>
+      </View>
 
       {/* Search Bar */}
-      <BlurView intensity={80} style={styles.searchContainer}>
+      <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Ionicons name="search-outline" size={20} color="rgba(255, 255, 255, 0.7)" />
+          <Ionicons name="search-outline" size={20} color={COLORS.textSecondary} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search by provider or service..."
-            placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            placeholderTextColor={COLORS.textSecondary}
             value={searchTerm}
             onChangeText={setSearchTerm}
           />
           {searchTerm.length > 0 && (
             <TouchableOpacity onPress={() => setSearchTerm('')}>
-              <Ionicons name="close-circle" size={20} color="rgba(255, 255, 255, 0.7)" />
+              <Ionicons name="close-circle" size={20} color={COLORS.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
-      </BlurView>
+      </View>
 
       {/* Tabs */}
-      <BlurView intensity={80} style={styles.tabContainer}>
+      <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tab, selectedTab === 'upcoming' && styles.activeTab]}
           onPress={() => setSelectedTab('upcoming')}
@@ -544,7 +564,7 @@ const BookingsScreen: React.FC = () => {
             Past
           </Text>
         </TouchableOpacity>
-      </BlurView>
+      </View>
 
       {/* Bookings List */}
       <ScrollView
@@ -591,7 +611,7 @@ const BookingsScreen: React.FC = () => {
           onReviewSubmitted={handleReviewSubmitted}
         />
       )}
-    </LinearGradient>
+    </View>
   );
 };
 
@@ -599,6 +619,7 @@ const styles = StyleSheet.create({
   // Base Layout
   container: {
     flex: 1,
+    backgroundColor: COLORS.background,
     paddingBottom: 100,
   },
   
@@ -607,33 +628,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
+    paddingBottom: 20,
+    backgroundColor: COLORS.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
-    color: 'white',
+    color: COLORS.text,
     letterSpacing: -0.5,
   },
   searchButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 6,
     position: 'relative',
   },
   headerActions: {
@@ -645,45 +662,41 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -6,
     right: -6,
-    backgroundColor: '#FFD700',
+    backgroundColor: COLORS.instagram,
     borderRadius: 10,
     width: 20,
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: COLORS.surface,
   },
   filterBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    color: 'white',
+    color: COLORS.surface,
   },
   
   // Search Section
   searchContainer: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: COLORS.surface,
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 20,
+    backgroundColor: COLORS.background,
+    borderRadius: 25,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
     gap: 12,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: 'white',
-    fontWeight: '500',
+    color: COLORS.text,
+    fontWeight: '400',
   },
   
   // Filter Modal Styles
@@ -846,11 +859,11 @@ const styles = StyleSheet.create({
   // Tab Section
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: 24,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
+    borderBottomColor: COLORS.border,
   },
   tab: {
     flex: 1,
@@ -862,40 +875,38 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   activeTab: {
-    borderBottomColor: '#FFD700',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderBottomColor: COLORS.primary,
+    backgroundColor: COLORS.background,
   },
   tabText: {
     fontSize: 17,
     fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: COLORS.textSecondary,
     letterSpacing: 0.2,
   },
   activeTabText: {
-    color: 'white',
+    color: COLORS.primary,
   },
   
   // Bookings List
   bookingsList: {
     flex: 1,
     padding: 20,
-    backgroundColor: 'transparent',
+    backgroundColor: COLORS.background,
   },
   bookingCard: {
-    borderRadius: 28,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    marginBottom: 20,
+    borderRadius: 16,
+    backgroundColor: COLORS.surface,
+    marginBottom: 16,
     overflow: 'hidden',
-    shadowColor: 'rgba(0, 0, 0, 0.15)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   bookingCardContent: {
-    padding: 20,
+    padding: 16,
   },
   bookingHeader: {
     flexDirection: 'row',
@@ -903,38 +914,30 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   providerImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     marginRight: 16,
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    shadowColor: 'rgba(0, 0, 0, 0.2)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 6,
   },
   bookingInfo: {
     flex: 1,
   },
   providerName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: 'white',
-    marginBottom: 6,
-    letterSpacing: -0.3,
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 4,
   },
   serviceName: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.85)',
-    marginBottom: 12,
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 8,
     fontWeight: '500',
   },
   dateTimeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: COLORS.background,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,

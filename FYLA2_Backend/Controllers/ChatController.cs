@@ -67,7 +67,7 @@ namespace FYLA2_Backend.Controllers
               id = otherUser.Id,
               firstName = otherUser.FirstName,
               lastName = otherUser.LastName,
-              profilePictureUrl = otherUser.ProfileImageUrl
+              profilePictureUrl = otherUser.ProfilePictureUrl
             },
             lastMessage = new
             {

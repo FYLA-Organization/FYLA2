@@ -58,35 +58,13 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
         ClockSkew = TimeSpan.Zero
     };
-    
-    // Configure JWT for SignalR
-    options.Events = new JwtBearerEvents
-    {
-        OnMessageReceived = context =>
-        {
-            var accessToken = context.Request.Query["access_token"];
-            var path = context.HttpContext.Request.Path;
-            
-            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chathub"))
-            {
-                context.Token = accessToken;
-            }
-            return Task.CompletedTask;
-        }
-    };
 });
 
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
 
-// Add SignalR with configuration
-builder.Services.AddSignalR(options =>
-{
-    options.EnableDetailedErrors = true;
-    options.HandshakeTimeout = TimeSpan.FromSeconds(30);
-    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
-});
+// Add SignalR
+builder.Services.AddSignalR();
 
 // Add HttpClient for push notifications
 builder.Services.AddHttpClient();
@@ -97,22 +75,14 @@ builder.Services.AddScoped<DataSeedingService>();
 // Add Push Notification Service
 builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 
-// Add Payment Services
-builder.Services.AddScoped<IPaymentCalculationService, PaymentCalculationService>();
-builder.Services.AddScoped<IEnhancedPaymentService, EnhancedPaymentService>();
-
-// Configure Stripe
-Stripe.StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
-
 // Add CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowMobile", policy =>
     {
-        policy.WithOrigins("http://localhost:19006", "http://localhost:8081", "exp://192.168.1.185:8081", "http://192.168.1.185:8081")
+        policy.AllowAnyOrigin()
               .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials(); // Required for SignalR
+              .AllowAnyHeader();
     });
 });
 

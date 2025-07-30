@@ -15,15 +15,27 @@ import {
   Modal,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useAuth } from '../../context/AuthContext';
 import { AuthStackParamList } from '../../types';
 
 const { width, height } = Dimensions.get('window');
+
+// Instagram-style Color Palette
+const COLORS = {
+  primary: '#3797F0',
+  background: '#FFFFFF',
+  surface: '#FFFFFF',
+  text: '#262626',
+  textSecondary: '#8E8E8E',
+  border: '#DBDBDB',
+  borderLight: '#EFEFEF',
+  error: '#ED4956',
+  success: '#00C851',
+  warning: '#FF6900',
+};
 
 type RegisterScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -147,24 +159,12 @@ const RegisterScreen: React.FC = () => {
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <LinearGradient
-          colors={['#764ba2', '#667eea', '#f093fb']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradient}
-        >
-          {/* Background shapes */}
-          <View style={styles.backgroundShapes}>
-            <View style={[styles.shape, styles.shape1]} />
-            <View style={[styles.shape, styles.shape2]} />
-            <View style={[styles.shape, styles.shape3]} />
-          </View>
-
+        <View style={styles.gradient}>
           <ScrollView 
             contentContainerStyle={styles.scrollContainer}
             showsVerticalScrollIndicator={false}
@@ -177,7 +177,7 @@ const RegisterScreen: React.FC = () => {
             </View>
 
             {/* Form */}
-            <BlurView intensity={20} tint="light" style={styles.formContainer}>
+            <View style={styles.formContainer}>
               <View style={styles.formInner}>
                 {/* Name Row */}
                 <View style={styles.row}>
@@ -392,16 +392,16 @@ const RegisterScreen: React.FC = () => {
                     <Switch
                       value={formData.isServiceProvider}
                       onValueChange={(value) => handleInputChange('isServiceProvider', value)}
-                      trackColor={{ false: 'rgba(255,255,255,0.3)', true: '#667eea' }}
-                      thumbColor={'#ffffff'}
-                      ios_backgroundColor="rgba(255,255,255,0.3)"
+                      trackColor={{ false: COLORS.border, true: COLORS.primary }}
+                      thumbColor={COLORS.background}
+                      ios_backgroundColor={COLORS.border}
                     />
                   </View>
                 </View>
 
                 {formData.isServiceProvider && (
                   <View style={styles.providerInfo}>
-                    <Ionicons name="information-circle" size={20} color="#667eea" />
+                    <Ionicons name="information-circle" size={20} color={COLORS.primary} />
                     <Text style={styles.providerInfoText}>
                       As a service provider, you'll be able to offer services, manage bookings, and grow your business on FYLA2.
                     </Text>
@@ -450,16 +450,11 @@ const RegisterScreen: React.FC = () => {
                   disabled={isLoading}
                   activeOpacity={0.8}
                 >
-                  <LinearGradient
-                    colors={isLoading ? ['#9CA3AF', '#9CA3AF'] : ['#667eea', '#764ba2']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.buttonGradient}
-                  >
+                  <View style={styles.buttonGradient}>
                     <Text style={styles.registerButtonText}>
                       {isLoading ? 'Creating Account...' : 'Create Account'}
                     </Text>
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
 
                 {/* Login Link */}
@@ -470,9 +465,9 @@ const RegisterScreen: React.FC = () => {
                   </TouchableOpacity>
                 </View>
               </View>
-            </BlurView>
+            </View>
           </ScrollView>
-        </LinearGradient>
+        </View>
       </KeyboardAvoidingView>
       
       {/* Date Picker Modal */}
@@ -482,18 +477,15 @@ const RegisterScreen: React.FC = () => {
         animationType="fade"
         onRequestClose={() => setShowDatePicker(false)}
       >
-        <LinearGradient
-          colors={['#667eea', '#764ba2']}
-          style={styles.modalOverlay}
-        >
-          <BlurView intensity={80} style={styles.datePickerContainer}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.datePickerContainer}>
             <View style={styles.datePickerHeader}>
               <Text style={styles.datePickerTitle}>Select Date of Birth</Text>
               <TouchableOpacity
                 onPress={() => setShowDatePicker(false)}
                 style={styles.closeButton}
               >
-                <Ionicons name="close" size={24} color="rgba(255, 255, 255, 0.9)" />
+                <Ionicons name="close" size={24} color={COLORS.text} />
               </TouchableOpacity>
             </View>
             <View style={styles.datePickerWrapper}>
@@ -504,12 +496,12 @@ const RegisterScreen: React.FC = () => {
                 onChange={handleDateChange}
                 maximumDate={new Date()} // Today's date (can't be born in the future)
                 minimumDate={new Date(1900, 0, 1)} // January 1, 1900 (allows for oldest person alive)
-                textColor="#ffffff" // White text for visibility on blur background
+                textColor={COLORS.text} // Text color for Instagram style
                 style={styles.datePicker}
               />
             </View>
-          </BlurView>
-        </LinearGradient>
+          </View>
+        </View>
       </Modal>
     </>
   );
@@ -521,37 +513,7 @@ const styles = StyleSheet.create({
   },
   gradient: {
     flex: 1,
-  },
-  backgroundShapes: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-  },
-  shape: {
-    position: 'absolute',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 50,
-  },
-  shape1: {
-    width: 180,
-    height: 180,
-    top: -40,
-    right: -40,
-    transform: [{ rotate: '30deg' }],
-  },
-  shape2: {
-    width: 120,
-    height: 120,
-    bottom: 80,
-    left: -20,
-    borderRadius: 60,
-  },
-  shape3: {
-    width: 80,
-    height: 80,
-    top: height * 0.25,
-    right: 40,
-    transform: [{ rotate: '45deg' }],
+    backgroundColor: COLORS.background,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -564,65 +526,65 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: 32,
+    fontWeight: '700',
+    color: COLORS.text,
     textAlign: 'center',
-    marginBottom: 6,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    marginBottom: 8,
+    letterSpacing: -1,
   },
   subtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 16,
+    color: COLORS.textSecondary,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
+    fontWeight: '500',
   },
   welcomeText: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    color: COLORS.textSecondary,
     textAlign: 'center',
   },
   formContainer: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    marginBottom: 16,
+    borderRadius: 16,
+    backgroundColor: COLORS.surface,
+    marginBottom: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   formInner: {
-    padding: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    // No additional styling needed
   },
   row: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   halfInputWrapper: {
     flex: 1,
   },
   inputWrapper: {
-    marginBottom: 14,
+    marginBottom: 16,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: COLORS.surface,
     borderRadius: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 2,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   inputContainerFocused: {
-    borderColor: '#667eea',
-    backgroundColor: 'rgba(255, 255, 255, 1)',
-    shadowOpacity: 0.2,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
   },
   inputIcon: {
     marginRight: 12,
@@ -630,7 +592,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#374151',
+    color: COLORS.text,
     paddingVertical: 12,
   },
   dateInputContent: {
@@ -649,10 +611,12 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   switchContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: COLORS.surface,
     borderRadius: 14,
     padding: 16,
     marginBottom: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   switchContent: {
     flexDirection: 'row',
@@ -666,26 +630,26 @@ const styles = StyleSheet.create({
   switchLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'white',
+    color: COLORS.text,
     marginBottom: 4,
   },
   switchDescription: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: COLORS.textSecondary,
   },
   providerInfo: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(102, 126, 234, 0.15)',
+    backgroundColor: COLORS.surface,
     borderRadius: 14,
     padding: 12,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(102, 126, 234, 0.3)',
+    borderColor: COLORS.primary,
   },
   providerInfoText: {
     fontSize: 14,
-    color: 'white',
+    color: COLORS.text,
     marginLeft: 12,
     flex: 1,
     lineHeight: 20,
@@ -693,13 +657,13 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: '#FFEBEE',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: '#FFCDD2',
   },
   errorText: {
     color: '#EF4444',
@@ -725,6 +689,8 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: 6,
   },
   registerButtonText: {
     color: 'white',
@@ -738,11 +704,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   loginText: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: COLORS.textSecondary,
     fontSize: 14,
   },
   loginLink: {
-    color: 'white',
+    color: COLORS.primary,
     fontSize: 14,
     fontWeight: '600',
   },

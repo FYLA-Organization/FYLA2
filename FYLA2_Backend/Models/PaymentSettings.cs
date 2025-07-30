@@ -2,59 +2,46 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FYLA2_Backend.Models
 {
-  public enum PaymentMethod
-  {
-    Stripe = 0,
-    PayPal = 1,
-    ApplePay = 2,
-    GooglePay = 3,
-    Klarna = 4,
-    BankTransfer = 5
-  }
-
-  public enum PaymentStructure
-  {
-    FullPaymentUpfront = 0,      // Default: 100% on booking
-    DepositThenRemainder = 1,    // Partial upfront, rest after completion
-    PaymentAfterService = 2      // Pay after service completion
-  }
-
   public class PaymentSettings
   {
+    [Key]
     public int Id { get; set; }
 
     [Required]
-    public string ProviderId { get; set; } = string.Empty;
+    public string UserId { get; set; } = string.Empty;
 
-    [Required]
-    public PaymentStructure PaymentStructure { get; set; } = PaymentStructure.FullPaymentUpfront;
+    public int? ProviderId { get; set; }
 
-    [Range(0, 100)]
-    public decimal DepositPercentage { get; set; } = 0; // For DepositThenRemainder structure
+    public string? StripeAccountId { get; set; }
 
-    [Range(0, 50)]
-    public decimal TaxRate { get; set; } = 0; // Tax percentage (e.g., 8.5 for 8.5%)
+    public bool IsStripeConnected { get; set; } = false;
 
-    public bool AcceptStripe { get; set; } = true;
-    public bool AcceptPayPal { get; set; } = false;
-    public bool AcceptApplePay { get; set; } = false;
-    public bool AcceptGooglePay { get; set; } = false;
-    public bool AcceptKlarna { get; set; } = false;
-    public bool AcceptBankTransfer { get; set; } = false;
+    public bool AcceptCreditCards { get; set; } = true;
 
-    public bool AutoRefundEnabled { get; set; } = true;
-    public int RefundTimeoutHours { get; set; } = 24; // Hours after which auto-refund is not available
+    public bool AcceptDebitCards { get; set; } = true;
 
-    // Stripe Connect account for receiving payments
-    public string? StripeConnectAccountId { get; set; }
-    
-    // PayPal business account email
-    public string? PayPalBusinessEmail { get; set; }
+    public bool AcceptDigitalWallets { get; set; } = true;
+
+    public decimal ServiceFeePercentage { get; set; } = 0.029m; // 2.9%
+
+    public decimal FixedFeeAmount { get; set; } = 0.30m; // $0.30
+
+    public decimal DepositPercentage { get; set; } = 0.50m; // 50% deposit
+
+    public decimal TaxRate { get; set; } = 0.08m; // 8% tax
+
+    public string Currency { get; set; } = "USD";
+
+    public bool AutoPayoutEnabled { get; set; } = true;
+
+    public string PayoutSchedule { get; set; } = "daily"; // daily, weekly, monthly
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation properties
-    public virtual User Provider { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
+    public virtual Models.ServiceProvider? Provider { get; set; }
   }
 }

@@ -31,54 +31,29 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!token) return;
 
     try {
-      console.log('🔄 Attempting to connect to chat...');
       await chatService.connect(token);
       setIsConnected(true);
-      console.log('✅ Chat connected successfully');
 
       // Set up message handler
       const unsubscribeMessage = chatService.onMessage((message: ChatMessage) => {
-        setMessages(prev => {
-          // Check if this message already exists (avoid duplicates from optimistic updates)
-          const existingMessage = prev.find(msg => 
-            msg.id === message.id || 
-            (msg.senderId === message.senderId && 
-             msg.receiverId === message.receiverId && 
-             msg.content === message.content &&
-             Math.abs(new Date(msg.timestamp).getTime() - new Date(message.timestamp).getTime()) < 5000) // Within 5 seconds
-          );
-          
-          if (existingMessage) {
-            // Replace optimistic message with real one
-            return prev.map(msg => 
-              msg.id === existingMessage.id ? message : msg
-            );
-          } else {
-            // Add new message
-            return [...prev, message];
-          }
-        });
-        
-        // Only update unread count if message is from someone else
-        if (message.senderId !== user?.id) {
-          // Update last message in rooms
-          setRooms(prev => prev.map(room => 
-            room.id === message.senderId 
-              ? {
-                  ...room,
-                  lastMessage: {
-                    id: message.id,
-                    content: message.content,
-                    timestamp: message.timestamp,
-                    senderId: message.senderId
-                  },
-                  unreadCount: room.unreadCount + 1
-                }
-              : room
-          ));
-          // Update unread count
-          setUnreadCount(prev => prev + 1);
-        }
+        setMessages(prev => [...prev, message]);
+        // Update last message in rooms
+        setRooms(prev => prev.map(room => 
+          room.id === message.senderId 
+            ? {
+                ...room,
+                lastMessage: {
+                  id: message.id,
+                  content: message.content,
+                  timestamp: message.timestamp,
+                  senderId: message.senderId
+                },
+                unreadCount: room.unreadCount + 1
+              }
+            : room
+        ));
+        // Update unread count
+        setUnreadCount(prev => prev + 1);
       });
 
       // Set up message status handlers
@@ -111,14 +86,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         unsubscribeMessagesRead();
       };
     } catch (error) {
-      console.error('❌ Failed to connect to chat:', error);
+      console.error('Failed to connect to chat:', error);
       setIsConnected(false);
-      
-      // Add retry logic for connection failures
-      setTimeout(() => {
-        console.log('🔄 Retrying chat connection in 5 seconds...');
-        connectToChat();
-      }, 5000);
     }
   }, []);
 
@@ -136,46 +105,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const sendMessage = useCallback(async (request: SendMessageRequest) => {
     try {
-      // Create optimistic message with temporary ID
-      const tempId = `temp_${Date.now()}_${Math.random()}`;
-      const optimisticMessage: ChatMessage = {
-        id: tempId,
-        senderId: user?.id || '',
-        receiverId: request.receiverId,
-        content: request.content,
-        timestamp: new Date().toISOString(),
-        isRead: false,
-        messageType: request.messageType || 'text',
-        status: 'Sent',
-        attachmentUrl: request.attachmentUrl,
-        attachmentType: request.attachmentType,
-        attachmentSize: request.attachmentSize,
-        attachmentName: request.attachmentName,
-      };
-
-      // Immediately add the message to local state for instant UI feedback
-      setMessages(prev => [...prev, optimisticMessage]);
-
-      try {
-        // Send to server
-        const serverMessage = await chatService.sendMessage(request);
-        
-        // Replace optimistic message with server response
-        setMessages(prev => prev.map(msg => 
-          msg.id === tempId ? { ...serverMessage, status: 'Delivered' } : msg
-        ));
-        
-      } catch (serverError) {
-        // Remove optimistic message on server error
-        setMessages(prev => prev.filter(msg => msg.id !== tempId));
-        throw serverError;
-      }
-      
+      const message = await chatService.sendMessage(request);
+      // Message will be added via SignalR callback for real-time update
     } catch (error) {
       console.error('Failed to send message:', error);
       throw error;
     }
-  }, [user?.id]);
+  }, []);
 
   const loadChatRooms = useCallback(async () => {
     try {

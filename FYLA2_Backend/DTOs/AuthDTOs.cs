@@ -47,7 +47,7 @@ namespace FYLA2_Backend.DTOs
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string? Bio { get; set; }
-    public string? ProfileImageUrl { get; set; }
+    public string? ProfilePictureUrl { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public bool IsServiceProvider { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -58,7 +58,7 @@ namespace FYLA2_Backend.DTOs
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
     public string? Bio { get; set; }
-    public string? ProfileImageUrl { get; set; }
+    public string? ProfilePictureUrl { get; set; }
     public DateTime? DateOfBirth { get; set; }
   }
 }

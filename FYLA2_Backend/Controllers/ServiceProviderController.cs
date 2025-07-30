@@ -91,7 +91,7 @@ namespace FYLA2_Backend.Controllers
         id = u.Id,
         businessName = $"{u.FirstName} {u.LastName}",
         businessDescription = u.Bio ?? "Professional Services",
-        profilePictureUrl = u.ProfileImageUrl,
+        profilePictureUrl = u.ProfilePictureUrl,
         averageRating = u.ReviewsReceived.Any() ? u.ReviewsReceived.Average(r => r.Rating) : 0.0,
         totalReviews = u.ReviewsReceived.Count,
         priceRange = "$$", // TODO: Calculate based on services
@@ -190,7 +190,7 @@ namespace FYLA2_Backend.Controllers
           averageRating = u.ReviewsReceived.Any() ? Math.Round(u.ReviewsReceived.Average(r => r.Rating), 1) : 0.0,
           totalReviews = u.ReviewsReceived.Count(),
           isVerified = false, // TODO: Add verification system
-          profilePictureUrl = u.ProfileImageUrl,
+          profilePictureUrl = u.ProfilePictureUrl,
           specialties = activeServices.Select(s => s.Category).Distinct().ToList(),
           priceRange = priceRange,
           serviceCount = activeServices.Count,
@@ -200,7 +200,7 @@ namespace FYLA2_Backend.Controllers
             firstName = u.FirstName,
             lastName = u.LastName,
             email = u.Email,
-            profileImageUrl = u.ProfileImageUrl,
+            profileImageUrl = u.ProfilePictureUrl,
             bio = u.Bio,
             isServiceProvider = u.IsServiceProvider
           }
@@ -254,7 +254,7 @@ namespace FYLA2_Backend.Controllers
         averageRating = rawProvider.ReviewsReceived.Any() ? Math.Round(rawProvider.ReviewsReceived.Average(r => r.Rating), 1) : 0.0,
         totalReviews = rawProvider.ReviewsReceived.Count(),
         isVerified = false, // TODO: Add verification system
-        profilePictureUrl = rawProvider.ProfileImageUrl,
+        profilePictureUrl = rawProvider.ProfilePictureUrl,
         specialties = activeServices.Select(s => s.Category).Distinct().ToList(),
         priceRange = priceRange,
         user = new
@@ -263,7 +263,7 @@ namespace FYLA2_Backend.Controllers
           firstName = rawProvider.FirstName,
           lastName = rawProvider.LastName,
           email = rawProvider.Email,
-          profileImageUrl = rawProvider.ProfileImageUrl,
+          profileImageUrl = rawProvider.ProfilePictureUrl,
           bio = rawProvider.Bio,
           dateOfBirth = rawProvider.DateOfBirth?.ToString("yyyy-MM-dd"),
           isServiceProvider = rawProvider.IsServiceProvider,
@@ -289,7 +289,7 @@ namespace FYLA2_Backend.Controllers
           {
             firstName = r.Reviewer.FirstName,
             lastName = r.Reviewer.LastName,
-            profilePictureUrl = r.Reviewer.ProfileImageUrl
+            profilePictureUrl = r.Reviewer.ProfilePictureUrl
           }
         }).ToList()
       };
@@ -323,14 +323,14 @@ namespace FYLA2_Backend.Controllers
         averageRating = reviews.Any() ? Math.Round(reviews.Average(r => r.Rating), 1) : 0.0,
         totalReviews = reviews.Count,
         isVerified = false, // TODO: Add verification system
-        profilePictureUrl = user.ProfileImageUrl,
+        profilePictureUrl = user.ProfilePictureUrl,
         user = new
         {
           id = user.Id,
           firstName = user.FirstName,
           lastName = user.LastName,
           email = user.Email,
-          profileImageUrl = user.ProfileImageUrl,
+          profileImageUrl = user.ProfilePictureUrl,
           bio = user.Bio,
           dateOfBirth = user.DateOfBirth?.ToString("yyyy-MM-dd"),
           isServiceProvider = user.IsServiceProvider,
@@ -378,8 +378,8 @@ namespace FYLA2_Backend.Controllers
       if (!string.IsNullOrWhiteSpace(request.Bio))
         user.Bio = request.Bio.Trim();
 
-      if (!string.IsNullOrWhiteSpace(request.ProfileImageUrl))
-        user.ProfileImageUrl = request.ProfileImageUrl.Trim();
+      if (!string.IsNullOrWhiteSpace(request.ProfilePictureUrl))
+        user.ProfilePictureUrl = request.ProfilePictureUrl.Trim();
 
       if (request.DateOfBirth.HasValue)
         user.DateOfBirth = request.DateOfBirth.Value;
@@ -391,14 +391,14 @@ namespace FYLA2_Backend.Controllers
         id = user.Id,
         businessName = $"{user.FirstName} {user.LastName}",
         businessDescription = user.Bio,
-        profilePictureUrl = user.ProfileImageUrl,
+        profilePictureUrl = user.ProfilePictureUrl,
         user = new
         {
           id = user.Id,
           firstName = user.FirstName,
           lastName = user.LastName,
           email = user.Email,
-          profileImageUrl = user.ProfileImageUrl,
+          profileImageUrl = user.ProfilePictureUrl,
           bio = user.Bio,
           dateOfBirth = user.DateOfBirth?.ToString("yyyy-MM-dd"),
           isServiceProvider = user.IsServiceProvider
@@ -471,7 +471,7 @@ namespace FYLA2_Backend.Controllers
             {
               firstName = r.Reviewer.FirstName,
               lastName = r.Reviewer.LastName,
-              profilePictureUrl = r.Reviewer.ProfileImageUrl
+              profilePictureUrl = r.Reviewer.ProfilePictureUrl
             }
           })
           .ToListAsync();
@@ -528,7 +528,7 @@ namespace FYLA2_Backend.Controllers
           businessName = $"{u.FirstName} {u.LastName}",
           averageRating = u.ReviewsReceived.Any() ? Math.Round(u.ReviewsReceived.Average(r => r.Rating), 1) : 0.0,
           totalReviews = u.ReviewsReceived.Count(),
-          profilePictureUrl = u.ProfileImageUrl,
+          profilePictureUrl = u.ProfilePictureUrl,
           specialties = activeServices.Select(s => s.Category).Distinct().Take(3).ToList(),
           priceRange = priceRange
         };
@@ -544,7 +544,7 @@ namespace FYLA2_Backend.Controllers
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
     public string? Bio { get; set; }
-    public string? ProfileImageUrl { get; set; }
+    public string? ProfilePictureUrl { get; set; }
     public DateTime? DateOfBirth { get; set; }
   }
 }

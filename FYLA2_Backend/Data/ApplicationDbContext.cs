@@ -14,8 +14,11 @@ namespace FYLA2_Backend.Data
         public DbSet<Message> Messages { get; set; }
         public DbSet<Post> Posts { get; set; }
         public DbSet<PostLike> PostLikes { get; set; }
+        public DbSet<PostBookmark> PostBookmarks { get; set; }
         public DbSet<Comment> Comments { get; set; }
+        public DbSet<CommentLike> CommentLikes { get; set; }
         public DbSet<UserFollow> UserFollows { get; set; }
+        public DbSet<Models.ServiceProvider> ServiceProviders { get; set; }
         public DbSet<PushToken> PushTokens { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
         public DbSet<PaymentRecord> PaymentRecords { get; set; }
@@ -93,7 +96,7 @@ namespace FYLA2_Backend.Data
 
             // Prevent self-follow
             modelBuilder.Entity<UserFollow>()
-                .HasCheckConstraint("CK_UserFollow_NoSelfFollow", "FollowerId != FollowingId");
+                .ToTable(t => t.HasCheckConstraint("CK_UserFollow_NoSelfFollow", "FollowerId != FollowingId"));
 
             // PostLike unique constraint
             modelBuilder.Entity<PostLike>()
@@ -138,7 +141,7 @@ namespace FYLA2_Backend.Data
             modelBuilder.Entity<PaymentTransaction>()
                 .HasOne(pt => pt.Client)
                 .WithMany()
-                .HasForeignKey(pt => pt.UserId)
+                .HasForeignKey(pt => pt.ClientId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<PaymentTransaction>()
@@ -177,6 +180,23 @@ namespace FYLA2_Backend.Data
             modelBuilder.Entity<PaymentSettings>()
                 .Property(ps => ps.TaxRate)
                 .HasPrecision(5, 2);
+
+            // PostBookmark unique constraint
+            modelBuilder.Entity<PostBookmark>()
+                .HasIndex(pb => new { pb.PostId, pb.UserId })
+                .IsUnique();
+
+            // CommentLike unique constraint
+            modelBuilder.Entity<CommentLike>()
+                .HasIndex(cl => new { cl.CommentId, cl.UserId })
+                .IsUnique();
+
+            // ServiceProvider relationships
+            modelBuilder.Entity<Models.ServiceProvider>()
+                .HasOne(sp => sp.User)
+                .WithOne(u => u.ServiceProvider)
+                .HasForeignKey<Models.ServiceProvider>(sp => sp.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
