@@ -249,13 +249,13 @@ class ApiService {
     }
   }
 
-  async getServiceProvider(id: string): Promise<ServiceProvider> {
+  async getServiceProvider(id: string): Promise<ServiceProvider | null> {
     try {
       const response = await this.api.get(`/serviceprovider/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching service provider:', error);
-      throw error;
+      return null;
     }
   }
 
@@ -297,6 +297,45 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('Error fetching provider services:', error);
+      throw error;
+    }
+  }
+
+  async getProviderServices(providerId: string): Promise<Service[]> {
+    try {
+      const response = await this.api.get(`/services/provider/${providerId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching provider services:', error);
+      throw error;
+    }
+  }
+
+  async createService(serviceData: any): Promise<Service> {
+    try {
+      const response = await this.api.post('/services', serviceData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating service:', error);
+      throw error;
+    }
+  }
+
+  async updateService(id: number, serviceData: any): Promise<Service> {
+    try {
+      const response = await this.api.put(`/services/${id}`, serviceData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating service:', error);
+      throw error;
+    }
+  }
+
+  async deleteService(id: number): Promise<void> {
+    try {
+      await this.api.delete(`/services/${id}`);
+    } catch (error) {
+      console.error('Error deleting service:', error);
       throw error;
     }
   }
@@ -500,6 +539,17 @@ class ApiService {
     }
   }
 
+  async getUserPosts(userId: string, page: number = 1, pageSize: number = 20): Promise<PaginatedResponse<Post>> {
+    try {
+      const params = { page, pageSize };
+      const response = await this.api.get(`/posts/user/${userId}`, { params });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user posts:', error);
+      throw error;
+    }
+  }
+
   async createPost(content: string, imageUrl?: string): Promise<Post> {
     try {
       const response = await this.api.post('/posts', {
@@ -509,6 +559,95 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('Error creating post:', error);
+      throw error;
+    }
+  }
+
+  // Enhanced Social Media Methods
+  async getSocialFeed(page: number = 1, pageSize: number = 20, filter: 'all' | 'following' | 'nearby' = 'all'): Promise<{ posts: any[], hasMore: boolean }> {
+    try {
+      const response = await this.api.get(`/Social/feed?page=${page}&pageSize=${pageSize}&filter=${filter}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching social feed:', error);
+      // Return empty array structure to prevent .map errors
+      return { posts: [], hasMore: false };
+    }
+  }
+
+  async createSocialPost(postData: {
+    content: string;
+    images?: string[];
+    location?: string;
+    tags?: string[];
+    isBusinessPost?: boolean;
+    serviceCategory?: string;
+    priceRange?: string;
+    allowBooking?: boolean;
+  }): Promise<any> {
+    try {
+      const response = await this.api.post('/Social/posts', postData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating social post:', error);
+      throw error;
+    }
+  }
+
+  async sharePost(postId: string, content?: string): Promise<void> {
+    try {
+      await this.api.post(`/social/posts/${postId}/share`, { content });
+    } catch (error) {
+      console.error('Error sharing post:', error);
+      throw error;
+    }
+  }
+
+  async uploadMultipleImages(images: Array<{
+    uri: string;
+    name: string;
+    type: string;
+  }>): Promise<string[]> {
+    try {
+      const uploadPromises = images.map(async (image) => {
+        const formData = new FormData();
+        formData.append('file', {
+          uri: image.uri,
+          name: image.name,
+          type: image.type,
+        } as any);
+
+        const response = await this.api.post('/fileupload/image', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        return response.data.url || response.data.fileName;
+      });
+
+      return await Promise.all(uploadPromises);
+    } catch (error) {
+      console.error('Error uploading multiple images:', error);
+      throw error;
+    }
+  }
+
+  async updateProfilePicture(imageUri: string): Promise<string> {
+    try {
+      const fileName = `profile_${Date.now()}.jpg`;
+      const uploadResult = await this.uploadImage(imageUri, fileName);
+      
+      // Update the user profile with new picture URL
+      const currentUser = await this.getCurrentUser();
+      if (currentUser) {
+        await this.updateProfile({
+          profilePictureUrl: uploadResult.url || uploadResult.fileName
+        });
+      }
+      
+      return uploadResult.url || uploadResult.fileName;
+    } catch (error) {
+      console.error('Error updating profile picture:', error);
       throw error;
     }
   }
@@ -539,16 +678,6 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('Error adding comment:', error);
-      throw error;
-    }
-  }
-
-  async getPostComments(postId: string): Promise<any[]> {
-    try {
-      const response = await this.api.get(`/social/posts/${postId}/comments`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching comments:', error);
       throw error;
     }
   }
@@ -665,26 +794,6 @@ class ApiService {
     }
   }
 
-  async getRevenueAnalytics(period: 'week' | 'month' | 'year'): Promise<RevenueAnalytics> {
-    try {
-      const response = await this.api.get(`/analytics/revenue?period=${period}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching revenue analytics:', error);
-      throw error;
-    }
-  }
-
-  async getClientAnalytics(period: 'week' | 'month' | 'year'): Promise<ClientAnalytics> {
-    try {
-      const response = await this.api.get(`/analytics/clients?period=${period}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching client analytics:', error);
-      throw error;
-    }
-  }
-
   // Enhanced Payment Methods
   async calculatePayment(serviceId: number, providerId: string): Promise<PaymentCalculation> {
     try {
@@ -755,6 +864,785 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('Error updating payment settings:', error);
+      throw error;
+    }
+  }
+
+  // ===== ENHANCED PROVIDER BUSINESS MANAGEMENT =====
+  
+  // Client Management
+  async getProviderClients(page: number = 1, limit: number = 20): Promise<PaginatedResponse<any>> {
+    try {
+      const response = await this.api.get(`/serviceprovider/clients?page=${page}&limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching provider clients:', error);
+      throw error;
+    }
+  }
+
+  async updateClientNotes(clientId: string, notes: string): Promise<void> {
+    try {
+      await this.api.put(`/serviceprovider/clients/${clientId}/notes`, { notes });
+    } catch (error) {
+      console.error('Error updating client notes:', error);
+      throw error;
+    }
+  }
+
+  async sendClientMessage(clientIds: string[], message: string): Promise<void> {
+    try {
+      await this.api.post('/serviceprovider/clients/message', {
+        clientIds,
+        message
+      });
+    } catch (error) {
+      console.error('Error sending client message:', error);
+      throw error;
+    }
+  }
+
+  // Coupons Management
+  async getCoupons(): Promise<any[]> {
+    try {
+      const response = await this.api.get('/serviceprovider/coupons');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching coupons:', error);
+      throw error;
+    }
+  }
+
+  async createCoupon(couponData: any): Promise<any> {
+    try {
+      const response = await this.api.post('/serviceprovider/coupons', couponData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating coupon:', error);
+      throw error;
+    }
+  }
+
+  async updateCoupon(couponId: string, couponData: any): Promise<any> {
+    try {
+      const response = await this.api.put(`/serviceprovider/coupons/${couponId}`, couponData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating coupon:', error);
+      throw error;
+    }
+  }
+
+  async toggleCoupon(couponId: string, isActive: boolean): Promise<void> {
+    try {
+      await this.api.patch(`/serviceprovider/coupons/${couponId}/toggle`, { isActive });
+    } catch (error) {
+      console.error('Error toggling coupon:', error);
+      throw error;
+    }
+  }
+
+  async deleteCoupon(couponId: string): Promise<void> {
+    try {
+      await this.api.delete(`/serviceprovider/coupons/${couponId}`);
+    } catch (error) {
+      console.error('Error deleting coupon:', error);
+      throw error;
+    }
+  }
+
+  // Loyalty Programs
+  async getLoyaltyPrograms(): Promise<any[]> {
+    try {
+      const response = await this.api.get('/serviceprovider/loyalty');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching loyalty programs:', error);
+      throw error;
+    }
+  }
+
+  async createLoyaltyProgram(programData: any): Promise<any> {
+    try {
+      const response = await this.api.post('/serviceprovider/loyalty', programData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating loyalty program:', error);
+      throw error;
+    }
+  }
+
+  async updateLoyaltyProgram(programId: string, programData: any): Promise<any> {
+    try {
+      const response = await this.api.put(`/serviceprovider/loyalty/${programId}`, programData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating loyalty program:', error);
+      throw error;
+    }
+  }
+
+  async toggleLoyaltyProgram(programId: string, isActive: boolean): Promise<void> {
+    try {
+      await this.api.patch(`/serviceprovider/loyalty/${programId}/toggle`, { isActive });
+    } catch (error) {
+      console.error('Error toggling loyalty program:', error);
+      throw error;
+    }
+  }
+
+  // Auto Messages
+  async getAutoMessages(): Promise<any[]> {
+    try {
+      const response = await this.api.get('/serviceprovider/auto-messages');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching auto messages:', error);
+      throw error;
+    }
+  }
+
+  async createAutoMessage(messageData: any): Promise<any> {
+    try {
+      const response = await this.api.post('/serviceprovider/auto-messages', messageData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating auto message:', error);
+      throw error;
+    }
+  }
+
+  async updateAutoMessage(messageId: string, messageData: any): Promise<any> {
+    try {
+      const response = await this.api.put(`/serviceprovider/auto-messages/${messageId}`, messageData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating auto message:', error);
+      throw error;
+    }
+  }
+
+  async toggleAutoMessage(messageId: string, isActive: boolean): Promise<void> {
+    try {
+      await this.api.patch(`/serviceprovider/auto-messages/${messageId}/toggle`, { isActive });
+    } catch (error) {
+      console.error('Error toggling auto message:', error);
+      throw error;
+    }
+  }
+
+  // Schedule Management
+  async getProviderSchedule(weekOffset: number = 0): Promise<any> {
+    try {
+      const response = await this.api.get(`/providerschedule/weekly?weekOffset=${weekOffset}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching provider schedule:', error);
+      throw error;
+    }
+  }
+
+  async updateDaySchedule(dayData: any): Promise<void> {
+    try {
+      await this.api.put('/providerschedule/day', dayData);
+    } catch (error) {
+      console.error('Error updating day schedule:', error);
+      throw error;
+    }
+  }
+
+  async blockTimeSlot(slotData: any): Promise<void> {
+    try {
+      await this.api.post('/providerschedule/block-time', slotData);
+    } catch (error) {
+      console.error('Error blocking time slot:', error);
+      throw error;
+    }
+  }
+
+  async unblockTimeSlot(slotId: string): Promise<void> {
+    try {
+      await this.api.delete(`/providerschedule/block-time/${slotId}`);
+    } catch (error) {
+      console.error('Error unblocking time slot:', error);
+      throw error;
+    }
+  }
+
+  async checkScheduleConflicts(appointmentData: any): Promise<any> {
+    try {
+      const response = await this.api.post('/providerschedule/check-conflicts', appointmentData);
+      return response.data;
+    } catch (error) {
+      console.error('Error checking schedule conflicts:', error);
+      throw error;
+    }
+  }
+
+  // Business Location
+  async updateBusinessLocation(locationData: any): Promise<void> {
+    try {
+      await this.api.put('/serviceprovider/business-location', locationData);
+    } catch (error) {
+      console.error('Error updating business location:', error);
+      throw error;
+    }
+  }
+
+  async getBusinessLocation(): Promise<any> {
+    try {
+      const response = await this.api.get('/serviceprovider/business-location');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching business location:', error);
+      throw error;
+    }
+  }
+
+  // Enhanced Analytics
+  async getRevenueAnalytics(timeframe: 'week' | 'month' | 'quarter' | 'year'): Promise<RevenueAnalytics> {
+    try {
+      const response = await this.api.get(`/analytics/revenue?timeframe=${timeframe}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching revenue analytics:', error);
+      throw error;
+    }
+  }
+
+  async getClientAnalytics(): Promise<ClientAnalytics> {
+    try {
+      const response = await this.api.get('/analytics/clients');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching client analytics:', error);
+      throw error;
+    }
+  }
+
+  async getServicePerformance(): Promise<any[]> {
+    try {
+      const response = await this.api.get('/analytics/service-performance');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching service performance:', error);
+      throw error;
+    }
+  }
+
+  async getBookingTrends(timeframe: string): Promise<any> {
+    try {
+      const response = await this.api.get(`/analytics/booking-trends?timeframe=${timeframe}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching booking trends:', error);
+      throw error;
+    }
+  }
+
+  // Appointment Management (Enhanced)
+  async getProviderAppointments(
+    page: number = 1, 
+    limit: number = 20, 
+    status?: string, 
+    date?: string
+  ): Promise<PaginatedResponse<Booking>> {
+    try {
+      let url = `/booking/provider/appointments?page=${page}&limit=${limit}`;
+      if (status) url += `&status=${status}`;
+      if (date) url += `&date=${date}`;
+      
+      const response = await this.api.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching provider appointments:', error);
+      throw error;
+    }
+  }
+
+  async acceptAppointment(appointmentId: string): Promise<void> {
+    try {
+      await this.api.patch(`/booking/${appointmentId}/accept`);
+    } catch (error) {
+      console.error('Error accepting appointment:', error);
+      throw error;
+    }
+  }
+
+  async declineAppointment(appointmentId: string, reason?: string): Promise<void> {
+    try {
+      await this.api.patch(`/booking/${appointmentId}/decline`, { reason });
+    } catch (error) {
+      console.error('Error declining appointment:', error);
+      throw error;
+    }
+  }
+
+  async completeAppointment(appointmentId: string): Promise<void> {
+    try {
+      await this.api.patch(`/booking/${appointmentId}/complete`);
+    } catch (error) {
+      console.error('Error completing appointment:', error);
+      throw error;
+    }
+  }
+
+  async rescheduleAppointment(appointmentId: string, newDateTime: string): Promise<void> {
+    try {
+      await this.api.patch(`/booking/${appointmentId}/reschedule`, { 
+        newDateTime 
+      });
+    } catch (error) {
+      console.error('Error rescheduling appointment:', error);
+      throw error;
+    }
+  }
+
+  // Client Communication
+  async getClientHistory(clientId: string): Promise<any> {
+    try {
+      const response = await this.api.get(`/serviceprovider/clients/${clientId}/history`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching client history:', error);
+      throw error;
+    }
+  }
+
+  async sendPromoMessage(clientIds: string[], promoData: any): Promise<void> {
+    try {
+      await this.api.post('/serviceprovider/send-promo', {
+        clientIds,
+        ...promoData
+      });
+    } catch (error) {
+      console.error('Error sending promo message:', error);
+      throw error;
+    }
+  }
+
+  // Loyalty Points Management
+  async awardLoyaltyPoints(clientId: string, points: number, reason: string): Promise<void> {
+    try {
+      await this.api.post(`/serviceprovider/loyalty/award`, {
+        clientId,
+        points,
+        reason
+      });
+    } catch (error) {
+      console.error('Error awarding loyalty points:', error);
+      throw error;
+    }
+  }
+
+  async redeemLoyaltyPoints(clientId: string, points: number): Promise<void> {
+    try {
+      await this.api.post(`/serviceprovider/loyalty/redeem`, {
+        clientId,
+        points
+      });
+    } catch (error) {
+      console.error('Error redeeming loyalty points:', error);
+      throw error;
+    }
+  }
+
+  // ===== REAL DATA INTEGRATION METHODS =====
+
+  // Provider Analytics with Real Data
+  async getProviderAnalytics(providerId: string, period: 'week' | 'month' | 'year'): Promise<{
+    revenue: RevenueAnalytics;
+    clients: ClientAnalytics;
+    socialMetrics: {
+      totalPosts: number;
+      totalLikes: number;
+      totalComments: number;
+      totalFollowers: number;
+      engagementRate: number;
+    };
+  }> {
+    try {
+      const response = await this.api.get(`/analytics/provider/${providerId}`, {
+        params: { period }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching provider analytics:', error);
+      throw error;
+    }
+  }
+
+  // Client-Provider Interaction Methods
+  async getProviderPromosForClient(providerId: string): Promise<{
+    id: string;
+    title: string;
+    description: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    minPurchase?: number;
+    validFrom: string;
+    validUntil: string;
+    isActive: boolean;
+    usageCount: number;
+    maxUsage?: number;
+  }[]> {
+    try {
+      const response = await this.api.get(`/providers/${providerId}/promos/active`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching provider promos:', error);
+      return [];
+    }
+  }
+
+  async getClientLoyaltyStatus(providerId: string, clientId: string): Promise<{
+    totalPoints: number;
+    currentTierLevel: string;
+    nextTierPoints: number;
+    availableRewards: {
+      id: string;
+      title: string;
+      description: string;
+      pointsCost: number;
+      type: 'discount' | 'service' | 'product';
+      value: number;
+    }[];
+    recentTransactions: {
+      id: string;
+      type: 'earned' | 'redeemed';
+      points: number;
+      description: string;
+      date: string;
+    }[];
+  }> {
+    try {
+      const response = await this.api.get(`/loyalty/${providerId}/client/${clientId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching client loyalty status:', error);
+      throw error;
+    }
+  }
+
+  async getProviderScheduleForClient(providerId: string, date?: string): Promise<{
+    availableSlots: {
+      date: string;
+      timeSlots: {
+        time: string;
+        available: boolean;
+        serviceId?: string;
+        duration: number;
+      }[];
+    }[];
+    blockedDates: string[];
+    specialHours: {
+      date: string;
+      openTime: string;
+      closeTime: string;
+      note?: string;
+    }[];
+  }> {
+    try {
+      const response = await this.api.get(`/providers/${providerId}/schedule`, {
+        params: { date, forClient: true }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching provider schedule:', error);
+      throw error;
+    }
+  }
+
+  // Real Social Metrics
+  async getPostMetrics(postId: string): Promise<{
+    likesCount: number;
+    commentsCount: number;
+    sharesCount: number;
+    bookmarksCount: number;
+    viewsCount: number;
+    isLikedByCurrentUser: boolean;
+    isBookmarkedByCurrentUser: boolean;
+  }> {
+    try {
+      const response = await this.api.get(`/social/posts/${postId}/metrics`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching post metrics:', error);
+      return {
+        likesCount: 0,
+        commentsCount: 0,
+        sharesCount: 0,
+        bookmarksCount: 0,
+        viewsCount: 0,
+        isLikedByCurrentUser: false,
+        isBookmarkedByCurrentUser: false,
+      };
+    }
+  }
+
+  async togglePostLike(postId: string): Promise<{ isLiked: boolean; newCount: number }> {
+    try {
+      const response = await this.api.post(`/social/posts/${postId}/like`);
+      return response.data;
+    } catch (error) {
+      console.error('Error toggling post like:', error);
+      throw error;
+    }
+  }
+
+  async togglePostBookmark(postId: string): Promise<{ isBookmarked: boolean; newCount: number }> {
+    try {
+      const response = await this.api.post(`/social/posts/${postId}/bookmark`);
+      return response.data;
+    } catch (error) {
+      console.error('Error toggling post bookmark:', error);
+      throw error;
+    }
+  }
+
+  async getUserSocialStats(userId: string): Promise<{
+    postsCount: number;
+    followersCount: number;
+    followingCount: number;
+    totalLikes: number;
+    totalComments: number;
+    engagementRate: number;
+  }> {
+    try {
+      const response = await this.api.get(`/social/users/${userId}/stats`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user social stats:', error);
+      return {
+        postsCount: 0,
+        followersCount: 0,
+        followingCount: 0,
+        totalLikes: 0,
+        totalComments: 0,
+        engagementRate: 0,
+      };
+    }
+  }
+
+  async followUser(userId: string): Promise<{ isFollowing: boolean; newFollowerCount: number }> {
+    try {
+      const response = await this.api.post(`/social/users/${userId}/follow`);
+      return response.data;
+    } catch (error) {
+      console.error('Error following user:', error);
+      throw error;
+    }
+  }
+
+  async unfollowUser(userId: string): Promise<{ isFollowing: boolean; newFollowerCount: number }> {
+    try {
+      const response = await this.api.delete(`/social/users/${userId}/follow`);
+      return response.data;
+    } catch (error) {
+      console.error('Error unfollowing user:', error);
+      throw error;
+    }
+  }
+
+  // Real-time Comment System
+  async getPostComments(postId: string, page: number = 1, limit: number = 20): Promise<{
+    comments: {
+      id: string;
+      postId: string;
+      userId: string;
+      content: string;
+      createdAt: string;
+      user: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        profilePictureUrl?: string;
+      };
+      likesCount: number;
+      isLikedByCurrentUser: boolean;
+      replies?: any[];
+    }[];
+    hasMore: boolean;
+    totalCount: number;
+  }> {
+    try {
+      const response = await this.api.get(`/social/posts/${postId}/comments`, {
+        params: { page, limit }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching post comments:', error);
+      return { comments: [], hasMore: false, totalCount: 0 };
+    }
+  }
+
+  async addComment(postId: string, content: string): Promise<any> {
+    try {
+      const response = await this.api.post(`/social/posts/${postId}/comments`, {
+        content
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      throw error;
+    }
+  }
+
+  async likeComment(commentId: string): Promise<{ isLiked: boolean; newCount: number }> {
+    try {
+      const response = await this.api.post(`/social/comments/${commentId}/like`);
+      return response.data;
+    } catch (error) {
+      console.error('Error liking comment:', error);
+      throw error;
+    }
+  }
+
+  // Enhanced Client Profile Data
+  async getClientProfileData(clientId: string): Promise<{
+    user: User;
+    socialStats: {
+      postsCount: number;
+      followersCount: number;
+      followingCount: number;
+    };
+    loyaltyPrograms: {
+      providerId: string;
+      providerName: string;
+      totalPoints: number;
+      tierLevel: string;
+      availableRewards: number;
+    }[];
+    availablePromos: {
+      providerId: string;
+      providerName: string;
+      promos: {
+        id: string;
+        title: string;
+        description: string;
+        discountValue: number;
+        validUntil: string;
+      }[];
+    }[];
+    recentBookings: Booking[];
+    favoriteProviders: ServiceProvider[];
+  }> {
+    try {
+      const response = await this.api.get(`/clients/${clientId}/profile`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching client profile data:', error);
+      throw error;
+    }
+  }
+
+  // Provider Profile Enhancement
+  async getProviderProfileData(providerId: string): Promise<{
+    provider: ServiceProvider;
+    socialStats: {
+      postsCount: number;
+      followersCount: number;
+      followingCount: number;
+      totalLikes: number;
+      engagementRate: number;
+    };
+    services: Service[];
+    recentPosts: Post[];
+    reviews: Review[];
+    averageRating: number;
+    activePromos: {
+      id: string;
+      title: string;
+      description: string;
+      discountValue: number;
+      validUntil: string;
+    }[];
+    schedule: {
+      nextAvailableSlot: string;
+      weeklyAvailability: {
+        [key: string]: {
+          openTime: string;
+          closeTime: string;
+          available: boolean;
+        };
+      };
+    };
+  }> {
+    try {
+      const response = await this.api.get(`/providers/${providerId}/profile`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching provider profile data:', error);
+      throw error;
+    }
+  }
+
+  // Real-time Notifications
+  async getNotifications(page: number = 1): Promise<{
+    notifications: {
+      id: string;
+      type: 'like' | 'comment' | 'follow' | 'booking' | 'promo' | 'loyalty';
+      title: string;
+      message: string;
+      isRead: boolean;
+      createdAt: string;
+      actionUrl?: string;
+      relatedUser?: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        profilePictureUrl?: string;
+      };
+    }[];
+    unreadCount: number;
+    hasMore: boolean;
+  }> {
+    try {
+      const response = await this.api.get('/notifications', {
+        params: { page }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      return { notifications: [], unreadCount: 0, hasMore: false };
+    }
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<void> {
+    try {
+      await this.api.patch(`/notifications/${notificationId}/read`);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      throw error;
+    }
+  }
+
+  async markAllNotificationsAsRead(): Promise<void> {
+    try {
+      await this.api.patch('/notifications/read-all');
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      throw error;
+    }
+  }
+
+  // Database management
+  async reseedDatabase(): Promise<any> {
+    try {
+      const response = await this.api.post('/database/reseed');
+      return response.data;
+    } catch (error) {
+      console.error('Error reseeding database:', error);
+      throw error;
+    }
+  }
+
+  async getDatabaseStats(): Promise<any> {
+    try {
+      const response = await this.api.get('/database/stats');
+      return response.data;
+    } catch (error) {
+      console.error('Error getting database stats:', error);
       throw error;
     }
   }

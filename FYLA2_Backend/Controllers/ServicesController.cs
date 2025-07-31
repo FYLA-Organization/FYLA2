@@ -410,6 +410,40 @@ namespace FYLA2_Backend.Controllers
         message = service.IsActive ? "Service activated" : "Service deactivated"
       });
     }
+
+    // GET: api/services/provider/{providerId}
+    [HttpGet("provider/{providerId}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<IEnumerable<object>>> GetServicesByProvider(string providerId)
+    {
+      var services = await _context.Services
+          .Include(s => s.Provider)
+          .Where(s => s.ProviderId == providerId && s.IsActive)
+          .Select(s => new
+          {
+            id = s.Id.ToString(),
+            serviceProviderId = s.ProviderId,
+            name = s.Name,
+            description = s.Description,
+            price = s.Price,
+            duration = s.DurationMinutes,
+            category = s.Category,
+            imageUrl = s.ImageUrl,
+            isActive = s.IsActive,
+            createdAt = s.CreatedAt,
+            updatedAt = s.UpdatedAt,
+            serviceProvider = new
+            {
+              id = s.Provider.Id,
+              businessName = $"{s.Provider.FirstName} {s.Provider.LastName}",
+              businessDescription = s.Provider.Bio,
+              profilePictureUrl = s.Provider.ProfilePictureUrl
+            }
+          })
+          .ToListAsync();
+
+      return Ok(services);
+    }
   }
 
   // DTOs for requests

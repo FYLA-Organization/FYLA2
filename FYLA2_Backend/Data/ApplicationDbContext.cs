@@ -26,6 +26,7 @@ namespace FYLA2_Backend.Data
         public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
         public DbSet<ProviderSchedule> ProviderSchedules { get; set; }
         public DbSet<ProviderBlockedTime> ProviderBlockedTimes { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -17,29 +17,29 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Booking, BookingStatus, RootStackParamList } from '../../types';
+import { Booking, BookingStatus, RootStackParamList } from '../../types/index';
 import ApiService from '../../services/api';
 import ReviewModal from '../../components/ReviewModal';
 
 type BookingsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
-// Instagram-style Color Palette
+// Instagram-style Color Palette - Enhanced for better visibility
 const COLORS = {
-  background: '#FAFAFA',
+  background: '#F0F0F0', // Slightly darker from #FAFAFA
   surface: '#FFFFFF',
-  text: '#262626',
-  textSecondary: '#8E8E8E',
-  border: '#DBDBDB',
-  borderLight: '#EFEFEF',
-  primary: '#3797F0',
-  accent: '#FF3040',
-  success: '#00D26A',
-  warning: '#FFB800',
-  verified: '#3797F0',
-  instagram: '#E1306C',
-  instagramBlue: '#4267B2',
-  gradient1: '#667eea',
-  gradient2: '#764ba2',
+  text: '#1A1A1A', // Darker from #262626 for better readability
+  textSecondary: '#666666', // Darker from #8E8E8E for better contrast
+  border: '#C0C0C0', // Darker from #DBDBDB
+  borderLight: '#E0E0E0', // Darker from #EFEFEF
+  primary: '#2B7CE6', // Deeper blue, darker from #3797F0
+  accent: '#E6283A', // Deeper red, darker from #FF3040
+  success: '#00B355', // Deeper green, darker from #00D26A
+  warning: '#E6A800', // Deeper yellow, darker from #FFB800
+  verified: '#2B7CE6', // Matches primary
+  instagram: '#C7285F', // Darker from #E1306C for better visibility
+  instagramBlue: '#365899', // Deeper blue, darker from #4267B2
+  gradient1: '#5A6FD8', // Deeper purple, darker from #667eea
+  gradient2: '#674BA8', // Deeper purple, darker from #764ba2
 };
 
 interface FilterOptions {
@@ -74,6 +74,7 @@ const BookingsScreen: React.FC = () => {
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [selectedBookingForReview, setSelectedBookingForReview] = useState<Booking | null>(null);
   const [bookingReviews, setBookingReviews] = useState<{[key: string]: boolean}>({});
+  const [expandedCards, setExpandedCards] = useState<{ [bookingId: string]: boolean }>({});
   
   const navigation = useNavigation<BookingsScreenNavigationProp>();
 
@@ -125,6 +126,30 @@ const BookingsScreen: React.FC = () => {
     }
     setReviewModalVisible(false);
     setSelectedBookingForReview(null);
+  };
+
+  const toggleCardExpansion = (bookingId: string) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [bookingId]: !prev[bookingId]
+    }));
+  };
+
+  const toggleAllCards = () => {
+    const filteredBookings = getFilteredBookings();
+    const allExpanded = filteredBookings.every(booking => expandedCards[booking.id]);
+    
+    if (allExpanded) {
+      // Collapse all cards
+      setExpandedCards({});
+    } else {
+      // Expand all cards
+      const newExpanded: { [key: string]: boolean } = {};
+      filteredBookings.forEach(booking => {
+        newExpanded[booking.id] = true;
+      });
+      setExpandedCards(newExpanded);
+    }
   };
 
   const updateActiveFiltersCount = () => {
@@ -214,36 +239,46 @@ const BookingsScreen: React.FC = () => {
   const getStatusColor = (status: BookingStatus) => {
     switch (status) {
       case BookingStatus.Pending:
-        return '#FFE66D';
+        return '#E6A800'; // Deeper amber for better visibility
       case BookingStatus.Confirmed:
-        return '#4ECDC4';
+        return '#00B4A6'; // Deeper teal for better contrast
       case BookingStatus.InProgress:
-        return '#FF6B6B';
+        return '#E6283A'; // Using our vibrant red
       case BookingStatus.Completed:
-        return '#A8E6CF';
+        return '#00B355'; // Using our vibrant green
       case BookingStatus.Cancelled:
-        return '#ff6b6b';
+        return '#B0B0B0'; // Neutral gray for cancelled items
       default:
-        return '#666';
+        return '#666666';
     }
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: new Date().getFullYear() !== date.getFullYear() ? 'numeric' : undefined,
+      });
+    } catch (error) {
+      return dateString;
+    }
   };
 
   const formatTime = (timeString: string) => {
-    const time = new Date(`2000-01-01T${timeString}`);
-    return time.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
+    if (!timeString) return 'N/A';
+    try {
+      const time = new Date(`2000-01-01T${timeString}`);
+      return time.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } catch (error) {
+      return timeString;
+    }
   };
 
   const getUniqueCategories = () => {
@@ -293,217 +328,389 @@ const BookingsScreen: React.FC = () => {
       onRequestClose={() => setShowFilters(false)}
     >
       <View style={styles.modalOverlay}>
-        <BlurView intensity={20} style={styles.modalBlur}>
-          <View style={styles.modalContainer}>
-            <LinearGradient colors={['#667eea', '#764ba2']} style={styles.modalContent}>
-              {/* Modal Header */}
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Filter Bookings</Text>
-                <TouchableOpacity 
-                  onPress={() => setShowFilters(false)}
-                  style={styles.modalCloseButton}
-                >
-                  <Ionicons name="close" size={24} color="white" />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView style={styles.filterContent} showsVerticalScrollIndicator={false}>
-                {/* Status Filter */}
-                <View style={styles.filterSection}>
-                  <Text style={styles.filterSectionTitle}>Status</Text>
-                  <View style={styles.filterOptionsContainer}>
-                    {Object.values(BookingStatus).map((status) => (
-                      <TouchableOpacity
-                        key={status}
-                        style={[
-                          styles.filterOption,
-                          filters.status.includes(status) && styles.filterOptionActive
-                        ]}
-                        onPress={() => toggleStatusFilter(status)}
-                      >
-                        <Text style={[
-                          styles.filterOptionText,
-                          filters.status.includes(status) && styles.filterOptionTextActive
-                        ]}>
-                          {status}
-                        </Text>
-                        {filters.status.includes(status) && (
-                          <Ionicons name="checkmark" size={16} color="white" />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* Category Filter */}
-                <View style={styles.filterSection}>
-                  <Text style={styles.filterSectionTitle}>Service Categories</Text>
-                  <View style={styles.filterOptionsContainer}>
-                    {getUniqueCategories().map((category) => (
-                      <TouchableOpacity
-                        key={category}
-                        style={[
-                          styles.filterOption,
-                          filters.categories.includes(category) && styles.filterOptionActive
-                        ]}
-                        onPress={() => toggleCategoryFilter(category)}
-                      >
-                        <Text style={[
-                          styles.filterOptionText,
-                          filters.categories.includes(category) && styles.filterOptionTextActive
-                        ]}>
-                          {category}
-                        </Text>
-                        {filters.categories.includes(category) && (
-                          <Ionicons name="checkmark" size={16} color="white" />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* Price Range Filter */}
-                <View style={styles.filterSection}>
-                  <Text style={styles.filterSectionTitle}>Price Range</Text>
-                  <View style={styles.priceRangeContainer}>
-                    <View style={styles.priceInputContainer}>
-                      <Text style={styles.priceLabel}>Min: $</Text>
-                      <TextInput
-                        style={styles.priceInput}
-                        value={filters.priceRange.min.toString()}
-                        onChangeText={(text) => {
-                          const value = parseInt(text) || 0;
-                          setFilters(prev => ({
-                            ...prev,
-                            priceRange: { ...prev.priceRange, min: value }
-                          }));
-                        }}
-                        keyboardType="numeric"
-                        placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                      />
-                    </View>
-                    <View style={styles.priceInputContainer}>
-                      <Text style={styles.priceLabel}>Max: $</Text>
-                      <TextInput
-                        style={styles.priceInput}
-                        value={filters.priceRange.max.toString()}
-                        onChangeText={(text) => {
-                          const value = parseInt(text) || 1000;
-                          setFilters(prev => ({
-                            ...prev,
-                            priceRange: { ...prev.priceRange, max: value }
-                          }));
-                        }}
-                        keyboardType="numeric"
-                        placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                      />
-                    </View>
-                  </View>
-                </View>
-              </ScrollView>
-
-              {/* Modal Actions */}
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={styles.clearFiltersButton}
-                  onPress={clearAllFilters}
-                >
-                  <Text style={styles.clearFiltersText}>Clear All</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.applyFiltersButton}
-                  onPress={() => setShowFilters(false)}
-                >
-                  <Text style={styles.applyFiltersText}>Apply Filters</Text>
-                </TouchableOpacity>
-              </View>
-            </LinearGradient>
+        <TouchableOpacity 
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowFilters(false)}
+        />
+        <View style={styles.filterModalContainer}>
+          {/* Modal Handle */}
+          <View style={styles.modalHandle} />
+          
+          {/* Modal Header */}
+          <View style={styles.filterModalHeader}>
+            <TouchableOpacity 
+              onPress={clearAllFilters}
+              style={styles.clearAllButton}
+            >
+              <Text style={styles.clearAllButtonText}>Clear All</Text>
+            </TouchableOpacity>
+            
+            <Text style={styles.filterModalTitle}>Filter Bookings</Text>
+            
+            <TouchableOpacity 
+              onPress={() => setShowFilters(false)}
+              style={styles.doneButton}
+            >
+              <Text style={styles.doneButtonText}>Done</Text>
+            </TouchableOpacity>
           </View>
-        </BlurView>
+
+          <ScrollView 
+            style={styles.filterModalContent} 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.filterScrollContent}
+          >
+            {/* Active Filters Count */}
+            {activeFiltersCount > 0 && (
+              <View style={styles.activeFiltersIndicator}>
+                <Ionicons name="funnel" size={16} color={COLORS.primary} />
+                <Text style={styles.activeFiltersText}>
+                  {activeFiltersCount} filter{activeFiltersCount > 1 ? 's' : ''} active
+                </Text>
+              </View>
+            )}
+
+            {/* Status Filter */}
+            <View style={styles.filterSection}>
+              <View style={styles.filterSectionHeader}>
+                <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.primary} />
+                <Text style={styles.filterSectionTitle}>Booking Status</Text>
+              </View>
+              <View style={styles.filterOptionsContainer}>
+                {Object.values(BookingStatus).map((status) => (
+                  <TouchableOpacity
+                    key={status}
+                    style={[
+                      styles.filterChip,
+                      filters.status.includes(status) && styles.filterChipActive
+                    ]}
+                    onPress={() => toggleStatusFilter(status)}
+                  >
+                    <Text style={[
+                      styles.filterChipText,
+                      filters.status.includes(status) && styles.filterChipTextActive
+                    ]}>
+                      {status}
+                    </Text>
+                    {filters.status.includes(status) && (
+                      <Ionicons name="checkmark" size={14} color="white" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Category Filter */}
+            <View style={styles.filterSection}>
+              <View style={styles.filterSectionHeader}>
+                <Ionicons name="pricetag-outline" size={20} color={COLORS.primary} />
+                <Text style={styles.filterSectionTitle}>Service Categories</Text>
+              </View>
+              <View style={styles.filterOptionsContainer}>
+                {getUniqueCategories().map((category) => (
+                  <TouchableOpacity
+                    key={category}
+                    style={[
+                      styles.filterChip,
+                      filters.categories.includes(category) && styles.filterChipActive
+                    ]}
+                    onPress={() => toggleCategoryFilter(category)}
+                  >
+                    <Text style={[
+                      styles.filterChipText,
+                      filters.categories.includes(category) && styles.filterChipTextActive
+                    ]}>
+                      {category}
+                    </Text>
+                    {filters.categories.includes(category) && (
+                      <Ionicons name="checkmark" size={14} color="white" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Price Range Filter */}
+            <View style={styles.filterSection}>
+              <View style={styles.filterSectionHeader}>
+                <Ionicons name="wallet-outline" size={20} color={COLORS.primary} />
+                <Text style={styles.filterSectionTitle}>Price Range</Text>
+              </View>
+              <View style={styles.priceRangeContainer}>
+                <View style={styles.priceInputWrapper}>
+                  <Text style={styles.priceInputLabel}>Min Price</Text>
+                  <View style={styles.priceInputContainer}>
+                    <Text style={styles.currencySymbol}>$</Text>
+                    <TextInput
+                      style={styles.priceInput}
+                      value={filters.priceRange.min.toString()}
+                      onChangeText={(text) => {
+                        const value = parseInt(text) || 0;
+                        setFilters(prev => ({
+                          ...prev,
+                          priceRange: { ...prev.priceRange, min: value }
+                        }));
+                      }}
+                      keyboardType="numeric"
+                      placeholder="0"
+                      placeholderTextColor={COLORS.textSecondary}
+                    />
+                  </View>
+                </View>
+                
+                <View style={styles.priceRangeSeparator}>
+                  <Text style={styles.priceRangeSeparatorText}>to</Text>
+                </View>
+                
+                <View style={styles.priceInputWrapper}>
+                  <Text style={styles.priceInputLabel}>Max Price</Text>
+                  <View style={styles.priceInputContainer}>
+                    <Text style={styles.currencySymbol}>$</Text>
+                    <TextInput
+                      style={styles.priceInput}
+                      value={filters.priceRange.max.toString()}
+                      onChangeText={(text) => {
+                        const value = parseInt(text) || 1000;
+                        setFilters(prev => ({
+                          ...prev,
+                          priceRange: { ...prev.priceRange, max: value }
+                        }));
+                      }}
+                      keyboardType="numeric"
+                      placeholder="1000"
+                      placeholderTextColor={COLORS.textSecondary}
+                    />
+                  </View>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
       </View>
     </Modal>
   );
 
-  const renderBookingCard = (booking: Booking) => (
-    <BlurView
-      key={booking.id}
-      intensity={80}
-      style={styles.bookingCard}
-    >
-      <TouchableOpacity
-        onPress={() => navigation.navigate('BookingDetails', { bookingId: booking.id })}
-        style={styles.bookingCardContent}
-      >
-      <View style={styles.bookingHeader}>
-        <Image
-          source={{
-            uri: booking.serviceProvider?.profilePictureUrl || 'https://via.placeholder.com/50',
-          }}
-          style={styles.providerImage}
-        />
-        <View style={styles.bookingInfo}>
-          <Text style={styles.providerName}>
-            {booking.serviceProvider?.businessName || 'Provider'}
-          </Text>
-          <Text style={styles.serviceName}>{booking.service?.name || 'Service'}</Text>
-          <View style={styles.dateTimeContainer}>
-            <Ionicons name="calendar-outline" size={14} color="#666" />
-            <Text style={styles.dateText}>{formatDate(booking.bookingDate)}</Text>
-            <Ionicons name="time-outline" size={14} color="#666" style={styles.timeIcon} />
-            <Text style={styles.timeText}>{formatTime(booking.startTime)}</Text>
+  const renderBookingCard = (booking: Booking) => {
+    const isExpanded = expandedCards[booking.id] || false;
+    
+    return (
+      <View key={booking.id} style={styles.bookingCard}>
+        {/* Status Strip */}
+        <View style={[styles.statusStrip, { backgroundColor: getStatusColor(booking.status) }]} />
+        
+        {/* Card Header - Always Visible */}
+        <TouchableOpacity
+          onPress={() => toggleCardExpansion(booking.id)}
+          style={styles.cardHeader}
+          activeOpacity={0.8}
+        >
+          <View style={styles.providerSection}>
+            <View style={styles.providerImageContainer}>
+              <Image
+                source={{
+                  uri: booking.serviceProvider?.profilePictureUrl || 'https://via.placeholder.com/60',
+                }}
+                style={styles.providerImage}
+              />
+              <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(booking.status) }]} />
+            </View>
+            <View style={styles.providerInfo}>
+              <Text style={styles.providerName} numberOfLines={1}>
+                {booking.serviceProvider?.businessName || 'Provider'}
+              </Text>
+              <Text style={styles.serviceName} numberOfLines={1}>
+                {booking.service?.name || 'Service'}
+              </Text>
+              <View style={styles.serviceCategory}>
+                <Ionicons name="pricetag-outline" size={12} color="#E6A800" />
+                <Text style={styles.categoryText}>
+                  {booking.service?.category || 'General Service'}
+                </Text>
+              </View>
+            </View>
           </View>
-        </View>
-        <View style={styles.statusContainer}>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) }]}>
-            <Text style={styles.statusText}>{booking.status}</Text>
+          
+          <View style={styles.priceStatusContainer}>
+            <Text style={styles.priceText}>${booking.totalAmount?.toFixed(2) || '0.00'}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) }]}>
+              <Text style={styles.statusText}>{booking.status}</Text>
+            </View>
+            <TouchableOpacity style={styles.expandButton}>
+              <Ionicons 
+                name={isExpanded ? "chevron-up" : "chevron-down"} 
+                size={20} 
+                color={COLORS.textSecondary} 
+              />
+            </TouchableOpacity>
           </View>
-          <Text style={styles.priceText}>${booking.totalAmount}</Text>
+        </TouchableOpacity>
+
+        {/* Quick Info - Always Visible */}
+        <View style={styles.quickInfo}>
+          <View style={styles.quickInfoItem}>
+            <Ionicons name="calendar" size={14} color="#00B4A6" />
+            <Text style={styles.quickInfoText}>{formatDate(booking.bookingDate)}</Text>
+          </View>
+          <View style={styles.quickInfoItem}>
+            <Ionicons name="time" size={14} color="#E6283A" />
+            <Text style={styles.quickInfoText}>{formatTime(booking.startTime)}</Text>
+          </View>
+          {!isExpanded && booking.notes && (
+            <View style={styles.quickInfoItem}>
+              <Ionicons name="chatbubble-outline" size={14} color="#E6A800" />
+              <Text style={styles.quickInfoText}>Has Notes</Text>
+            </View>
+          )}
         </View>
+
+        {/* Expandable Content */}
+        {isExpanded && (
+          <View style={styles.expandableContent}>
+            {/* Detailed Booking Info */}
+            <View style={styles.bookingDetails}>
+              {booking.endTime && (
+                <View style={styles.durationContainer}>
+                  <Ionicons name="stopwatch-outline" size={14} color="#E6A800" />
+                  <Text style={styles.durationText}>
+                    Duration: {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
+                  </Text>
+                </View>
+              )}
+
+              {booking.serviceProvider?.businessAddress && (
+                <View style={styles.locationContainer}>
+                  <Ionicons name="location" size={14} color="#00B355" />
+                  <Text style={styles.locationText} numberOfLines={2}>
+                    {booking.serviceProvider.businessAddress}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Additional Info Section */}
+            {booking.notes && (
+              <View style={styles.additionalInfo}>
+                <View style={styles.notesSection}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="chatbubble-outline" size={14} color="#E6A800" />
+                    <Text style={styles.sectionTitle}>Notes</Text>
+                  </View>
+                  <Text style={styles.notesText} numberOfLines={3}>
+                    {booking.notes}
+                  </Text>
+                </View>
+                
+                {booking.cancellationReason && booking.status === BookingStatus.Cancelled && (
+                  <View style={styles.requestsSection}>
+                    <View style={styles.sectionHeader}>
+                      <Ionicons name="close-circle-outline" size={14} color="#E6283A" />
+                      <Text style={styles.sectionTitle}>Cancellation Reason</Text>
+                    </View>
+                    <Text style={styles.requestsText} numberOfLines={2}>
+                      {booking.cancellationReason}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Progress Indicator for Active Bookings */}
+            {(booking.status === BookingStatus.Confirmed || booking.status === BookingStatus.InProgress) && (
+              <View style={styles.progressSection}>
+                <View style={styles.progressHeader}>
+                  <Text style={styles.progressTitle}>Booking Progress</Text>
+                  <Text style={styles.progressPercentage}>
+                    {booking.status === BookingStatus.Confirmed ? '25%' : '75%'}
+                  </Text>
+                </View>
+                <View style={styles.progressBar}>
+                  <View 
+                    style={[
+                      styles.progressFill, 
+                      { width: booking.status === BookingStatus.Confirmed ? '25%' : '75%' }
+                    ]} 
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Action Buttons */}
+            <View style={styles.actionButtonsContainer}>
+              {booking.status === BookingStatus.Pending && (
+                <>
+                  <TouchableOpacity style={[styles.actionButton, styles.secondaryAction]}>
+                    <Ionicons name="close-circle-outline" size={16} color="#FF6B6B" />
+                    <Text style={[styles.actionButtonText, styles.secondaryActionText]}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.actionButton, styles.primaryAction]}>
+                    <Ionicons name="calendar-outline" size={16} color="white" />
+                    <Text style={[styles.actionButtonText, styles.primaryActionText]}>Reschedule</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              
+              {booking.status === BookingStatus.Confirmed && (
+                <>
+                  <TouchableOpacity style={[styles.actionButton, styles.secondaryAction]}>
+                    <Ionicons name="close-circle-outline" size={16} color="#FF6B6B" />
+                    <Text style={[styles.actionButtonText, styles.secondaryActionText]}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.actionButton, styles.primaryAction]}>
+                    <Ionicons name="chatbubble-outline" size={16} color="white" />
+                    <Text style={[styles.actionButtonText, styles.primaryActionText]}>Contact</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              
+              {booking.status === BookingStatus.InProgress && (
+                <TouchableOpacity style={[styles.actionButton, styles.inProgressAction]}>
+                  <Ionicons name="checkmark-circle-outline" size={16} color="white" />
+                  <Text style={[styles.actionButtonText, styles.primaryActionText]}>Mark Complete</Text>
+                </TouchableOpacity>
+              )}
+              
+              {booking.status === BookingStatus.Completed && (
+                <TouchableOpacity 
+                  style={[
+                    styles.actionButton, 
+                    bookingReviews[booking.id] ? styles.reviewedAction : styles.primaryAction
+                  ]}
+                  onPress={() => handleReviewPress(booking)}
+                  disabled={bookingReviews[booking.id]}
+                >
+                  <Ionicons 
+                    name={bookingReviews[booking.id] ? "checkmark-circle" : "star-outline"} 
+                    size={16} 
+                    color="white" 
+                  />
+                  <Text style={[styles.actionButtonText, styles.primaryActionText]}>
+                    {bookingReviews[booking.id] ? 'Reviewed' : 'Write Review'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              
+              {booking.status === BookingStatus.Cancelled && (
+                <TouchableOpacity style={[styles.actionButton, styles.rebookAction]}>
+                  <Ionicons name="refresh-outline" size={16} color="white" />
+                  <Text style={[styles.actionButtonText, styles.primaryActionText]}>Book Again</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* View Details Button */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('BookingDetails', { bookingId: booking.id })}
+              style={styles.viewDetailsButton}
+            >
+              <Text style={styles.viewDetailsText}>View Full Details</Text>
+              <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
-      
-      {booking.notes && (
-        <View style={styles.notesContainer}>
-          <Text style={styles.notesLabel}>Notes:</Text>
-          <Text style={styles.notesText}>{booking.notes}</Text>
-        </View>
-      )}
-      
-      <View style={styles.bookingActions}>
-        {booking.status === BookingStatus.Pending && (
-          <>
-            <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, styles.primaryAction]}>
-              <Text style={[styles.actionButtonText, styles.primaryActionText]}>Reschedule</Text>
-            </TouchableOpacity>
-          </>
-        )}
-        {booking.status === BookingStatus.Confirmed && (
-          <>
-            <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, styles.primaryAction]}>
-              <Text style={[styles.actionButtonText, styles.primaryActionText]}>Contact</Text>
-            </TouchableOpacity>
-          </>
-        )}
-        {booking.status === BookingStatus.Completed && (
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.primaryAction, bookingReviews[booking.id] && styles.reviewedButton]}
-            onPress={() => handleReviewPress(booking)}
-            disabled={bookingReviews[booking.id]}
-          >
-            <Text style={[styles.actionButtonText, styles.primaryActionText, bookingReviews[booking.id] && styles.reviewedButtonText]}>
-              {bookingReviews[booking.id] ? 'Reviewed' : 'Review'}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </TouchableOpacity>
-    </BlurView>
-  );
+    );
+  };
 
   const filteredBookings = getFilteredBookings();
 
@@ -513,6 +720,16 @@ const BookingsScreen: React.FC = () => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Bookings</Text>
         <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={styles.toggleAllButton}
+            onPress={toggleAllCards}
+          >
+            <Ionicons 
+              name={getFilteredBookings().every(booking => expandedCards[booking.id]) ? "contract-outline" : "expand-outline"} 
+              size={20} 
+              color={COLORS.text} 
+            />
+          </TouchableOpacity>
           <TouchableOpacity 
             style={styles.searchButton}
             onPress={() => setShowFilters(true)}
@@ -653,10 +870,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
+  toggleAllButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
   },
   filterBadge: {
     position: 'absolute',
@@ -702,158 +927,184 @@ const styles = StyleSheet.create({
   // Filter Modal Styles
   modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
-  modalBlur: {
+  modalBackdrop: {
     flex: 1,
   },
-  modalContainer: {
-    height: '80%',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    overflow: 'hidden',
-    marginTop: 60, // Added margin to avoid dynamic island
+  filterModalContainer: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 10,
   },
-  modalContent: {
-    flex: 1,
-    paddingTop: 24,
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: COLORS.borderLight,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
   },
-  modalHeader: {
+  filterModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.15)',
+    borderBottomColor: COLORS.borderLight,
   },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: 'white',
+  filterModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
     letterSpacing: -0.3,
   },
-  modalCloseButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+  clearAllButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: COLORS.background,
   },
-  filterContent: {
+  clearAllButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  doneButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: COLORS.primary,
+  },
+  doneButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: 'white',
+  },
+  filterModalContent: {
     flex: 1,
-    paddingHorizontal: 24,
+  },
+  filterScrollContent: {
+    paddingBottom: 20,
+  },
+  activeFiltersIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginTop: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: COLORS.background,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  activeFiltersText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginLeft: 6,
   },
   filterSection: {
-    marginBottom: 32,
+    marginHorizontal: 20,
+    marginTop: 24,
+  },
+  filterSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   filterSectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: 'white',
-    marginBottom: 16,
-    letterSpacing: 0.2,
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginLeft: 8,
+    letterSpacing: -0.2,
   },
   filterOptionsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-  },
-  filterOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
     gap: 8,
   },
-  filterOptionActive: {
-    backgroundColor: 'rgba(255, 215, 0, 0.3)',
-    borderColor: '#FFD700',
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 6,
   },
-  filterOptionText: {
-    fontSize: 14,
+  filterChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterChipText: {
+    fontSize: 13,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: COLORS.text,
   },
-  filterOptionTextActive: {
+  filterChipTextActive: {
     color: 'white',
-    fontWeight: '700',
   },
   priceRangeContainer: {
     flexDirection: 'row',
-    gap: 16,
+    alignItems: 'flex-end',
+    gap: 12,
+  },
+  priceInputWrapper: {
+    flex: 1,
+  },
+  priceInputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   priceInputContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 16,
-    paddingHorizontal: 16,
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: COLORS.border,
   },
-  priceLabel: {
+  currencySymbol: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'white',
-    marginRight: 8,
+    color: COLORS.text,
+    marginRight: 4,
   },
   priceInput: {
     flex: 1,
     fontSize: 16,
-    color: 'white',
+    color: COLORS.text,
     fontWeight: '500',
   },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 24,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.15)',
-    gap: 16,
-  },
-  clearFiltersButton: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+  priceRangeSeparator: {
+    paddingBottom: 12,
     alignItems: 'center',
   },
-  clearFiltersText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  applyFiltersButton: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 215, 0, 0.9)',
-    borderWidth: 1,
-    borderColor: '#FFD700',
-    alignItems: 'center',
-    shadowColor: 'rgba(0, 0, 0, 0.2)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  applyFiltersText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: 'white',
+  priceRangeSeparatorText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
   
   // Tab Section
@@ -895,79 +1146,123 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   bookingCard: {
-    borderRadius: 16,
+    borderRadius: 20,
     backgroundColor: COLORS.surface,
-    marginBottom: 16,
+    marginBottom: 20,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   bookingCardContent: {
-    padding: 16,
+    position: 'relative',
   },
-  bookingHeader: {
+  
+  // Status Strip
+  statusStrip: {
+    height: 4,
+    width: '100%',
+  },
+  
+  // Card Header
+  cardHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    padding: 20,
+    paddingBottom: 16,
+  },
+  providerSection: {
+    flexDirection: 'row',
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  providerImageContainer: {
+    position: 'relative',
+    marginRight: 16,
   },
   providerImage: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    marginRight: 16,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  bookingInfo: {
+  statusIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: COLORS.surface,
+  },
+  providerInfo: {
     flex: 1,
+    paddingTop: 2,
   },
   providerName: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: COLORS.text,
     marginBottom: 4,
+    letterSpacing: -0.3,
   },
   serviceName: {
-    fontSize: 14,
+    fontSize: 16,
     color: COLORS.textSecondary,
     marginBottom: 8,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  dateTimeContainer: {
+  serviceCategory: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    backgroundColor: 'rgba(230, 168, 0, 0.1)', // Updated to our amber
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: 'rgba(230, 168, 0, 0.3)',
   },
-  dateText: {
-    fontSize: 13,
-    color: 'white',
-    marginLeft: 6,
-    fontWeight: '600',
+  categoryText: {
+    fontSize: 12,
+    color: '#E6A800', // Updated to our amber
+    fontWeight: '700',
+    marginLeft: 4,
   },
-  timeIcon: {
-    marginLeft: 16,
-    opacity: 0.9,
-  },
-  timeText: {
-    fontSize: 13,
-    color: 'white',
-    marginLeft: 6,
-    fontWeight: '600',
-  },
-  statusContainer: {
+  priceStatusContainer: {
     alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    minHeight: 60,
+  },
+  priceText: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#E6A800', // Updated to our vibrant amber
+    letterSpacing: -0.5,
+    textShadowColor: 'rgba(230, 168, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  expandButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
   },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    marginBottom: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
     shadowColor: 'rgba(0, 0, 0, 0.2)',
@@ -981,81 +1276,285 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: 'white',
     letterSpacing: 0.5,
-  },
-  priceText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFD700',
-    letterSpacing: 0.2,
+    textTransform: 'uppercase',
   },
   
-  // Notes Section
-  notesContainer: {
-    marginTop: 16,
-    padding: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+  // Quick Info Section
+  quickInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  notesLabel: {
+  quickInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  quickInfoText: {
+    fontSize: 14,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  
+  // Expandable Content
+  expandableContent: {
+    overflow: 'hidden',
+  },
+  
+  // View Details Button
+  viewDetailsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    gap: 8,
+  },
+  viewDetailsText: {
+    fontSize: 15,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  
+  // Booking Details
+  bookingDetails: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 12,
+    borderRadius: 12,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  iconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  detailContent: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  detailValue: {
+    fontSize: 15,
+    color: COLORS.text,
+    fontWeight: '700',
+  },
+  durationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(230, 168, 0, 0.1)', // Updated to our amber
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(230, 168, 0, 0.2)',
+  },
+  durationText: {
     fontSize: 13,
-    fontWeight: '800',
-    color: 'white',
-    marginBottom: 6,
-    letterSpacing: 0.3,
-    opacity: 0.9,
+    color: '#E6A800', // Updated to our amber
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(0, 179, 85, 0.1)', // Updated to our green
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 179, 85, 0.2)',
+  },
+  locationText: {
+    fontSize: 13,
+    color: '#00B355', // Updated to our green
+    fontWeight: '600',
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 18,
+  },
+  
+  // Additional Info
+  additionalInfo: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    marginTop: 8,
+    paddingTop: 16,
+  },
+  notesSection: {
+    marginBottom: 12,
+  },
+  requestsSection: {
+    marginBottom: 0,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginLeft: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   notesText: {
-    fontSize: 15,
-    color: 'white',
-    lineHeight: 22,
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
     fontWeight: '500',
-    opacity: 0.9,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  requestsText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+    fontWeight: '500',
+    backgroundColor: 'rgba(230, 40, 58, 0.1)', // Updated to our red
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(230, 40, 58, 0.2)',
+  },
+  
+  // Progress Section
+  progressSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    marginTop: 8,
+    paddingTop: 16,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  progressTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  progressPercentage: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#00B4A6', // Updated to our vibrant teal
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#00B4A6', // Updated to our vibrant teal
+    borderRadius: 3,
   },
   
   // Action Buttons
-  bookingActions: {
+  actionButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
     gap: 12,
   },
   actionButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 16,
+    gap: 8,
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 12,
     elevation: 6,
   },
   primaryAction: {
-    backgroundColor: 'rgba(255, 215, 0, 0.9)',
-    borderColor: '#FFD700',
+    backgroundColor: '#00B4A6', // Updated to our vibrant teal
+    borderWidth: 1,
+    borderColor: 'rgba(0, 180, 166, 0.3)',
+  },
+  secondaryAction: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  inProgressAction: {
+    backgroundColor: '#E6283A', // Updated to our vibrant red
+    borderWidth: 1,
+    borderColor: 'rgba(230, 40, 58, 0.3)',
+  },
+  reviewedAction: {
+    backgroundColor: '#00B355', // Updated to our vibrant green
+    borderWidth: 1,
+    borderColor: 'rgba(0, 179, 85, 0.3)',
+  },
+  rebookAction: {
+    backgroundColor: '#E6A800', // Updated to our vibrant amber
+    borderWidth: 1,
+    borderColor: 'rgba(230, 168, 0, 0.3)',
   },
   actionButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: 'white',
     letterSpacing: 0.3,
-    opacity: 0.9,
   },
   primaryActionText: {
     color: 'white',
-    opacity: 1,
   },
-  reviewedButton: {
-    backgroundColor: 'rgba(76, 175, 80, 0.8)',
-    borderColor: '#4CAF50',
-  },
-  reviewedButtonText: {
-    color: 'white',
-    opacity: 0.9,
+  secondaryActionText: {
+    color: COLORS.textSecondary,
   },
   
   // Loading & Empty States
@@ -1072,27 +1571,25 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 24,
     fontWeight: '800',
-    color: 'white',
+    color: COLORS.text,
     marginTop: 20,
     textAlign: 'center',
     letterSpacing: -0.3,
   },
   emptySubtext: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: COLORS.textSecondary,
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 24,
     fontWeight: '500',
   },
   bookNowButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 28,
     marginTop: 32,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
     shadowColor: 'rgba(0, 0, 0, 0.15)',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 1,

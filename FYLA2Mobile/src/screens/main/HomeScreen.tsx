@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { Post, RootStackParamList } from '../../types';
 import ApiService from '../../services/api';
+import ShareModal from '../../components/ShareModal';
 
 const { width } = Dimensions.get('window');
 
@@ -42,6 +43,9 @@ const HomeScreen: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
   const [lastTap, setLastTap] = useState<{ [key: string]: number }>({});
   const [likedPosts, setLikedPosts] = useState<{ [key: string]: boolean }>({});
   const [bookmarkedPosts, setBookmarkedPosts] = useState<{ [key: string]: boolean }>({});
@@ -66,18 +70,62 @@ const HomeScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    loadSocialFeed();
+    loadSocialFeed(1, true);
   }, []);
 
-  const loadSocialFeed = async () => {
+  const loadSocialFeed = async (pageNum: number = 1, isRefresh: boolean = false) => {
+    if (loadingMore && !isRefresh) return;
+    
     try {
-      console.log('🔄 Loading social feed...');
+      if (isRefresh) {
+        setRefreshing(true);
+      } else if (pageNum > 1) {
+        setLoadingMore(true);
+      } else {
+        setIsLoading(true);
+      }
+
+      console.log('🔄 Loading social feed...', { page: pageNum, isRefresh });
       
-      // Mock data until backend is working
+      // Try to get real data from API
+      try {
+        const response = await ApiService.getSocialFeed(pageNum, 10, 'all');
+        console.log('✅ Social feed API response:', response);
+        
+        if (response.posts && Array.isArray(response.posts)) {
+          const newPosts = response.posts.map((post: any) => ({
+            ...post,
+            isLikedByCurrentUser: post.isLiked || false,
+            isBookmarkedByCurrentUser: post.isBookmarked || false,
+            user: post.provider || post.user || {
+              id: post.userId,
+              firstName: post.userName?.split(' ')[0] || 'Unknown',
+              lastName: post.userName?.split(' ')[1] || 'User',
+              profilePictureUrl: post.userAvatar,
+              isServiceProvider: post.isBusinessPost || false,
+            }
+          }));
+
+          if (isRefresh || pageNum === 1) {
+            setPosts(newPosts);
+            setPage(2);
+          } else {
+            setPosts(prev => [...prev, ...newPosts]);
+            setPage(pageNum + 1);
+          }
+          
+          setHasMore(response.hasMore);
+          return;
+        }
+      } catch (apiError) {
+        console.log('📡 API unavailable, falling back to mock data');
+      }
+
+      // Fallback to enhanced mock data
       const mockPosts: Post[] = [
         {
-          id: '1',
-          content: 'Just finished an amazing hair transformation! 💇‍♀️✨ Book your appointment today!',
+          id: `mock-${pageNum}-1`,
+          content: 'Just finished an amazing hair transformation! 💇‍♀️✨ Book your appointment today! #hairgoals #transformation #beauty',
           imageUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400&h=300&fit=crop',
           isBusinessPost: true,
           userId: 'provider1',
@@ -90,17 +138,17 @@ const HomeScreen: React.FC = () => {
             isServiceProvider: true,
             createdAt: new Date().toISOString(),
           },
-          createdAt: new Date().toISOString(),
-          likesCount: 24,
-          commentsCount: 8,
-          bookmarksCount: 3,
-          isLikedByCurrentUser: false,
-          isBookmarkedByCurrentUser: false,
+          createdAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+          likesCount: Math.floor(Math.random() * 100) + 10,
+          commentsCount: Math.floor(Math.random() * 20) + 3,
+          bookmarksCount: Math.floor(Math.random() * 15) + 1,
+          isLikedByCurrentUser: Math.random() > 0.5,
+          isBookmarkedByCurrentUser: Math.random() > 0.7,
           comments: []
         },
         {
-          id: '2',
-          content: 'Beautiful nail art session completed! 💅 Perfect for any occasion.',
+          id: `mock-${pageNum}-2`,
+          content: 'Beautiful nail art session completed! 💅 Perfect for any occasion. DM for bookings! #nailart #beauty #nails',
           imageUrl: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&h=300&fit=crop',
           isBusinessPost: true,
           userId: 'provider2',
@@ -113,17 +161,17 @@ const HomeScreen: React.FC = () => {
             isServiceProvider: true,
             createdAt: new Date().toISOString(),
           },
-          createdAt: new Date().toISOString(),
-          likesCount: 45,
-          commentsCount: 12,
-          bookmarksCount: 7,
-          isLikedByCurrentUser: true,
-          isBookmarkedByCurrentUser: false,
+          createdAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+          likesCount: Math.floor(Math.random() * 100) + 20,
+          commentsCount: Math.floor(Math.random() * 25) + 5,
+          bookmarksCount: Math.floor(Math.random() * 20) + 2,
+          isLikedByCurrentUser: Math.random() > 0.5,
+          isBookmarkedByCurrentUser: Math.random() > 0.7,
           comments: []
         },
         {
-          id: '3',
-          content: 'Relaxing massage therapy session. Your wellness is our priority! 🌿',
+          id: `mock-${pageNum}-3`,
+          content: 'Relaxing massage therapy session. Your wellness is our priority! 🌿 Book now for ultimate relaxation. #massage #wellness #selfcare',
           imageUrl: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&h=300&fit=crop',
           isBusinessPost: true,
           userId: 'provider3',
@@ -136,84 +184,142 @@ const HomeScreen: React.FC = () => {
             isServiceProvider: true,
             createdAt: new Date().toISOString(),
           },
-          createdAt: new Date().toISOString(),
-          likesCount: 32,
-          commentsCount: 5,
-          bookmarksCount: 2,
-          isLikedByCurrentUser: false,
-          isBookmarkedByCurrentUser: true,
+          createdAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+          likesCount: Math.floor(Math.random() * 80) + 15,
+          commentsCount: Math.floor(Math.random() * 15) + 2,
+          bookmarksCount: Math.floor(Math.random() * 10) + 1,
+          isLikedByCurrentUser: Math.random() > 0.5,
+          isBookmarkedByCurrentUser: Math.random() > 0.7,
           comments: []
         }
       ];
 
-      console.log('✅ Social feed loaded successfully with mock data');
-      setPosts(mockPosts);
+      if (isRefresh || pageNum === 1) {
+        setPosts(mockPosts);
+        setPage(2);
+      } else {
+        setPosts(prev => [...prev, ...mockPosts]);
+        setPage(pageNum + 1);
+      }
+      
+      // Simulate pagination
+      setHasMore(pageNum < 5); // Allow 5 pages of mock data
+
+      console.log('✅ Social feed loaded successfully');
       
       // Initialize social interaction state
+      const allPosts = isRefresh || pageNum === 1 ? mockPosts : [...posts, ...mockPosts];
       const initialLikes: { [key: string]: number } = {};
       const initialLikedState: { [key: string]: boolean } = {};
       const initialBookmarkState: { [key: string]: boolean } = {};
       
-      mockPosts.forEach((post: Post) => {
+      allPosts.forEach((post: Post) => {
         initialLikes[post.id] = post.likesCount || 0;
         initialLikedState[post.id] = post.isLikedByCurrentUser || false;
         initialBookmarkState[post.id] = post.isBookmarkedByCurrentUser || false;
       });
       
-      setPostLikes(initialLikes);
-      setLikedPosts(initialLikedState);
-      setBookmarkedPosts(initialBookmarkState);
+      setPostLikes(prev => ({ ...prev, ...initialLikes }));
+      setLikedPosts(prev => ({ ...prev, ...initialLikedState }));
+      setBookmarkedPosts(prev => ({ ...prev, ...initialBookmarkState }));
     } catch (error: any) {
       console.error('❌ Error loading social feed:', error);
       
-      // Fallback to empty array on error
-      setPosts([]);
+      // Don't clear posts on error if we have existing ones
+      if (pageNum === 1) {
+        setPosts([]);
+      }
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
+      setLoadingMore(false);
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadSocialFeed();
-    setRefreshing(false);
+  const onRefresh = () => {
+    loadSocialFeed(1, true);
   };
 
-  const handlePostPress = (post: Post) => {
-    // Navigate to post details or user profile
-    console.log('Post pressed:', post.id);
+  const onEndReached = () => {
+    if (hasMore && !loadingMore && !isLoading) {
+      loadSocialFeed(page);
+    }
   };
 
-  const handleLikePress = (postId: string) => {
+  // Enhanced interaction handlers with API calls
+  const handleLikePress = async (postId: string) => {
     const isCurrentlyLiked = likedPosts[postId];
     const currentLikes = postLikes[postId] || 0;
     
-    // Update like state
+    // Optimistic update
     setLikedPosts(prev => ({
       ...prev,
       [postId]: !isCurrentlyLiked
     }));
     
-    // Update likes count
     setPostLikes(prev => ({
       ...prev,
       [postId]: isCurrentlyLiked ? currentLikes - 1 : currentLikes + 1
     }));
-    
-    // Add haptic feedback
-    console.log(`${isCurrentlyLiked ? 'Unliked' : 'Liked'} post ${postId}`);
+
+    // Try to call API
+    try {
+      if (isCurrentlyLiked) {
+        await ApiService.unlikePost(postId);
+      } else {
+        await ApiService.likePost(postId);
+      }
+      console.log(`✅ ${isCurrentlyLiked ? 'Unliked' : 'Liked'} post ${postId}`);
+    } catch (error) {
+      // Revert optimistic update on error
+      setLikedPosts(prev => ({
+        ...prev,
+        [postId]: isCurrentlyLiked
+      }));
+      
+      setPostLikes(prev => ({
+        ...prev,
+        [postId]: currentLikes
+      }));
+      
+      console.error('❌ Error toggling like:', error);
+    }
   };
 
-  const handleBookmarkPress = (postId: string) => {
+  const handleBookmarkPress = async (postId: string) => {
     const isCurrentlyBookmarked = bookmarkedPosts[postId];
     
-    // Update bookmark state
+    // Optimistic update
     setBookmarkedPosts(prev => ({
       ...prev,
       [postId]: !isCurrentlyBookmarked
     }));
-    
-    console.log(`${isCurrentlyBookmarked ? 'Removed bookmark' : 'Bookmarked'} post ${postId}`);
+
+    // Try to call API
+    try {
+      if (isCurrentlyBookmarked) {
+        await ApiService.unbookmarkPost(postId);
+      } else {
+        await ApiService.bookmarkPost(postId);
+      }
+      console.log(`✅ ${isCurrentlyBookmarked ? 'Removed bookmark' : 'Bookmarked'} post ${postId}`);
+    } catch (error) {
+      // Revert optimistic update on error
+      setBookmarkedPosts(prev => ({
+        ...prev,
+        [postId]: isCurrentlyBookmarked
+      }));
+      
+      console.error('❌ Error toggling bookmark:', error);
+    }
+  };
+
+  const handleSharePress = (postId: string) => {
+    setShowShare(postId);
+  };
+
+  const handleCommentPress = (postId: string) => {
+    navigation.navigate('PostComments', { postId });
   };
 
   const handleDoublePress = (postId: string) => {
@@ -239,11 +345,10 @@ const HomeScreen: React.FC = () => {
     { name: 'Fitness', icon: 'barbell-outline', color: '#FFA07A' },
   ];
 
-  const handleCategoryPress = (category: { name: string; icon: string; color: string }) => {
-    // For now, navigate to search - could be enhanced later to pass category filter
+  const handleCategoryPress = (category: { name: string; icon: string; color?: string; gradient?: string[]; }) => {
     navigation.navigate('Search');
   };
-
+  
   return (
     <>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -269,151 +374,181 @@ const HomeScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Stories-style Categories */}
-        <View style={styles.storiesSection}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.storiesScroll}>
-            {categories.map((category, index) => (
-              <TouchableOpacity 
-                key={index} 
-                style={styles.storyItem}
-                onPress={() => handleCategoryPress(category)}
-              >
-                <View style={[styles.storyCircle, { borderColor: category.color }]}>
-                  <View style={[styles.storyIcon, { backgroundColor: category.color }]}>
-                    <Ionicons name={category.icon as any} size={20} color="white" />
-                  </View>
-                </View>
-                <Text style={styles.storyText}>{category.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
         {/* Feed Content */}
-        <ScrollView 
+        <FlatList
           style={styles.content}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          
-          {/* Welcome Card */}
-          <View style={styles.welcomeCard}>
-            <Text style={styles.welcomeTitle}>Hello, {user?.firstName}! 👋</Text>
-            <Text style={styles.welcomeSubtitle}>Discover amazing beauty services near you</Text>
-          </View>
-
-          {/* Social Feed */}
-          {isLoading ? (
-            <View style={styles.loadingView}>
-              <Text style={styles.loadingText}>Loading...</Text>
-            </View>
-          ) : (
-            posts.map((post) => (
-              <View key={post.id} style={styles.feedCard}>
-                {/* Post Header */}
-                <View style={styles.postHeader}>
-                  <TouchableOpacity 
-                    style={styles.userInfo}
-                    onPress={() => handlePostPress(post)}
-                  >
-                    <Image
-                      source={{ uri: post.user?.profilePictureUrl || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face' }}
-                      style={styles.userAvatar}
-                    />
-                    <View style={styles.userDetails}>
-                      <Text style={styles.username}>
-                        {post.user ? `${post.user.firstName} ${post.user.lastName}` : 'Beauty Provider'}
-                      </Text>
-                      <Text style={styles.location}>Professional Service</Text>
-                    </View>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.moreButton}>
-                    <Ionicons name="ellipsis-horizontal" size={16} color="#262626" />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Post Image */}
+          data={posts}
+          renderItem={({ item: post }) => (
+            <View style={styles.feedCard}>
+              {/* Post Header */}
+              <View style={styles.postHeader}>
                 <TouchableOpacity 
-                  onPress={() => handleDoublePress(post.id)}
-                  activeOpacity={1}
+                  style={styles.userInfo}
+                  onPress={() => navigation.navigate('ProviderProfile', { providerId: post.userId })}
                 >
                   <Image
-                    source={{ uri: post.imageUrl || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400&h=400&fit=crop' }}
-                    style={styles.postImage}
-                    resizeMode="cover"
+                    source={{ uri: post.user?.profilePictureUrl || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face' }}
+                    style={styles.userAvatar}
                   />
-                </TouchableOpacity>
-
-                {/* Post Actions */}
-                <View style={styles.postActions}>
-                  <View style={styles.leftActions}>
-                    <TouchableOpacity 
-                      style={styles.actionButton}
-                      onPress={() => handleLikePress(post.id)}
-                    >
-                      <Ionicons 
-                        name={likedPosts[post.id] ? "heart" : "heart-outline"} 
-                        size={24} 
-                        color={likedPosts[post.id] ? COLORS.heart : COLORS.text} 
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton}>
-                      <Ionicons name="chatbubble-outline" size={24} color={COLORS.text} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton}>
-                      <Ionicons name="paper-plane-outline" size={24} color={COLORS.text} />
-                    </TouchableOpacity>
+                  <View style={styles.userDetails}>
+                    <Text style={styles.username}>
+                      {post.user ? `${post.user.firstName} ${post.user.lastName}` : 'Beauty Provider'}
+                    </Text>
+                    <Text style={styles.location}>
+                      {post.isBusinessPost ? 'Professional Service' : formatTimeAgo(post.createdAt)}
+                    </Text>
                   </View>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.moreButton}>
+                  <Ionicons name="ellipsis-horizontal" size={16} color="#262626" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Post Image */}
+              <TouchableOpacity 
+                onPress={() => handleDoublePress(post.id)}
+                activeOpacity={1}
+              >
+                <Image
+                  source={{ uri: post.imageUrl || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400&h=400&fit=crop' }}
+                  style={styles.postImage}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+
+              {/* Post Actions */}
+              <View style={styles.postActions}>
+                <View style={styles.leftActions}>
                   <TouchableOpacity 
-                    style={styles.bookmarkButton}
-                    onPress={() => handleBookmarkPress(post.id)}
+                    style={styles.actionButton}
+                    onPress={() => handleLikePress(post.id)}
                   >
                     <Ionicons 
-                      name={bookmarkedPosts[post.id] ? "bookmark" : "bookmark-outline"} 
+                      name={likedPosts[post.id] ? "heart" : "heart-outline"}
                       size={24} 
-                      color={COLORS.text} 
+                      color={likedPosts[post.id] ? COLORS.heart : "#262626"}
                     />
                   </TouchableOpacity>
-                </View>
-
-                {/* Post Info */}
-                <View style={styles.postInfo}>
-                  {/* Likes */}
-                  <TouchableOpacity style={styles.likesContainer}>
-                    <Text style={styles.likesText}>
-                      {postLikes[post.id] || post.likesCount || 0} {((postLikes[post.id] || post.likesCount || 0) === 1) ? 'like' : 'likes'}
-                    </Text>
+                  <TouchableOpacity 
+                    style={styles.actionButton}
+                    onPress={() => handleCommentPress(post.id)}
+                  >
+                    <Ionicons name="chatbubble-outline" size={24} color="#262626" />
                   </TouchableOpacity>
-
-                  <Text style={styles.description} numberOfLines={3}>
-                    <Text style={styles.postUsername}>
-                      {post.user ? `${post.user.firstName}${post.user.lastName}`.toLowerCase() : 'beautyProvider'}
-                    </Text>
-                    {' '}
-                    {post.content || 'Check out our amazing beauty services! Book your appointment today for professional care. ✨ #beauty #professional #booktoday'}
-                  </Text>
-                  
-                  {/* Comments */}
-                  <TouchableOpacity>
-                    <Text style={styles.viewComments}>
-                      {post.commentsCount > 0 
-                        ? `View all ${post.commentsCount} comments`
-                        : 'Add a comment...'
-                      }
-                    </Text>
+                  <TouchableOpacity 
+                    style={styles.actionButton}
+                    onPress={() => handleSharePress(post.id)}
+                  >
+                    <Ionicons name="paper-plane-outline" size={24} color="#262626" />
                   </TouchableOpacity>
-                  
-                  {/* Timestamp */}
-                  <Text style={styles.timestamp}>
-                    {formatTimeAgo(post.createdAt)}
-                  </Text>
                 </View>
+                <TouchableOpacity 
+                  style={styles.bookmarkButton}
+                  onPress={() => handleBookmarkPress(post.id)}
+                >
+                  <Ionicons 
+                    name={bookmarkedPosts[post.id] ? "bookmark" : "bookmark-outline"}
+                    size={24} 
+                    color="#262626"
+                  />
+                </TouchableOpacity>
               </View>
-            ))
-          )}
 
-          <View style={styles.bottomPadding} />
-        </ScrollView>
+              {/* Post Info */}
+              <View style={styles.postInfo}>
+                <TouchableOpacity style={styles.likesContainer}>
+                  <Text style={styles.likesText}>
+                    {postLikes[post.id] || 0} likes
+                  </Text>
+                </TouchableOpacity>
+                
+                <Text style={styles.postDescription}>
+                  <Text style={styles.username}>
+                    {post.user ? `${post.user.firstName} ${post.user.lastName}` : 'Beauty Provider'}
+                  </Text>
+                  {' '}{post.content}
+                </Text>
+                
+                {post.commentsCount > 0 && (
+                  <TouchableOpacity onPress={() => handleCommentPress(post.id)}>
+                    <Text style={styles.viewComments}>
+                      View all {post.commentsCount} comments
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                
+                <Text style={styles.postTime}>
+                  {formatTimeAgo(post.createdAt)}
+                </Text>
+              </View>
+            </View>
+          )}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={0.1}
+          ListFooterComponent={() => (
+            loadingMore ? (
+              <View style={styles.loadingMore}>
+                <Text style={styles.loadingText}>Loading more posts...</Text>
+              </View>
+            ) : null
+          )}
+          ListHeaderComponent={() => (
+            <>
+              {/* Stories-style Categories */}
+              <View style={styles.storiesSection}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.storiesScroll}>
+                  {categories.map((category, index) => (
+                    <TouchableOpacity 
+                      key={index} 
+                      style={styles.storyItem}
+                      onPress={() => handleCategoryPress(category)}
+                    >
+                      <View style={[styles.storyCircle, { borderColor: category.color }]}>
+                        <View style={[styles.storyIcon, { backgroundColor: category.color }]}>
+                          <Ionicons name={category.icon as any} size={20} color="white" />
+                        </View>
+                      </View>
+                      <Text style={styles.storyText}>{category.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Welcome Card */}
+              <View style={styles.welcomeCard}>
+                <Text style={styles.welcomeTitle}>Hello, {user?.firstName}! 👋</Text>
+                <Text style={styles.welcomeSubtitle}>Discover amazing beauty services near you</Text>
+              </View>
+            </>
+          )}
+          ListEmptyComponent={() => (
+            isLoading ? (
+              <View style={styles.loadingView}>
+                <Text style={styles.loadingText}>Loading amazing posts...</Text>
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="images-outline" size={64} color={COLORS.textSecondary} />
+                <Text style={styles.emptyTitle}>No posts yet</Text>
+                <Text style={styles.emptySubtitle}>Follow some providers to see their posts here!</Text>
+              </View>
+            )
+          )}
+        />
+
+        {/* Share Modal */}
+        <ShareModal
+          visible={showShare !== null}
+          onClose={() => setShowShare(null)}
+          postId={showShare || ''}
+          postContent={posts.find(p => p.id === showShare)?.content}
+          userName={posts.find(p => p.id === showShare)?.user ? 
+            `${posts.find(p => p.id === showShare)?.user?.firstName} ${posts.find(p => p.id === showShare)?.user?.lastName}` 
+            : undefined}
+        />
       </View>
     </>
   );
@@ -689,6 +824,41 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: 16,
     fontWeight: '400',
+  },
+  loadingMore: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  
+  // Empty State
+  emptyState: {
+    padding: 60,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginTop: 16,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  
+  // Enhanced Post Styles
+  postDescription: {
+    fontSize: 14,
+    color: COLORS.text,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  postTime: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginTop: 8,
   },
   
   // Bottom Spacing

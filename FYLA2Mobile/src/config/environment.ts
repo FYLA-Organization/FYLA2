@@ -26,14 +26,14 @@ class Config {
       }
       // Method 2: Fallback to the last known working IP (will be updated by scripts)
       else {
-        this._baseURL = 'http://192.168.1.185:5224/api';
+        this._baseURL = 'http://10.0.12.121:5224/api';
         console.log('Using fallback API URL:', this._baseURL);
       }
 
       this._isInitialized = true;
     } catch (error) {
       console.error('Failed to initialize config:', error);
-      this._baseURL = 'http://192.168.1.185:5224/api';
+      this._baseURL = 'http://10.0.12.121:5224/api';
       this._isInitialized = true;
     }
   }
@@ -41,13 +41,13 @@ class Config {
   private async detectLocalIP(): Promise<string> {
     // Since automatic detection is complex in React Native,
     // we'll rely on the script-based approach and use fallback
-    return '192.168.1.185'; // Current detected IP as fallback
+    return '10.0.12.121'; // Current detected IP as fallback
   }
 
   public get baseURL(): string {
     if (!this._isInitialized) {
       console.warn('Config not initialized, using fallback URL');
-      return 'http://192.168.1.185:5224/api';
+      return 'http://10.0.12.121:5224/api';
     }
     return this._baseURL;
   }

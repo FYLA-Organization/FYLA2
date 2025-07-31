@@ -103,11 +103,17 @@ export interface ServiceProvider {
   followersCount?: number;
   followingCount?: number;
   isFollowing?: boolean;
+  isFollowedByCurrentUser?: boolean;
   // Location properties
   coordinates?: {
     latitude: number;
     longitude: number;
   };
+  // Social properties for compatibility
+  postsCount?: number;
+  firstName?: string;
+  lastName?: string;
+  isBookmarkedByCurrentUser?: boolean;
 }
 
 // Service Types
@@ -239,16 +245,25 @@ export interface Post {
   userId: string;
   content?: string;
   imageUrl?: string;
+  imageUrls?: string[]; // Support multiple images
   videoUrl?: string;
   likesCount: number;
   commentsCount: number;
   bookmarksCount?: number;
   isLikedByCurrentUser?: boolean;
   isBookmarkedByCurrentUser?: boolean;
+  isBookmarkByCurrentUser?: boolean; // Compatibility alias
   isBusinessPost?: boolean;
   createdAt: string;
   user?: User;
   comments?: Comment[];
+  // Social media properties
+  caption?: string;
+  tags?: string[];
+  location?: string;
+  serviceCategories?: string[];
+  provider?: ServiceProvider;
+  providerId?: string;
 }
 
 export interface Comment {
@@ -324,6 +339,11 @@ export type RootStackParamList = {
     service: Service; 
     provider: ServiceProvider; 
   };
+  BookingCalendar: {
+    serviceId: string;
+    providerId: string;
+    rescheduleBookingId?: string;
+  };
   Chat: {
     userId: string;
     userName: string;
@@ -349,16 +369,24 @@ export type RootStackParamList = {
   // Provider Dashboard Navigation
   Analytics: undefined;
   Schedule: undefined;
+  EnhancedSchedule: undefined;
   Clients: undefined;
   Reviews: undefined;
+  // Enhanced Provider Business Management
+  ClientManagement: undefined;
+  CouponsLoyalty: undefined;
+  ServiceManagement: undefined;
   // Social Media Screens
   SocialFeed: undefined;
   InstagramSearch: undefined;
   CreatePost: undefined;
   PostComments: { postId: string };
+  PostDetail: { postId: string };
   UserProfile: { userId: string };
   FollowingBookmarks: undefined;
   EnhancedProviderProfile: { providerId: string };
+  CreateReview: { providerId: string };
+  SocialSearch: undefined;
 };
 
 export type AuthStackParamList = {
@@ -380,10 +408,14 @@ export type ClientTabParamList = {
 
 // Provider Navigation (Business Dashboard)
 export type ProviderTabParamList = {
+  Home: undefined;
   Dashboard: undefined;
+  AddPost: undefined;
   Appointments: undefined;
-  Social: undefined;
   Profile: undefined;
+  ClientManagement: undefined;
+  CouponsLoyalty: undefined;
+  Schedule: undefined;
 };
 
 // Legacy - keeping for backward compatibility
@@ -460,11 +492,15 @@ export interface DailyRevenue {
 }
 
 export interface ServicePerformance {
-  serviceId: number;
+  serviceId: string | number; // Allow both string and number for flexibility
   serviceName: string;
   bookingCount: number;
   totalRevenue: number;
   averagePrice: number;
+  averageRating?: number; // Add missing property
+  // Add missing properties for compatibility
+  revenue?: number;
+  bookings?: number;
 }
 
 export interface ClientAnalytics {
@@ -617,4 +653,191 @@ export interface FollowResponse {
   isFollowing: boolean;
   followerCount: number;
   message: string;
+}
+
+// ===== ENHANCED PROVIDER BUSINESS MANAGEMENT TYPES =====
+
+// Client Management Types
+export interface ProviderClient {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  profilePictureUrl?: string;
+  totalBookings: number;
+  totalSpent: number;
+  averageRating?: number;
+  lastVisit?: string;
+  loyaltyPoints: number;
+  notes?: string;
+  preferences: string[];
+  tags: string[];
+  createdAt: string;
+}
+
+export interface ClientStats {
+  totalClients: number;
+  newClientsThisMonth: number;
+  topSpendingClients: ProviderClient[];
+  clientRetentionRate: number;
+  averageClientValue: number;
+}
+
+// Coupon Management Types
+export interface Coupon {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  minAmount?: number;
+  maxDiscount?: number;
+  usageLimit?: number;
+  usageCount: number;
+  validFrom: string;
+  validUntil: string;
+  isActive: boolean;
+  applicableServices: string[];
+  createdAt: string;
+}
+
+// Loyalty Program Types
+export interface LoyaltyProgram {
+  id: string;
+  name: string;
+  description: string;
+  pointsPerDollar: number;
+  redemptionRate: number; // points per dollar discount
+  minimumRedemption: number;
+  bonusMultiplier?: number;
+  tierThresholds?: {
+    bronze: number;
+    silver: number;
+    gold: number;
+    platinum: number;
+  };
+  tierBenefits?: {
+    [tier: string]: string[];
+  };
+  isActive: boolean;
+  createdAt: string;
+}
+
+// Auto Message Types
+export interface AutoMessage {
+  id: string;
+  name: string;
+  message: string;
+  trigger: 'booking_confirmed' | 'booking_completed' | 'birthday' | 'no_visit_30_days' | 'loyalty_milestone';
+  triggerValue?: string; // Additional trigger data
+  delay?: number; // Minutes after trigger
+  isActive: boolean;
+  lastSent?: string;
+  sentCount: number;
+  createdAt: string;
+}
+
+// Schedule Management Types
+export interface DaySchedule {
+  date: string;
+  isWorkingDay: boolean;
+  startTime: string;
+  endTime: string;
+  breakTimes: TimeSlot[];
+  blockedTimes: BlockedTimeSlot[];
+  appointments: ScheduleAppointment[];
+}
+
+export interface TimeSlot {
+  startTime: string;
+  endTime: string;
+}
+
+export interface BlockedTimeSlot extends TimeSlot {
+  id: string;
+  reason: string;
+  createdAt: string;
+}
+
+export interface ScheduleAppointment {
+  id: string;
+  clientName: string;
+  serviceName: string;
+  startTime: string;
+  endTime: string;
+  status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
+  clientId: string;
+  serviceId: string;
+}
+
+export interface WeekSchedule {
+  weekStart: string;
+  weekEnd: string;
+  days: DaySchedule[];
+}
+
+// Business Location Types
+export interface BusinessLocation {
+  id: string;
+  businessName: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
+  contactPhone?: string;
+  businessHours: {
+    [day: string]: {
+      isOpen: boolean;
+      openTime: string;
+      closeTime: string;
+    };
+  };
+  amenities: string[];
+  description?: string;
+  photos: string[];
+}
+
+// Enhanced Analytics Types
+export interface DashboardMetrics {
+  todayRevenue: number;
+  weekRevenue: number;
+  monthRevenue: number;
+  totalClients: number;
+  newClientsThisMonth: number;
+  appointmentsToday: number;
+  appointmentsThisWeek: number;
+  averageRating: number;
+  topServices: {
+    name: string;
+    revenue: number;
+    bookings: number;
+  }[];
+  recentActivity: {
+    type: 'booking' | 'payment' | 'review' | 'new_client';
+    message: string;
+    timestamp: string;
+  }[];
+}
+
+// Missing Type Exports - Add these for compatibility
+export type SocialPost = Post;
+export type SocialFeed = {
+  posts: SocialPost[];
+  hasMore: boolean;
+  nextCursor?: string;
+};
+
+export interface ClientDashboard {
+  upcomingBookings: number;
+  totalBookings: number;
+  totalSpent: number;
+  favoriteProviders: ServiceProvider[];
+  recentBookings: Booking[];
+  recommendedServices: Service[];
 }

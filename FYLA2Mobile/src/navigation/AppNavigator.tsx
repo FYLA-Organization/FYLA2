@@ -26,10 +26,16 @@ import ProfileScreen from '../screens/main/ProfileScreen';
 
 // Provider Screens (Business Dashboard)
 import DashboardScreen from '../screens/provider/DashboardScreen';
+import ProviderDashboardScreen from '../screens/provider/ProviderDashboardScreen';
+import EnhancedDashboardScreen from '../screens/provider/EnhancedDashboardScreen';
 import AppointmentsScreen from '../screens/provider/AppointmentsScreenSimple';
 import AnalyticsScreen from '../screens/provider/AnalyticsScreen';
 import ScheduleScreen from '../screens/provider/ScheduleScreen';
+import EnhancedScheduleScreen from '../screens/provider/EnhancedScheduleScreen';
 import ClientsScreen from '../screens/provider/ClientsScreen';
+import ClientManagementScreen from '../screens/provider/ClientManagementScreen';
+import CouponsLoyaltyScreen from '../screens/provider/CouponsLoyaltyScreen';
+import ServiceManagementScreen from '../screens/provider/ServiceManagementScreen';
 import ReviewsScreen from '../screens/reviews/ReviewsScreen';
 
 // Detail Screens (Shared)
@@ -50,7 +56,7 @@ import CreatePostScreen from '../screens/social/CreatePostScreen';
 import PostCommentsScreen from '../screens/social/PostCommentsScreen';
 import UserProfileScreen from '../screens/social/UserProfileScreen';
 import FollowingBookmarksScreen from '../screens/social/FollowingBookmarksScreen';
-import EnhancedProviderProfileScreen from '../screens/provider/EnhancedProviderProfileScreen';
+import WorkingEnhancedProviderProfileScreen from '../screens/provider/WorkingEnhancedProviderProfileScreen';
 
 // Instagram-style Search
 import InstagramSearchScreen from '../screens/main/InstagramSearchScreen';
@@ -166,14 +172,17 @@ const ProviderTabNavigator = () => {
           let iconName: string;
 
           switch (route.name) {
+            case 'Home':
+              iconName = focused ? 'home' : 'home-outline';
+              break;
             case 'Dashboard':
               iconName = focused ? 'analytics' : 'analytics-outline';
               break;
+            case 'AddPost':
+              iconName = focused ? 'add-circle' : 'add-circle-outline';
+              break;
             case 'Appointments':
               iconName = focused ? 'calendar' : 'calendar-outline';
-              break;
-            case 'Social':
-              iconName = focused ? 'heart' : 'heart-outline';
               break;
             case 'Profile':
               iconName = focused ? 'person' : 'person-outline';
@@ -185,16 +194,16 @@ const ProviderTabNavigator = () => {
           const iconSize = focused ? 26 : 24;
           return <Ionicons name={iconName as any} size={iconSize} color={color} />;
         },
-        tabBarActiveTintColor: 'white',
-        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.6)',
+        tabBarActiveTintColor: '#3797F0', // Match client side styling
+        tabBarInactiveTintColor: '#8E8E8E',
         tabBarStyle: {
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.95)',
+          backgroundColor: '#FFFFFF', // Match client side styling
           borderTopWidth: 1,
-          borderTopColor: 'rgba(255, 255, 255, 0.1)',
+          borderTopColor: '#DBDBDB',
           height: 85,
           paddingBottom: 20,
           paddingTop: 10,
@@ -209,19 +218,24 @@ const ProviderTabNavigator = () => {
       })}
     >
       <ProviderTab.Screen 
+        name="Home" 
+        component={HomeScreen}
+        options={{ tabBarLabel: 'Home' }}
+      />
+      <ProviderTab.Screen 
         name="Dashboard" 
-        component={DashboardScreen}
-        options={{ tabBarLabel: 'Dashboard' }}
+        component={ProviderDashboardScreen}
+        options={{ tabBarLabel: 'Business' }}
+      />
+      <ProviderTab.Screen 
+        name="AddPost" 
+        component={CreatePostScreen}
+        options={{ tabBarLabel: 'Create' }}
       />
       <ProviderTab.Screen 
         name="Appointments" 
         component={AppointmentsScreen}
-        options={{ tabBarLabel: 'Appointments' }}
-      />
-      <ProviderTab.Screen 
-        name="Social" 
-        component={SocialFeedScreen}
-        options={{ tabBarLabel: 'Social' }}
+        options={{ tabBarLabel: 'Bookings' }}
       />
       <ProviderTab.Screen 
         name="Profile" 
@@ -381,6 +395,28 @@ const AppNavigator = () => {
             <RootStack.Screen 
               name="EnhancedProfile" 
               component={EnhancedProfileScreen}
+              options={{ headerShown: false }}
+            />
+            
+            {/* Enhanced Provider Business Management Screens */}
+            <RootStack.Screen 
+              name="ClientManagement" 
+              component={ClientManagementScreen}
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
+              name="CouponsLoyalty" 
+              component={CouponsLoyaltyScreen}
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
+              name="EnhancedSchedule" 
+              component={EnhancedScheduleScreen}
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
+              name="ServiceManagement" 
+              component={ServiceManagementScreen}
               options={{ headerShown: false }}
             />
             
@@ -664,9 +700,9 @@ const AppNavigator = () => {
             />
             <RootStack.Screen 
               name="EnhancedProviderProfile" 
-              component={EnhancedProviderProfileScreen}
+              component={WorkingEnhancedProviderProfileScreen}
               options={{ 
-                headerShown: true, 
+                headerShown: false, 
                 title: 'Provider Profile',
                 headerStyle: {
                   backgroundColor: 'transparent',
