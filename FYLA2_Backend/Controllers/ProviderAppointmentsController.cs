@@ -401,9 +401,13 @@ namespace FYLA2_Backend.Controllers
             .Where(b => b.ProviderId == providerId && b.ClientId == clientId && b.Status == BookingStatus.Completed)
             .CountAsync();
 
-        var lifetimeValue = await _context.Bookings
+        // Convert to ToListAsync first to avoid SQLite decimal sum issue
+        var completedBookings = await _context.Bookings
             .Where(b => b.ProviderId == providerId && b.ClientId == clientId && b.Status == BookingStatus.Completed)
-            .SumAsync(b => b.TotalPrice);
+            .Select(b => b.TotalPrice)
+            .ToListAsync();
+        
+        var lifetimeValue = completedBookings.Sum();
 
         var loyaltyStatus = await _loyaltyService.GetClientLoyaltyStatusAsync(clientId, providerId);
 

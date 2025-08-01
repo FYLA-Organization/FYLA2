@@ -413,23 +413,30 @@ namespace FYLA2_Backend.Controllers
       var previousStartDate = startDate.AddDays(-periodDays);
       var previousEndDate = startDate;
 
-      var currentRevenue = await _context.PaymentRecords
+      // Get payments for current period (convert to List first to avoid SQLite decimal sum issue)
+      var currentPayments = await _context.PaymentRecords
           .Include(p => p.Booking)
           .Where(p => p.Booking != null &&
                      p.Booking.ProviderId == userId &&
                      p.Status == PaymentStatus.Succeeded &&
                      p.UpdatedAt >= startDate &&
                      p.UpdatedAt < endDate)
-          .SumAsync(p => p.Amount);
+          .Select(p => p.Amount)
+          .ToListAsync();
+      
+      var currentRevenue = currentPayments.Sum();
 
-      var previousRevenue = await _context.PaymentRecords
+      var previousPayments = await _context.PaymentRecords
           .Include(p => p.Booking)
           .Where(p => p.Booking != null &&
                      p.Booking.ProviderId == userId &&
                      p.Status == PaymentStatus.Succeeded &&
                      p.UpdatedAt >= previousStartDate &&
                      p.UpdatedAt < previousEndDate)
-          .SumAsync(p => p.Amount);
+          .Select(p => p.Amount)
+          .ToListAsync();
+      
+      var previousRevenue = previousPayments.Sum();
 
       if (previousRevenue == 0) return currentRevenue > 0 ? 100 : 0;
 
