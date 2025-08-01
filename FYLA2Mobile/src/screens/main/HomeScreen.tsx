@@ -384,7 +384,19 @@ const HomeScreen: React.FC = () => {
               <View style={styles.postHeader}>
                 <TouchableOpacity 
                   style={styles.userInfo}
-                  onPress={() => navigation.navigate('ProviderProfile', { providerId: post.userId })}
+                  onPress={() => {
+                    // Only navigate to provider profile if the user is a service provider
+                    if (post.user?.isServiceProvider) {
+                      navigation.navigate('ProviderProfile', { providerId: post.userId });
+                    } else {
+                      // For regular clients, show an alert or do nothing
+                      Alert.alert(
+                        'Profile Unavailable', 
+                        'This user is a client and does not have a business profile.',
+                        [{ text: 'OK' }]
+                      );
+                    }
+                  }}
                 >
                   <Image
                     source={{ uri: post.user?.profilePictureUrl || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face' }}
@@ -393,6 +405,9 @@ const HomeScreen: React.FC = () => {
                   <View style={styles.userDetails}>
                     <Text style={styles.username}>
                       {post.user ? `${post.user.firstName} ${post.user.lastName}` : 'Beauty Provider'}
+                      {post.user?.isServiceProvider && (
+                        <Text style={styles.verifiedBadge}> ✓</Text>
+                      )}
                     </Text>
                     <Text style={styles.location}>
                       {post.isBusinessPost ? 'Professional Service' : formatTimeAgo(post.createdAt)}
@@ -465,6 +480,9 @@ const HomeScreen: React.FC = () => {
                 <Text style={styles.postDescription}>
                   <Text style={styles.username}>
                     {post.user ? `${post.user.firstName} ${post.user.lastName}` : 'Beauty Provider'}
+                    {post.user?.isServiceProvider && (
+                      <Text style={styles.verifiedBadge}> ✓</Text>
+                    )}
                   </Text>
                   {' '}{post.content}
                 </Text>
@@ -721,6 +739,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text,
     marginBottom: 2,
+  },
+  verifiedBadge: {
+    color: '#3797F0',
+    fontSize: 14,
+    fontWeight: '600',
   },
   location: {
     fontSize: 12,

@@ -48,6 +48,13 @@ namespace FYLA2_Backend.DTOs
         public string Content { get; set; } = string.Empty;
     }
 
+    public class CreateCommentRequest
+    {
+        [Required]
+        [MaxLength(500)]
+        public string Content { get; set; } = string.Empty;
+    }
+
     public class CommentDto
     {
         public int Id { get; set; }

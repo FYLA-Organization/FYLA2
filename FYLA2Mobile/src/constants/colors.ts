@@ -90,17 +90,71 @@ export const TYPOGRAPHY = {
   '4xl': 36,
   
   // Font Weights
-  light: '300',
-  regular: '400',
-  medium: '500',
-  semibold: '600',
-  bold: '700',
-  extrabold: '800',
+  light: '300' as const,
+  regular: '400' as const,
+  medium: '500' as const,
+  semibold: '600' as const,
+  bold: '700' as const,
+  extrabold: '800' as const,
   
   // Line Heights
   tight: 1.2,
   normalLine: 1.4,
   relaxed: 1.6,
+  
+  // Predefined Text Styles
+  h1: {
+    fontSize: 32,
+    fontWeight: '700' as const,
+    lineHeight: 1.2,
+  },
+  h2: {
+    fontSize: 28,
+    fontWeight: '700' as const,
+    lineHeight: 1.2,
+  },
+  h3: {
+    fontSize: 24,
+    fontWeight: '600' as const,
+    lineHeight: 1.3,
+  },
+  h4: {
+    fontSize: 20,
+    fontWeight: '600' as const,
+    lineHeight: 1.3,
+  },
+  h5: {
+    fontSize: 18,
+    fontWeight: '500' as const,
+    lineHeight: 1.4,
+  },
+  body: {
+    fontSize: 16,
+    fontWeight: '400' as const,
+    lineHeight: 1.5,
+  },
+  bodySmall: {
+    fontSize: 14,
+    fontWeight: '400' as const,
+    lineHeight: 1.4,
+  },
+  caption: {
+    fontSize: 12,
+    fontWeight: '400' as const,
+    lineHeight: 1.3,
+  },
+  button: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    lineHeight: 1.2,
+  },
+  
+  // Line Height values for custom use
+  lineHeight: {
+    tight: 1.2,
+    normal: 1.4,
+    relaxed: 1.6,
+  },
 };
 
 // Spacing constants

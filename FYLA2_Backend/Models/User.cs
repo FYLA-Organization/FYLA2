@@ -26,6 +26,9 @@ namespace FYLA2_Backend.Models
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    // Loyalty Points
+    public int LoyaltyPoints { get; set; } = 0;
+
     // Navigation properties
     public virtual ICollection<Booking> BookingsAsClient { get; set; } = new List<Booking>();
     public virtual ICollection<Booking> BookingsAsProvider { get; set; } = new List<Booking>();
@@ -43,5 +46,7 @@ namespace FYLA2_Backend.Models
     public virtual ICollection<CommentLike> CommentLikes { get; set; } = new List<CommentLike>();
     public virtual ServiceProvider? ServiceProvider { get; set; }
     public virtual PaymentSettings? PaymentSettings { get; set; }
+    public virtual ICollection<LoyaltyTransaction> LoyaltyTransactionsAsClient { get; set; } = new List<LoyaltyTransaction>();
+    public virtual ICollection<LoyaltyTransaction> LoyaltyTransactionsAsProvider { get; set; } = new List<LoyaltyTransaction>();
   }
 }

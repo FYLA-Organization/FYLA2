@@ -3,6 +3,7 @@ using System;
 using FYLA2_Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FYLA2_Backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250801043313_AddLoyaltySystem")]
+    partial class AddLoyaltySystem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.0");
@@ -28,9 +31,6 @@ namespace FYLA2_Backend.Migrations
 
                     b.Property<string>("ClientId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -301,7 +301,6 @@ namespace FYLA2_Backend.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<decimal>("Amount")
-                        .HasPrecision(10, 2)
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("BookingId")
@@ -1361,9 +1360,8 @@ namespace FYLA2_Backend.Migrations
             modelBuilder.Entity("FYLA2_Backend.Models.PaymentRecord", b =>
                 {
                     b.HasOne("FYLA2_Backend.Models.Booking", "Booking")
-                        .WithMany("PaymentRecords")
-                        .HasForeignKey("BookingId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .WithMany()
+                        .HasForeignKey("BookingId");
 
                     b.HasOne("FYLA2_Backend.Models.Subscription", null)
                         .WithMany("PaymentRecords")
@@ -1676,8 +1674,6 @@ namespace FYLA2_Backend.Migrations
 
             modelBuilder.Entity("FYLA2_Backend.Models.Booking", b =>
                 {
-                    b.Navigation("PaymentRecords");
-
                     b.Navigation("Reviews");
                 });
 

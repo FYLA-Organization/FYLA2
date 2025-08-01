@@ -10,6 +10,8 @@ import {
   Service,
   Booking,
   CreateBookingRequest,
+  BookingCreationResponse,
+  ClientLoyaltyStatus,
   Review,
   ReviewQuestionnaire,
   Post,
@@ -343,8 +345,8 @@ class ApiService {
   // Review Methods
   async getReviews(providerId: string): Promise<Review[]> {
     try {
-      const response = await this.api.get(`/review/${providerId}`);
-      return response.data;
+      const response = await this.api.get(`/serviceprovider/${providerId}/reviews`);
+      return response.data.data; // The reviews endpoint returns { data: [...], pagination: {...}, summary: {...} }
     } catch (error) {
       console.error('Error fetching reviews:', error);
       throw error;
@@ -400,9 +402,9 @@ class ApiService {
     }
   }
 
-  async createBooking(bookingData: CreateBookingRequest): Promise<Booking> {
+  async createBooking(bookingData: CreateBookingRequest): Promise<BookingCreationResponse> {
     try {
-      const response = await this.api.post('/bookings', bookingData);
+      const response = await this.api.post('/bookings/create', bookingData);
       return response.data;
     } catch (error) {
       console.error('Error creating booking:', error);
@@ -714,6 +716,29 @@ class ApiService {
       await this.api.delete(`/social/follow/${providerId}`);
     } catch (error) {
       console.error('Error unfollowing provider:', error);
+      throw error;
+    }
+  }
+
+  async getFollowStatus(providerId: string): Promise<{ isFollowing: boolean; followersCount: number }> {
+    try {
+      const response = await this.api.get(`/social/follow/status/${providerId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting follow status:', error);
+      // Return default values if the follow functionality is not yet implemented
+      return { isFollowing: false, followersCount: 0 };
+    }
+  }
+
+  async getSavedPosts(page: number = 1): Promise<{ posts: any[]; hasMore: boolean }> {
+    try {
+      const response = await this.api.get('/social/bookmarks', {
+        params: { page }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching saved posts:', error);
       throw error;
     }
   }
@@ -1051,24 +1076,6 @@ class ApiService {
     }
   }
 
-  async blockTimeSlot(slotData: any): Promise<void> {
-    try {
-      await this.api.post('/providerschedule/block-time', slotData);
-    } catch (error) {
-      console.error('Error blocking time slot:', error);
-      throw error;
-    }
-  }
-
-  async unblockTimeSlot(slotId: string): Promise<void> {
-    try {
-      await this.api.delete(`/providerschedule/block-time/${slotId}`);
-    } catch (error) {
-      console.error('Error unblocking time slot:', error);
-      throw error;
-    }
-  }
-
   async checkScheduleConflicts(appointmentData: any): Promise<any> {
     try {
       const response = await this.api.post('/providerschedule/check-conflicts', appointmentData);
@@ -1141,25 +1148,6 @@ class ApiService {
   }
 
   // Appointment Management (Enhanced)
-  async getProviderAppointments(
-    page: number = 1, 
-    limit: number = 20, 
-    status?: string, 
-    date?: string
-  ): Promise<PaginatedResponse<Booking>> {
-    try {
-      let url = `/booking/provider/appointments?page=${page}&limit=${limit}`;
-      if (status) url += `&status=${status}`;
-      if (date) url += `&date=${date}`;
-      
-      const response = await this.api.get(url);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching provider appointments:', error);
-      throw error;
-    }
-  }
-
   async acceptAppointment(appointmentId: string): Promise<void> {
     try {
       await this.api.patch(`/booking/${appointmentId}/accept`);
@@ -1643,6 +1631,139 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('Error getting database stats:', error);
+      throw error;
+    }
+  }
+
+  // Enhanced Provider Appointments Management
+  async getProviderAppointments(filters: any): Promise<any> {
+    try {
+      const queryString = new URLSearchParams(filters).toString();
+      const response = await this.api.get(`/provider/appointments?${queryString}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting provider appointments:', error);
+      throw error;
+    }
+  }
+
+  async updateAppointmentStatus(appointmentId: number, status: string, notes?: string, tipAmount?: number): Promise<any> {
+    try {
+      const response = await this.api.post(`/provider/appointments/${appointmentId}/update-status`, {
+        status,
+        notes,
+        tipAmount
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      throw error;
+    }
+  }
+
+  async getProviderPaymentHistory(startDate?: string, endDate?: string, page = 1, pageSize = 50): Promise<any> {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        pageSize: pageSize.toString(),
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate })
+      });
+      const response = await this.api.get(`/provider/appointments/payment-history?${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting payment history:', error);
+      throw error;
+    }
+  }
+
+  async generateInvoice(bookingId: number): Promise<any> {
+    try {
+      const response = await this.api.post(`/provider/appointments/generate-invoice/${bookingId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      throw error;
+    }
+  }
+
+  // Enhanced Schedule Management
+  async getProviderWeekSchedule(weekStart: string): Promise<any> {
+    try {
+      const response = await this.api.get(`/provider/schedule-management/week?weekStart=${weekStart}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting week schedule:', error);
+      throw error;
+    }
+  }
+
+  async getProviderScheduleStats(startDate?: string, endDate?: string): Promise<any> {
+    try {
+      const params = new URLSearchParams({
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate })
+      });
+      const response = await this.api.get(`/provider/schedule-management/stats?${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting schedule stats:', error);
+      throw error;
+    }
+  }
+
+  async blockTimeSlot(date: string, startTime: string, endTime: string, reason?: string): Promise<any> {
+    try {
+      const response = await this.api.post('/provider/schedule-management/block-time', {
+        date,
+        startTime,
+        endTime,
+        reason
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error blocking time slot:', error);
+      throw error;
+    }
+  }
+
+  async unblockTimeSlot(bookingId: number): Promise<any> {
+    try {
+      const response = await this.api.delete(`/provider/schedule-management/unblock-time/${bookingId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error unblocking time slot:', error);
+      throw error;
+    }
+  }
+
+  async updateProviderAvailability(availabilityUpdate: any): Promise<any> {
+    try {
+      const response = await this.api.post('/provider/schedule-management/availability', availabilityUpdate);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating availability:', error);
+      throw error;
+    }
+  }
+
+  async updateBulkAvailability(bulkUpdate: any): Promise<any> {
+    try {
+      const response = await this.api.post('/provider/schedule-management/bulk-availability', bulkUpdate);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating bulk availability:', error);
+      throw error;
+    }
+  }
+
+  // Public schedule access for clients
+  async getProviderPublicAvailability(providerId: string, date: string): Promise<any> {
+    try {
+      const response = await this.api.get(`/provider/schedule-management/availability/${providerId}?date=${date}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting provider availability:', error);
       throw error;
     }
   }

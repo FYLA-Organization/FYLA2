@@ -462,5 +462,70 @@ namespace FYLA2_Backend.Controllers
         return StatusCode(500, $"Internal server error: {ex.Message}");
       }
     }
+
+    [HttpGet("provider-clients")]
+    public async Task<ActionResult<List<object>>> GetProviderClients()
+    {
+      var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+      if (string.IsNullOrEmpty(userId))
+      {
+        return Unauthorized();
+      }
+
+      try
+      {
+        // Check if user is a service provider
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null || !user.IsServiceProvider)
+        {
+          return NotFound("Service provider profile not found");
+        }
+
+        // Get all clients who have booked with this provider
+        var clientsData = await _context.Bookings
+            .Where(b => b.ProviderId == userId)
+            .Include(b => b.Client)
+            .GroupBy(b => b.ClientId)
+            .Select(g => new
+            {
+              ClientId = g.Key,
+              Client = g.First().Client,
+              TotalBookings = g.Count(),
+              TotalSpent = g.Sum(b => (double)b.TotalPrice),
+              LastVisit = g.Max(b => b.BookingDate),
+              CompletedBookings = g.Count(b => b.Status == BookingStatus.Completed),
+              CancelledBookings = g.Count(b => b.Status == BookingStatus.Cancelled),
+              FirstBooking = g.Min(b => b.BookingDate)
+            })
+            .ToListAsync();
+
+        // Transform to client management format
+        var clients = clientsData.Select(c => new
+        {
+          id = c.ClientId,
+          firstName = c.Client?.FirstName ?? "Unknown",
+          lastName = c.Client?.LastName ?? "Client",
+          email = c.Client?.Email ?? "No email",
+          phone = c.Client?.PhoneNumber ?? "No phone",
+          profilePictureUrl = c.Client?.ProfilePictureUrl ?? "",
+          totalBookings = c.TotalBookings,
+          totalSpent = c.TotalSpent,
+          lastVisit = c.LastVisit,
+          averageRating = 4.5, // Default rating since we don't have review system fully implemented
+          loyaltyPoints = (int)(c.TotalSpent * 0.1), // 10% of spending as points
+          status = c.TotalSpent > 500 ? "vip" : (c.TotalBookings > 0 ? "active" : "inactive"),
+          preferences = new string[] { }, // Empty for now
+          notes = "",
+          completionRate = c.TotalBookings > 0 ? (double)c.CompletedBookings / c.TotalBookings * 100 : 0,
+          isNewClient = c.FirstBooking >= DateTime.Today.AddDays(-30)
+        }).OrderByDescending(c => c.totalSpent).ToList();
+
+        return Ok(clients);
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, $"Internal server error: {ex.Message}");
+      }
+    }
   }
 }

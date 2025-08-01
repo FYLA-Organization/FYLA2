@@ -29,9 +29,12 @@ import DashboardScreen from '../screens/provider/DashboardScreen';
 import ProviderDashboardScreen from '../screens/provider/ProviderDashboardScreen';
 import EnhancedDashboardScreen from '../screens/provider/EnhancedDashboardScreen';
 import AppointmentsScreen from '../screens/provider/AppointmentsScreenSimple';
+import EnhancedAppointmentsScreen from '../screens/provider/EnhancedAppointmentsScreen';
 import AnalyticsScreen from '../screens/provider/AnalyticsScreen';
+import AnalyticsDashboardScreen from '../screens/provider/AnalyticsDashboardScreen';
 import ScheduleScreen from '../screens/provider/ScheduleScreen';
 import EnhancedScheduleScreen from '../screens/provider/EnhancedScheduleScreen';
+import EnhancedScheduleManagementScreen from '../screens/provider/EnhancedScheduleManagementScreen';
 import ClientsScreen from '../screens/provider/ClientsScreen';
 import ClientManagementScreen from '../screens/provider/ClientManagementScreen';
 import CouponsLoyaltyScreen from '../screens/provider/CouponsLoyaltyScreen';
@@ -415,6 +418,16 @@ const AppNavigator = () => {
               options={{ headerShown: false }}
             />
             <RootStack.Screen 
+              name="EnhancedScheduleManagement" 
+              component={EnhancedScheduleManagementScreen}
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
+              name="EnhancedAppointments" 
+              component={EnhancedAppointmentsScreen}
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
               name="ServiceManagement" 
               component={ServiceManagementScreen}
               options={{ headerShown: false }}
@@ -423,10 +436,10 @@ const AppNavigator = () => {
             {/* Provider Dashboard Navigation Screens */}
             <RootStack.Screen 
               name="Analytics" 
-              component={AnalyticsScreen}
+              component={AnalyticsDashboardScreen}
               options={{ 
                 headerShown: true, 
-                title: 'Analytics',
+                title: 'Business Intelligence',
                 headerStyle: {
                   backgroundColor: 'transparent',
                 },

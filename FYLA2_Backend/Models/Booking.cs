@@ -8,7 +8,8 @@ namespace FYLA2_Backend.Models
     Confirmed,
     InProgress,
     Completed,
-    Cancelled
+    Cancelled,
+    Blocked
   }
 
   public class Booking
@@ -54,10 +55,13 @@ namespace FYLA2_Backend.Models
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    public DateTime? CompletedAt { get; set; }
+
     // Navigation properties
     public virtual User Client { get; set; } = null!;
     public virtual User Provider { get; set; } = null!;
     public virtual Service Service { get; set; } = null!;
     public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public virtual ICollection<PaymentRecord> PaymentRecords { get; set; } = new List<PaymentRecord>();
   }
 }

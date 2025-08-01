@@ -11,12 +11,15 @@ import {
   TextInput,
   ScrollView,
   Modal,
+  Dimensions,
+  StatusBar,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { Booking } from '../../types';
+import { COLORS, COMMON_STYLES } from '../../constants/colors';
 import ApiService from '../../services/api';
+
+const { width } = Dimensions.get('window');
 
 const AppointmentsScreen = () => {
   const [appointments, setAppointments] = useState<Booking[]>([]);
@@ -183,32 +186,32 @@ const AppointmentsScreen = () => {
       return (
         <View style={styles.actionButtons}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: '#4ECDC4' }]}
+            style={[styles.actionButton, { backgroundColor: COLORS.success }]}
             onPress={() => handleStatusChange(item.id, 'Confirmed')}
           >
-            <Ionicons name="checkmark" size={16} color="white" />
-            <Text style={styles.actionButtonText}>Accept Booking</Text>
+            <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+            <Text style={styles.actionButtonText}>Accept</Text>
           </TouchableOpacity>
         </View>
       );
     } else if (item.status === 'Confirmed') {
       return (
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: '#45B7D1' }]}
+          style={[styles.actionButton, { backgroundColor: COLORS.primary }]}
           onPress={() => handleStatusChange(item.id, 'InProgress')}
         >
-          <Ionicons name="play" size={16} color="white" />
-          <Text style={styles.actionButtonText}>Start Service</Text>
+          <Ionicons name="play" size={14} color="#FFFFFF" />
+          <Text style={styles.actionButtonText}>Start</Text>
         </TouchableOpacity>
       );
     } else if (item.status === 'InProgress') {
       return (
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: '#96CEB4' }]}
+          style={[styles.actionButton, { backgroundColor: COLORS.verified }]}
           onPress={() => handleStatusChange(item.id, 'Completed')}
         >
-          <Ionicons name="checkmark-circle" size={16} color="white" />
-          <Text style={styles.actionButtonText}>Mark Complete</Text>
+          <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
+          <Text style={styles.actionButtonText}>Complete</Text>
         </TouchableOpacity>
       );
     }
@@ -216,111 +219,80 @@ const AppointmentsScreen = () => {
   };
 
   const renderAppointment = ({ item }: { item: Booking }) => (
-    <BlurView intensity={20} style={styles.appointmentCard}>
-      {/* Status Bar */}
-      <View style={[styles.statusBar, { backgroundColor: getStatusColor(item.status) }]} />
-      
-      {/* Main Content */}
-      <View style={styles.cardContent}>
-        {/* Top Row - Client & Service Info */}
-        <View style={styles.topSection}>
-          <View style={styles.clientSection}>
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarText}>
-                {(item.client?.firstName?.[0] || 'U')}
-                {(item.client?.lastName?.[0] || '')}
-              </Text>
-            </View>
-            <View style={styles.clientInfo}>
-              <Text style={styles.clientName}>
-                {item.client?.firstName} {item.client?.lastName || 'Unknown Client'}
-              </Text>
-              <Text style={styles.serviceName}>
-                {item.service?.name || 'Unknown Service'}
-              </Text>
-            </View>
-          </View>
-          <View style={[styles.statusPill, { backgroundColor: getStatusColor(item.status) }]}>
-            <Text style={styles.statusText}>{item.status}</Text>
-          </View>
+    <TouchableOpacity style={styles.appointmentCard}>
+      <View style={styles.appointmentHeader}>
+        <View style={styles.appointmentInfo}>
+          <Text style={styles.clientName}>
+            {item.client?.firstName} {item.client?.lastName || 'Unknown Client'}
+          </Text>
+          <Text style={styles.serviceName}>
+            {item.service?.name || 'Unknown Service'}
+          </Text>
         </View>
-
-        {/* Details Grid */}
-        <View style={styles.detailsGrid}>
-          <View style={styles.detailItem}>
-            <View style={styles.detailIcon}>
-              <Ionicons name="calendar" size={18} color="#4ECDC4" />
-            </View>
-            <View>
-              <Text style={styles.detailLabel}>Date</Text>
-              <Text style={styles.detailValue}>
-                {new Date(item.bookingDate).toLocaleDateString()}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.detailItem}>
-            <View style={styles.detailIcon}>
-              <Ionicons name="time" size={18} color="#45B7D1" />
-            </View>
-            <View>
-              <Text style={styles.detailLabel}>Time</Text>
-              <Text style={styles.detailValue}>
-                {item.startTime} - {item.endTime}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.detailItem}>
-            <View style={styles.detailIcon}>
-              <Ionicons name="card" size={18} color="#FFD93D" />
-            </View>
-            <View>
-              <Text style={styles.detailLabel}>Amount</Text>
-              <Text style={[styles.detailValue, styles.priceText]}>${item.totalAmount}</Text>
-            </View>
-          </View>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+          <Text style={styles.statusText}>{item.status}</Text>
         </View>
-
-        {/* Action Section */}
-        {renderStatusActions(item)}
       </View>
-    </BlurView>
+      
+      <View style={styles.appointmentDetails}>
+        <View style={styles.detailRow}>
+          <Ionicons name="calendar-outline" size={16} color={COLORS.textLight} />
+          <Text style={styles.detailText}>
+            {new Date(item.bookingDate).toLocaleDateString()}
+          </Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Ionicons name="time-outline" size={16} color={COLORS.textLight} />
+          <Text style={styles.detailText}>
+            {new Date(item.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Ionicons name="card-outline" size={16} color={COLORS.textLight} />
+          <Text style={styles.detailText}>${item.totalAmount}</Text>
+        </View>
+      </View>
+
+      {/* Action buttons for status changes */}
+      {renderStatusActions(item)}
+    </TouchableOpacity>
   );
 
   if (loading) {
     return (
-      <LinearGradient colors={['#667eea', '#764ba2']} style={[styles.container, styles.loadingContainer]}>
-        <BlurView intensity={20} style={styles.loadingCard}>
-          <ActivityIndicator size="large" color="white" />
+      <View style={[styles.container, styles.loadingContainer]}>
+        <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+        <View style={styles.loadingCard}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>Loading appointments...</Text>
-        </BlurView>
-      </LinearGradient>
+        </View>
+      </View>
     );
   }
 
   return (
-    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       <View style={styles.content}>
         {/* Header */}
-        <BlurView intensity={20} style={styles.header}>
+        <View style={styles.header}>
           <Text style={styles.title}>My Appointments ({filteredAppointments.length})</Text>
           <TouchableOpacity 
             style={styles.filterButton}
             onPress={() => setShowFilters(!showFilters)}
           >
-            <Ionicons name="filter" size={20} color="white" />
+            <Ionicons name="filter" size={20} color={COLORS.primary} />
             {getActiveFilterCount() > 0 && (
               <View style={styles.filterBadge}>
                 <Text style={styles.filterBadgeText}>{getActiveFilterCount()}</Text>
               </View>
             )}
           </TouchableOpacity>
-        </BlurView>
+        </View>
 
         {/* Filter Panel */}
         {showFilters && (
-          <BlurView intensity={20} style={styles.filterPanel}>
+          <View style={styles.filterPanel}>
             <ScrollView showsVerticalScrollIndicator={false}>
               {/* Status Filter */}
               <View style={styles.filterSection}>
@@ -414,12 +386,12 @@ const AppointmentsScreen = () => {
               {/* Clear Filters */}
               {getActiveFilterCount() > 0 && (
                 <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
-                  <Ionicons name="refresh" size={16} color="white" />
+                  <Ionicons name="refresh" size={16} color={COLORS.primary} />
                   <Text style={styles.clearButtonText}>Clear All Filters</Text>
                 </TouchableOpacity>
               )}
             </ScrollView>
-          </BlurView>
+          </View>
         )}
 
         <FlatList
@@ -429,11 +401,11 @@ const AppointmentsScreen = () => {
           style={styles.list}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="white" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
           }
           ListEmptyComponent={
-            <BlurView intensity={20} style={styles.emptyContainer}>
-              <Ionicons name="calendar-outline" size={64} color="rgba(255, 255, 255, 0.5)" />
+            <View style={styles.emptyContainer}>
+              <Ionicons name="calendar-outline" size={64} color={COLORS.textLight} />
               <Text style={styles.emptyText}>
                 {getActiveFilterCount() > 0 ? 'No appointments match your filters' : 'No appointments found'}
               </Text>
@@ -443,17 +415,18 @@ const AppointmentsScreen = () => {
                   : 'Appointments will appear here when clients book your services'
                 }
               </Text>
-            </BlurView>
+            </View>
           }
         />
       </View>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.background,
   },
   content: {
     flex: 1,
@@ -468,15 +441,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: COLORS.surface,
     padding: 24,
     borderRadius: 20,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: COLORS.border,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   loadingText: {
-    color: 'white',
+    color: COLORS.text,
     fontSize: 16,
     marginTop: 12,
     fontWeight: '500',
@@ -484,33 +462,40 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: COLORS.surface,
     padding: 16,
     borderRadius: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: COLORS.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: COLORS.text,
     flex: 1,
   },
   filterButton: {
     padding: 8,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: COLORS.background,
     position: 'relative',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   filterBadge: {
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: '#FF6B6B',
+    backgroundColor: COLORS.error,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -518,20 +503,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   filterBadgeText: {
-    color: 'white',
+    color: '#FFFFFF',
     fontSize: 10,
     fontWeight: 'bold',
   },
 
   // Filter Panel
   filterPanel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: COLORS.surface,
     borderRadius: 20,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: COLORS.border,
     maxHeight: 300,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
   },
   filterSection: {
     marginBottom: 16,
@@ -539,7 +529,7 @@ const styles = StyleSheet.create({
   filterTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: 'white',
+    color: COLORS.text,
     marginBottom: 8,
     textTransform: 'uppercase',
   },
@@ -547,25 +537,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   filterChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: COLORS.background,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: COLORS.border,
   },
   filterChipActive: {
-    backgroundColor: '#4ECDC4',
-    borderColor: '#4ECDC4',
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   filterChipText: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: COLORS.textLight,
     fontSize: 12,
     fontWeight: '500',
   },
   filterChipTextActive: {
-    color: 'white',
+    color: '#FFFFFF',
     fontWeight: 'bold',
   },
   searchRow: {
@@ -574,13 +564,13 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: COLORS.background,
     borderRadius: 12,
     padding: 12,
-    color: 'white',
+    color: COLORS.text,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: COLORS.border,
   },
   amountRow: {
     flexDirection: 'row',
@@ -589,21 +579,21 @@ const styles = StyleSheet.create({
   },
   amountInput: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: COLORS.background,
     borderRadius: 12,
     padding: 12,
-    color: 'white',
+    color: COLORS.text,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: COLORS.border,
   },
   amountSeparator: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: COLORS.textLight,
     fontSize: 14,
     fontWeight: '500',
   },
   clearButton: {
-    backgroundColor: 'rgba(255, 107, 107, 0.8)',
+    backgroundColor: COLORS.error,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -612,7 +602,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   clearButtonText: {
-    color: 'white',
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -625,119 +615,14 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
 
-  // Cards
+  // Appointment Cards (matching client booking card style)
   appointmentCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    overflow: 'hidden',
-  },
-  statusBar: {
-    height: 4,
-    width: '100%',
-  },
-  cardContent: {
-    padding: 20,
-  },
-  
-  // Top Section
-  topSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  clientSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  avatarCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  avatarText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  clientInfo: {
-    flex: 1,
-  },
-  clientName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 4,
-  },
-  serviceName: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontWeight: '500',
-  },
-  statusPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  statusText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-
-  // Details Grid
-  detailsGrid: {
-    marginBottom: 20,
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 12,
+    backgroundColor: COLORS.surface,
     borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    ...COMMON_STYLES.shadow,
   },
-  detailIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  detailValue: {
-    fontSize: 14,
-    color: 'white',
-    fontWeight: '600',
-  },
-  priceText: {
-    color: '#4ECDC4',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-
-  // Old styles to remove
   appointmentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -746,73 +631,90 @@ const styles = StyleSheet.create({
   },
   appointmentInfo: {
     flex: 1,
-    marginRight: 12,
+  },
+  clientName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  serviceName: {
+    fontSize: 14,
+    color: COLORS.textLight,
   },
   statusBadge: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 16,
-    minWidth: 70,
-    alignItems: 'center',
+    borderRadius: 12,
   },
-
-  // Details (old)
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   appointmentDetails: {
+    flexDirection: 'row',
+    gap: 16,
     marginBottom: 12,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    gap: 4,
   },
   detailText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 12,
+    color: COLORS.textLight,
   },
 
-  // Buttons
+  // Action Buttons
   actionButtons: {
     flexDirection: 'row',
     gap: 8,
+    marginTop: 8,
   },
   actionButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 16,
+    borderRadius: 8,
     gap: 4,
   },
   actionButtonText: {
-    color: 'white',
-    fontSize: 13,
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
 
   // Empty
   emptyContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: COLORS.surface,
     padding: 32,
     borderRadius: 20,
     alignItems: 'center',
     marginTop: 40,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: COLORS.border,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
   },
   emptyText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: 'white',
+    color: COLORS.text,
     marginTop: 12,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: COLORS.textLight,
     textAlign: 'center',
     lineHeight: 18,
   },

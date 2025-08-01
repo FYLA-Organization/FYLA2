@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using FYLA2_Backend.Data;
 using FYLA2_Backend.Models;
 using FYLA2_Backend.DTOs;
+using FYLA2_Backend.DTOs.Booking;
+using FYLA2_Backend.DTOs.Loyalty;
+using FYLA2_Backend.Services;
 using System.Security.Claims;
 
 namespace FYLA2_Backend.Controllers
@@ -15,11 +18,13 @@ namespace FYLA2_Backend.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<BookingController> _logger;
+        private readonly ILoyaltyService _loyaltyService;
 
-        public BookingController(ApplicationDbContext context, ILogger<BookingController> logger)
+        public BookingController(ApplicationDbContext context, ILogger<BookingController> logger, ILoyaltyService loyaltyService)
         {
             _context = context;
             _logger = logger;
+            _loyaltyService = loyaltyService;
         }
 
         private string GetUserId()
@@ -94,7 +99,7 @@ namespace FYLA2_Backend.Controllers
         }
 
         [HttpPost("create")]
-        public async Task<ActionResult<BookingDto>> CreateBooking([FromBody] CreateBookingDto request)
+        public async Task<ActionResult<BookingCreationResponseDto>> CreateBooking([FromBody] CreateBookingDto request)
         {
             try
             {
@@ -140,6 +145,9 @@ namespace FYLA2_Backend.Controllers
                 _context.Bookings.Add(booking);
                 await _context.SaveChangesAsync();
 
+                // Calculate loyalty points for completed bookings (or pending ones that will likely complete)
+                var loyaltyPointsEarned = await _loyaltyService.AwardPointsForBookingAsync(booking.Id);
+
                 var bookingDto = new BookingDto
                 {
                     Id = booking.Id,
@@ -156,7 +164,13 @@ namespace FYLA2_Backend.Controllers
                     PaymentMethod = booking.PaymentMethod
                 };
 
-                return CreatedAtAction(nameof(GetBooking), new { id = booking.Id }, bookingDto);
+                var response = new BookingCreationResponseDto
+                {
+                    Booking = bookingDto,
+                    LoyaltyPoints = loyaltyPointsEarned
+                };
+
+                return CreatedAtAction(nameof(GetBooking), new { id = booking.Id }, response);
             }
             catch (Exception ex)
             {
@@ -280,6 +294,22 @@ namespace FYLA2_Backend.Controllers
             {
                 _logger.LogError(ex, "Error updating booking status");
                 return StatusCode(500, new { error = "Failed to update booking status", details = ex.Message });
+            }
+        }
+
+        [HttpGet("loyalty-status/{providerId}")]
+        public async Task<ActionResult<ClientLoyaltyStatusDto>> GetClientLoyaltyStatus(string providerId)
+        {
+            try
+            {
+                var userId = GetUserId();
+                var loyaltyStatus = await _loyaltyService.GetClientLoyaltyStatusAsync(userId, providerId);
+                return Ok(loyaltyStatus);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting loyalty status");
+                return StatusCode(500, new { error = "Failed to get loyalty status", details = ex.Message });
             }
         }
     }

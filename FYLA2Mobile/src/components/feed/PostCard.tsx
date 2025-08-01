@@ -147,16 +147,36 @@ const PostCard: React.FC<PostCardProps> = ({
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.providerInfo}
-          onPress={() => onProviderPress(post.providerId)}
+          onPress={() => {
+            // Only navigate if the user is a service provider
+            if (post.user?.isServiceProvider) {
+              const providerId = post.userId || post.providerId;
+              if (providerId) {
+                onProviderPress(providerId);
+              }
+            } else {
+              Alert.alert(
+                'Profile Unavailable', 
+                'This user is a client and does not have a business profile.',
+                [{ text: 'OK' }]
+              );
+            }
+          }}
         >
           <Image
             source={{
-              uri: post.provider.profilePictureUrl || 'https://via.placeholder.com/40x40?text=👤'
+              uri: post.user?.profilePictureUrl || post.provider?.profilePictureUrl || 'https://via.placeholder.com/40x40?text=👤'
             }}
             style={styles.providerAvatar}
           />
           <View style={styles.providerDetails}>
-            <Text style={styles.providerName}>{post.provider.businessName}</Text>
+            <Text style={styles.providerName}>
+              {post.user ? `${post.user.firstName} ${post.user.lastName}` : 
+               post.provider?.businessName || 'User'}
+              {post.user?.isServiceProvider && (
+                <Text style={styles.verifiedBadge}> ✓</Text>
+              )}
+            </Text>
             <View style={styles.locationTimeContainer}>
               {post.location && (
                 <View style={styles.locationContainer}>
@@ -242,7 +262,10 @@ const PostCard: React.FC<PostCardProps> = ({
       {post.caption && (
         <View style={styles.captionContainer}>
           <Text style={styles.captionText}>
-            <Text style={styles.providerUsername}>{post.provider.businessName}</Text>
+            <Text style={styles.providerUsername}>
+              {post.user ? `${post.user.firstName} ${post.user.lastName}` : 
+               post.provider?.businessName || 'User'}
+            </Text>
             {' '}{post.caption}
           </Text>
         </View>
@@ -284,6 +307,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
+  },
+  verifiedBadge: {
+    color: '#3797F0',
+    fontSize: 16,
+    fontWeight: '600',
   },
   locationTimeContainer: {
     flexDirection: 'row',

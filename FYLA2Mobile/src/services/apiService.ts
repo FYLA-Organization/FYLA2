@@ -553,6 +553,139 @@ class ApiService {
       return { data: [] };
     }
   }
+
+  // Enhanced Provider Appointment Management
+  async getProviderAppointments(filters?: {
+    page?: number;
+    pageSize?: number;
+    status?: string;
+    paymentStatus?: string;
+    membershipTier?: string;
+    minAmount?: number;
+    maxAmount?: number;
+    searchTerm?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.page) params.append('page', filters.page.toString());
+      if (filters?.pageSize) params.append('pageSize', filters.pageSize.toString());
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.paymentStatus) params.append('paymentStatus', filters.paymentStatus);
+      if (filters?.membershipTier) params.append('membershipTier', filters.membershipTier);
+      if (filters?.minAmount) params.append('minAmount', filters.minAmount.toString());
+      if (filters?.maxAmount) params.append('maxAmount', filters.maxAmount.toString());
+      if (filters?.searchTerm) params.append('searchTerm', filters.searchTerm);
+      if (filters?.startDate) params.append('startDate', filters.startDate);
+      if (filters?.endDate) params.append('endDate', filters.endDate);
+
+      const response = await this.api.get(`/provider/appointments?${params.toString()}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Error getting provider appointments:', error);
+      return { success: false, message: 'Failed to get appointments' };
+    }
+  }
+
+  async updateAppointmentStatus(appointmentId: number, status: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.api.put(`/provider/appointments/${appointmentId}/status`, { status });
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      return { success: false, message: 'Failed to update appointment status' };
+    }
+  }
+
+  async generateInvoice(appointmentId: number): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.api.post(`/provider/appointments/${appointmentId}/invoice`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      return { success: false, message: 'Failed to generate invoice' };
+    }
+  }
+
+  async getPaymentHistory(filters?: {
+    page?: number;
+    pageSize?: number;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.page) params.append('page', filters.page.toString());
+      if (filters?.pageSize) params.append('pageSize', filters.pageSize.toString());
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.startDate) params.append('startDate', filters.startDate);
+      if (filters?.endDate) params.append('endDate', filters.endDate);
+
+      const response = await this.api.get(`/provider/appointments/payment-history?${params.toString()}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Error getting payment history:', error);
+      return { success: false, message: 'Failed to get payment history' };
+    }
+  }
+
+  // Enhanced Schedule Management
+  async getWeekSchedule(weekStart: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.api.get(`/ProviderScheduleManagement/week?weekStart=${weekStart}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Error getting week schedule:', error);
+      return { success: false, message: 'Failed to get week schedule' };
+    }
+  }
+
+  async blockTimeSlot(date: string, startTime: string, endTime: string, reason?: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.api.post('/ProviderScheduleManagement/block', {
+        date,
+        startTime,
+        endTime,
+        reason
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Error blocking time slot:', error);
+      return { success: false, message: 'Failed to block time slot' };
+    }
+  }
+
+  async unblockTimeSlot(blockId: number): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.api.delete(`/ProviderScheduleManagement/block/${blockId}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Error unblocking time slot:', error);
+      return { success: false, message: 'Failed to unblock time slot' };
+    }
+  }
+
+  async getProviderAvailability(providerId: string, date: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.api.get(`/ProviderScheduleManagement/availability/${providerId}?date=${date}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Error getting provider availability:', error);
+      return { success: false, message: 'Failed to get provider availability' };
+    }
+  }
+
+  async getScheduleStats(): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.api.get('/ProviderScheduleManagement/stats');
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Error getting schedule stats:', error);
+      return { success: false, message: 'Failed to get schedule statistics' };
+    }
+  }
 }
 
 export default new ApiService();

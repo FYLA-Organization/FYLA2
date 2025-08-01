@@ -46,6 +46,7 @@ const BookingFlowScreen: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('credit-card');
+  const [loyaltyPointsEarned, setLoyaltyPointsEarned] = useState<any>(null);
   
   // Card details state
   const [cardNumber, setCardNumber] = useState('');
@@ -233,8 +234,42 @@ const BookingFlowScreen: React.FC = () => {
       console.log('Booking data:', bookingData);
       console.log('Selected payment method:', selectedPaymentMethod);
       console.log('Total amount:', pricing.total.toFixed(2));
-      const booking = await ApiService.createBooking(bookingData);
-      console.log('Booking created successfully:', booking);
+      const bookingResponse = await ApiService.createBooking(bookingData);
+      console.log('Booking created successfully:', bookingResponse);
+
+      // Check if loyalty points were earned
+      if (bookingResponse.loyaltyPoints) {
+        setLoyaltyPointsEarned(bookingResponse.loyaltyPoints);
+        console.log('🎉 Loyalty points earned:', bookingResponse.loyaltyPoints);
+        
+        // Show loyalty points notification
+        Alert.alert(
+          'Booking Confirmed! 🎉',
+          `Your booking has been confirmed!\n\n🏆 You earned ${bookingResponse.loyaltyPoints.pointsEarned} loyalty points!\nTotal Points: ${bookingResponse.loyaltyPoints.totalPoints}\nMembership: ${bookingResponse.loyaltyPoints.membershipTier}`,
+          [
+            {
+              text: 'Awesome!',
+              onPress: () => {
+                navigation.goBack();
+              }
+            }
+          ]
+        );
+      } else {
+        // Standard confirmation without loyalty points
+        Alert.alert(
+          'Booking Confirmed!',
+          'Your booking has been confirmed successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                navigation.goBack();
+              }
+            }
+          ]
+        );
+      }
 
       // Show immediate confirmation notification
       await PushNotificationService.showBookingConfirmation(
@@ -250,7 +285,7 @@ const BookingFlowScreen: React.FC = () => {
       
       try {
         await PushNotificationService.scheduleBookingReminder(
-          booking.id || 'unknown',
+          bookingResponse.booking?.id || bookingResponse.id || 'unknown',
           provider.businessName,
           service.name,
           appointmentDateTime,
@@ -263,15 +298,7 @@ const BookingFlowScreen: React.FC = () => {
 
       setShowConfirmation(true);
       
-      // Auto-navigate after showing confirmation
-      setTimeout(() => {
-        setShowConfirmation(false);
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Main' }],
-        });
-        navigation.navigate('Bookings');
-      }, 3000);
+      // Don't auto-navigate - let the user dismiss the alert to navigate
 
     } catch (error: any) {
       console.error('Error creating booking:', error);

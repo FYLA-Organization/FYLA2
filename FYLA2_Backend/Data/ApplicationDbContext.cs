@@ -27,6 +27,7 @@ namespace FYLA2_Backend.Data
         public DbSet<ProviderSchedule> ProviderSchedules { get; set; }
         public DbSet<ProviderBlockedTime> ProviderBlockedTimes { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<LoyaltyTransaction> LoyaltyTransactions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -198,6 +199,36 @@ namespace FYLA2_Backend.Data
                 .WithOne(u => u.ServiceProvider)
                 .HasForeignKey<Models.ServiceProvider>(sp => sp.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // LoyaltyTransaction relationships
+            modelBuilder.Entity<LoyaltyTransaction>()
+                .HasOne(lt => lt.User)
+                .WithMany(u => u.LoyaltyTransactionsAsClient)
+                .HasForeignKey(lt => lt.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<LoyaltyTransaction>()
+                .HasOne(lt => lt.Provider)
+                .WithMany(u => u.LoyaltyTransactionsAsProvider)
+                .HasForeignKey(lt => lt.ProviderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<LoyaltyTransaction>()
+                .HasOne(lt => lt.Booking)
+                .WithMany()
+                .HasForeignKey(lt => lt.BookingId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // PaymentRecord relationships
+            modelBuilder.Entity<PaymentRecord>()
+                .HasOne(pr => pr.Booking)
+                .WithMany(b => b.PaymentRecords)
+                .HasForeignKey(pr => pr.BookingId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<PaymentRecord>()
+                .Property(pr => pr.Amount)
+                .HasPrecision(10, 2);
         }
     }
 }

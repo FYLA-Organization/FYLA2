@@ -18,6 +18,7 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../../services/api';
 import { RootStackParamList, ProviderDashboard, DashboardMetrics, BusinessLocation } from '../../types';
 import { COLORS } from '../../constants/colors';
@@ -45,10 +46,51 @@ interface BusinessMetric {
   color: string;
 }
 
+interface EnhancedDashboardData {
+  todayRevenue: number;
+  weekRevenue: number;
+  monthRevenue: number;
+  totalClients: number;
+  newClientsThisMonth: number;
+  appointmentsToday: number;
+  appointmentsThisWeek: number;
+  averageRating: number;
+  // Enhanced fields that the Enhanced Dashboard expects
+  todayAppointments: number;
+  pendingAppointments: number;
+  weeklyRevenue: number;
+  monthlyRevenue: number;
+  nextAppointment?: {
+    clientName: string;
+    serviceName: string;
+    scheduledDate: string;
+    duration: number;
+    totalAmount: number;
+  };
+  recentBookings?: Array<{
+    id: number;
+    clientName: string;
+    serviceName: string;
+    scheduledDate: string;
+    status: string;
+    totalAmount: number;
+  }>;
+  topServices: {
+    name: string;
+    revenue: number;
+    bookings: number;
+  }[];
+  recentActivity: {
+    type: 'booking' | 'payment' | 'review' | 'new_client';
+    message: string;
+    timestamp: string;
+  }[];
+}
+
 const EnhancedDashboardScreen: React.FC = () => {
   const navigation = useNavigation<DashboardNavigationProp>();
   
-  const [dashboardData, setDashboardData] = useState<DashboardMetrics | null>(null);
+  const [dashboardData, setDashboardData] = useState<EnhancedDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -61,21 +103,91 @@ const EnhancedDashboardScreen: React.FC = () => {
     loadBusinessLocation();
   }, []);
 
+  // Helper function to convert demo data to enhanced format
+  const convertDemoToEnhanced = (demoData: DashboardMetrics): EnhancedDashboardData => {
+    return {
+      ...demoData,
+      todayAppointments: demoData.appointmentsToday,
+      pendingAppointments: Math.floor(demoData.appointmentsToday * 0.5),
+      weeklyRevenue: demoData.weekRevenue,
+      monthlyRevenue: demoData.monthRevenue,
+      nextAppointment: undefined, // Demo doesn't have this
+      recentBookings: [], // Demo doesn't have this
+    };
+  };
+
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      // Try to load from API, fallback to demo data
+      
+      // Load real analytics data from backend
       try {
-        const data = await ApiService.getRevenueAnalytics('month');
-        // For now, use demo data since API may not be fully implemented
-        setDashboardData(demoDashboardMetrics);
+        const token = await AsyncStorage.getItem('authToken');
+        if (!token) {
+          throw new Error('No auth token');
+        }
+
+        const response = await fetch('http://192.168.1.185:5224/api/analytics/dashboard', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const analyticsData = await response.json();
+          
+          // Transform API data to match enhanced dashboard format
+          const transformedData: EnhancedDashboardData = {
+            // DashboardMetrics fields
+            todayRevenue: analyticsData.weeklyRevenue || 0,
+            weekRevenue: analyticsData.weeklyRevenue || 0,
+            monthRevenue: analyticsData.monthlyRevenue || 0,
+            totalClients: analyticsData.totalClients || 0,
+            newClientsThisMonth: Math.floor(analyticsData.totalClients * 0.15) || 0,
+            appointmentsToday: analyticsData.todayAppointments || 0,
+            appointmentsThisWeek: analyticsData.pendingAppointments + analyticsData.todayAppointments || 0,
+            averageRating: parseFloat(analyticsData.averageRating?.toFixed(1)) || 0,
+            // Enhanced Dashboard specific fields
+            todayAppointments: analyticsData.todayAppointments || 0,
+            pendingAppointments: analyticsData.pendingAppointments || 0,
+            weeklyRevenue: analyticsData.weeklyRevenue || 0,
+            monthlyRevenue: analyticsData.monthlyRevenue || 0,
+            nextAppointment: analyticsData.nextAppointment ? {
+              clientName: analyticsData.nextAppointment.clientName,
+              serviceName: analyticsData.nextAppointment.serviceName,
+              scheduledDate: analyticsData.nextAppointment.scheduledDate,
+              duration: analyticsData.nextAppointment.duration,
+              totalAmount: analyticsData.nextAppointment.totalAmount
+            } : undefined,
+            recentBookings: analyticsData.recentBookings || [],
+            topServices: analyticsData.recentBookings?.slice(0, 4).map((booking: any, index: number) => ({
+              name: booking.serviceName || `Service ${index + 1}`,
+              revenue: booking.totalAmount || 0,
+              bookings: index + 3
+            })) || demoDashboardMetrics.topServices,
+            recentActivity: analyticsData.recentBookings?.slice(0, 4).map((booking: any, index: number) => ({
+              type: booking.status === 'Completed' ? 'payment' : 'booking',
+              message: booking.status === 'Completed' 
+                ? `Payment received for $${booking.totalAmount} from ${booking.clientName}`
+                : `${booking.status} appointment with ${booking.clientName}`,
+              timestamp: booking.scheduledDate
+            })) || demoDashboardMetrics.recentActivity
+          };
+          
+          setDashboardData(transformedData);
+          console.log('Enhanced Dashboard - Loaded real data:', transformedData);
+        } else {
+          console.log('Enhanced Dashboard - API failed, using demo data');
+          setDashboardData(convertDemoToEnhanced(demoDashboardMetrics));
+        }
       } catch (apiError) {
-        console.log('Using demo data for dashboard');
-        setDashboardData(demoDashboardMetrics);
+        console.log('Enhanced Dashboard - API error, using demo data:', apiError);
+        setDashboardData(convertDemoToEnhanced(demoDashboardMetrics));
       }
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
-      setDashboardData(demoDashboardMetrics);
+      console.error('Error loading enhanced dashboard data:', error);
+      setDashboardData(convertDemoToEnhanced(demoDashboardMetrics));
     } finally {
       setLoading(false);
     }

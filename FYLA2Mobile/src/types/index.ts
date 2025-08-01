@@ -165,6 +165,42 @@ export interface CreateBookingRequest {
   notes?: string;
 }
 
+// Loyalty Points Types
+export interface LoyaltyPointsEarned {
+  pointsEarned: number;
+  totalPoints: number;
+  providerName: string;
+  serviceName: string;
+  amountSpent: number;
+  description: string;
+}
+
+export interface BookingCreationResponse {
+  booking: Booking;
+  loyaltyPoints?: LoyaltyPointsEarned;
+}
+
+export interface ClientLoyaltyStatus {
+  totalPoints: number;
+  pointsWithProvider: number;
+  totalBookings: number;
+  totalSpent: number;
+  membershipTier: string;
+  recentTransactions: LoyaltyTransaction[];
+}
+
+export interface LoyaltyTransaction {
+  id: number;
+  userId: string;
+  providerId: string;
+  bookingId?: number;
+  points: number;
+  transactionType: string;
+  description?: string;
+  createdAt: string;
+  expiresAt?: string;
+}
+
 // Chat & Messaging Types
 export interface ChatMessage {
   id: string;
@@ -370,6 +406,8 @@ export type RootStackParamList = {
   Analytics: undefined;
   Schedule: undefined;
   EnhancedSchedule: undefined;
+  EnhancedScheduleManagement: undefined;
+  EnhancedAppointments: undefined;
   Clients: undefined;
   Reviews: undefined;
   // Enhanced Provider Business Management

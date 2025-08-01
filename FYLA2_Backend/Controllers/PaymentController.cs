@@ -150,7 +150,7 @@ namespace FYLA2_Backend.Controllers
 
         // Create payment intent
         var paymentIntentService = new PaymentIntentService();
-        var amount = (long)(request.Amount * 100); // Convert to cents
+        var amount = (long)(booking.TotalPrice * 100); // Convert to cents
 
         var paymentIntent = await paymentIntentService.CreateAsync(new PaymentIntentCreateOptions
         {
@@ -170,7 +170,7 @@ namespace FYLA2_Backend.Controllers
           UserId = userId,
           BookingId = request.BookingId,
           StripePaymentIntentId = paymentIntent.Id,
-          Amount = request.Amount,
+          Amount = booking.TotalPrice,
           Currency = "USD",
           Status = PaymentStatus.Pending,
           Type = PaymentType.Booking,

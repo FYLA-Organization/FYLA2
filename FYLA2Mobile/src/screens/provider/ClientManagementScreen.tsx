@@ -19,6 +19,7 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../../constants/colors';
 import { demoClients } from '../../data/providerDemoData';
 import ApiService from '../../services/api';
@@ -76,58 +77,52 @@ const ClientManagementScreen: React.FC = () => {
   const loadClients = async () => {
     try {
       setLoading(true);
-      // In a real app, this would fetch from the API
-      const mockClients: Client[] = [
-        {
-          id: '1',
-          firstName: 'Sarah',
-          lastName: 'Johnson',
-          email: 'sarah.johnson@email.com',
-          phone: '+1 (555) 123-4567',
-          profilePictureUrl: 'https://images.unsplash.com/photo-1494790108755-2616b60d88e4?w=150&h=150&fit=crop&crop=face',
-          totalBookings: 12,
-          totalSpent: 1450.00,
-          lastVisit: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          averageRating: 4.8,
-          loyaltyPoints: 145,
-          status: 'vip',
-          preferences: ['Hair Styling', 'Facial Treatment'],
-          notes: 'Prefers morning appointments. Allergic to certain hair products.',
-        },
-        {
-          id: '2',
-          firstName: 'Emma',
-          lastName: 'Wilson',
-          email: 'emma.wilson@email.com',
-          phone: '+1 (555) 234-5678',
-          profilePictureUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
-          totalBookings: 8,
-          totalSpent: 920.00,
-          lastVisit: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-          averageRating: 4.9,
-          loyaltyPoints: 92,
-          status: 'active',
-          preferences: ['Manicure', 'Pedicure'],
-          notes: 'Regular customer, books every 2 weeks.',
-        },
-        {
-          id: '3',
-          firstName: 'Lisa',
-          lastName: 'Chen',
-          email: 'lisa.chen@email.com',
-          phone: '+1 (555) 345-6789',
-          profilePictureUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-          totalBookings: 3,
-          totalSpent: 285.00,
-          lastVisit: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
-          averageRating: 4.6,
-          loyaltyPoints: 28,
-          status: 'inactive',
-          preferences: ['Facial Treatment'],
-          notes: 'New client, needs gentle approach.',
-        },
-      ];
-      setClients(mockClients);
+      
+      // Fetch real client data from the API
+      try {
+        const token = await AsyncStorage.getItem('authToken');
+        if (!token) {
+          throw new Error('No auth token');
+        }
+
+        const response = await fetch('http://192.168.1.185:5224/api/analytics/provider-clients', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const clientsData = await response.json();
+          
+          // Transform API data to match Client interface
+          const transformedClients: Client[] = clientsData.map((client: any) => ({
+            id: client.id,
+            firstName: client.firstName,
+            lastName: client.lastName,
+            email: client.email,
+            phone: client.phone || 'No phone',
+            profilePictureUrl: client.profilePictureUrl || `https://ui-avatars.com/api/?name=${client.firstName}+${client.lastName}&background=6366f1&color=fff`,
+            totalBookings: client.totalBookings,
+            totalSpent: client.totalSpent,
+            lastVisit: new Date(client.lastVisit),
+            averageRating: client.averageRating,
+            loyaltyPoints: client.loyaltyPoints,
+            status: client.status as 'active' | 'inactive' | 'vip',
+            preferences: client.preferences || [],
+            notes: client.notes || '',
+          }));
+
+          setClients(transformedClients);
+          console.log('Loaded real client data:', transformedClients.length, 'clients');
+        } else {
+          console.log('API failed, using demo data');
+          setClients([]);
+        }
+      } catch (apiError) {
+        console.log('API error, no client data available:', apiError);
+        setClients([]);
+      }
     } catch (error) {
       console.error('Error loading clients:', error);
       Alert.alert('Error', 'Failed to load clients');
