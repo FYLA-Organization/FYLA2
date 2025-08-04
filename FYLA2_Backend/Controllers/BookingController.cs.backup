@@ -1,0 +1,434 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using FYLA2_Backend.Data;
+using FYLA2_Backend.Models;
+using FYLA2_Backend.DTOs;
+using System.Security.Claims;
+
+namespace FYLA2_Backend.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    public class BookingController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly ILogger<BookingController> _logger;
+
+        public BookingController(ApplicationDbContext context, ILogger<BookingController> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
+
+        private string GetUserId()
+        {
+            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        }
+
+        [HttpGet("available-slots")]
+        public async Task<ActionResult<List<TimeSlotDto>>> GetAvailableSlots(
+            [FromQuery] string providerId,
+            [FromQuery] string serviceId,
+            [FromQuery] string date)
+        {
+            try
+            {
+                var requestDate = DateTime.Parse(date);
+                var userId = GetUserId();
+
+                _logger.LogInformation($"Getting available slots for provider {providerId}, service {serviceId}, date {date}");
+
+                // Get service details to determine duration
+                var service = await _context.Services
+                    .FirstOrDefaultAsync(s => s.Id == Guid.Parse(serviceId));
+
+                if (service == null)
+                {
+                    return NotFound("Service not found");
+                }
+
+                // Get existing bookings for the day
+                var existingBookings = await _context.Bookings
+                    .Where(b => b.ProviderId == providerId && 
+                               b.BookingDate.Date == requestDate.Date &&
+                               b.Status != "cancelled")
+                    .ToListAsync();
+
+                // Generate time slots (9 AM to 6 PM, 30-minute intervals)
+                var timeSlots = new List<TimeSlotDto>();
+                var startHour = 9;
+                var endHour = 18;
+                var slotDuration = 30; // minutes
+
+                for (int hour = startHour; hour < endHour; hour++)
+                {
+                    for (int minute = 0; minute < 60; minute += slotDuration)
+                    {
+                        var slotTime = new TimeSpan(hour, minute, 0);
+                        var slotDateTime = requestDate.Date.Add(slotTime);
+                        
+                        // Check if slot is in the past
+                        if (slotDateTime <= DateTime.Now)
+                            continue;
+
+                        // Check if slot conflicts with existing bookings
+                        var isAvailable = !existingBookings.Any(booking =>
+                        {
+                            var bookingStart = booking.BookingDate.TimeOfDay;
+                            var bookingEnd = bookingStart.Add(TimeSpan.FromMinutes(booking.DurationMinutes));
+                            var slotEnd = slotTime.Add(TimeSpan.FromMinutes(service.DurationMinutes));
+
+                            return (slotTime < bookingEnd && slotEnd > bookingStart);
+                        });
+
+                        timeSlots.Add(new TimeSlotDto
+                        {
+                            Id = $"{date}-{slotTime:hh\\:mm}",
+                            Time = slotTime.ToString(@"hh\:mm"),
+                            IsAvailable = isAvailable,
+                            Price = service.Price
+                        });
+                    }
+                }
+
+                return Ok(timeSlots);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting available slots");
+                return StatusCode(500, new { error = "Failed to get available slots", details = ex.Message });
+            }
+        }
+
+        [HttpPost("create")]
+        public async Task<ActionResult<BookingDto>> CreateBooking([FromBody] CreateBookingDto request)
+        {
+            try
+            {
+                var userId = GetUserId();
+                _logger.LogInformation($"Creating booking for user {userId}");
+
+                // Validate service and provider
+                var service = await _context.Services
+                    .Include(s => s.Provider)
+                    .FirstOrDefaultAsync(s => s.Id == Guid.Parse(request.ServiceId));
+
+                if (service == null)
+                {
+                    return NotFound("Service not found");
+                }
+
+                // Parse date and time
+                var bookingDateTime = DateTime.Parse($"{request.Date} {request.Time}");
+
+                // Check if slot is still available
+                var conflictingBooking = await _context.Bookings
+                    .Where(b => b.ProviderId == request.ProviderId &&
+                               b.BookingDate.Date == bookingDateTime.Date &&
+                               b.Status != "cancelled")
+                    .FirstOrDefaultAsync(b =>
+                    {
+                        var bookingStart = b.BookingDate.TimeOfDay;
+                        var bookingEnd = bookingStart.Add(TimeSpan.FromMinutes(b.DurationMinutes));
+                        var requestStart = bookingDateTime.TimeOfDay;
+                        var requestEnd = requestStart.Add(TimeSpan.FromMinutes(service.DurationMinutes));
+
+                        return (requestStart < bookingEnd && requestEnd > bookingStart);
+                    });
+
+                if (conflictingBooking != null)
+                {
+                    return BadRequest("Time slot is no longer available");
+                }
+
+                // Create booking
+                var booking = new Booking
+                {
+                    Id = Guid.NewGuid(),
+                    ClientId = userId,
+                    ProviderId = request.ProviderId,
+                    ServiceId = Guid.Parse(request.ServiceId),
+                    BookingDate = bookingDateTime,
+                    DurationMinutes = service.DurationMinutes,
+                    Status = "confirmed",
+                    TotalPrice = request.TotalPrice,
+                    PaymentMethod = request.PaymentMethod,
+                    Notes = request.Notes ?? "",
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Bookings.Add(booking);
+                await _context.SaveChangesAsync();
+
+                // Return booking details
+                var bookingDto = new BookingDto
+                {
+                    Id = booking.Id.ToString(),
+                    ServiceName = service.Name,
+                    ProviderName = service.Provider?.FirstName + " " + service.Provider?.LastName,
+                    ProviderImage = service.Provider?.ProfileImageUrl ?? "",
+                    ProviderPhone = service.Provider?.PhoneNumber ?? "",
+                    ProviderAddress = "123 Beauty Street, Beverly Hills, CA", // Mock address
+                    Date = booking.BookingDate.ToString("yyyy-MM-dd"),
+                    Time = booking.BookingDate.ToString("HH:mm"),
+                    Duration = booking.DurationMinutes,
+                    Status = booking.Status,
+                    TotalPrice = booking.TotalPrice,
+                    PaymentMethod = booking.PaymentMethod,
+                    Notes = booking.Notes,
+                    CanReschedule = true,
+                    CanCancel = true
+                };
+
+                return Ok(bookingDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating booking");
+                return StatusCode(500, new { error = "Failed to create booking", details = ex.Message });
+            }
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<BookingDto>> GetBookingDetails(string id)
+        {
+            try
+            {
+                var userId = GetUserId();
+                var bookingId = Guid.Parse(id);
+
+                var booking = await _context.Bookings
+                    .Include(b => b.Service)
+                    .Include(b => b.Provider)
+                    .Include(b => b.Client)
+                    .FirstOrDefaultAsync(b => b.Id == bookingId && 
+                                            (b.ClientId == userId || b.ProviderId == userId));
+
+                if (booking == null)
+                {
+                    return NotFound("Booking not found");
+                }
+
+                var bookingDto = new BookingDto
+                {
+                    Id = booking.Id.ToString(),
+                    ServiceName = booking.Service?.Name ?? "Unknown Service",
+                    ProviderName = $"{booking.Provider?.FirstName} {booking.Provider?.LastName}",
+                    ProviderImage = booking.Provider?.ProfileImageUrl ?? "",
+                    ProviderPhone = booking.Provider?.PhoneNumber ?? "",
+                    ProviderAddress = "123 Beauty Street, Beverly Hills, CA", // Mock address
+                    Date = booking.BookingDate.ToString("yyyy-MM-dd"),
+                    Time = booking.BookingDate.ToString("HH:mm"),
+                    Duration = booking.DurationMinutes,
+                    Status = booking.Status,
+                    TotalPrice = booking.TotalPrice,
+                    PaymentMethod = booking.PaymentMethod,
+                    Notes = booking.Notes,
+                    CanReschedule = booking.Status == "confirmed" && booking.BookingDate > DateTime.Now.AddHours(24),
+                    CanCancel = booking.Status == "confirmed" && booking.BookingDate > DateTime.Now.AddHours(2)
+                };
+
+                return Ok(bookingDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting booking details");
+                return StatusCode(500, new { error = "Failed to get booking details", details = ex.Message });
+            }
+        }
+
+        [HttpPut("{id}/cancel")]
+        public async Task<ActionResult> CancelBooking(string id)
+        {
+            try
+            {
+                var userId = GetUserId();
+                var bookingId = Guid.Parse(id);
+
+                var booking = await _context.Bookings
+                    .FirstOrDefaultAsync(b => b.Id == bookingId && b.ClientId == userId);
+
+                if (booking == null)
+                {
+                    return NotFound("Booking not found");
+                }
+
+                if (booking.Status != "confirmed")
+                {
+                    return BadRequest("Cannot cancel booking with current status");
+                }
+
+                if (booking.BookingDate <= DateTime.Now.AddHours(2))
+                {
+                    return BadRequest("Cannot cancel booking less than 2 hours before appointment");
+                }
+
+                booking.Status = "cancelled";
+                booking.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Booking cancelled successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cancelling booking");
+                return StatusCode(500, new { error = "Failed to cancel booking", details = ex.Message });
+            }
+        }
+
+        [HttpGet("my-bookings")]
+        public async Task<ActionResult<List<BookingDto>>> GetMyBookings(
+            [FromQuery] string? status = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var userId = GetUserId();
+                
+                var query = _context.Bookings
+                    .Include(b => b.Service)
+                    .Include(b => b.Provider)
+                    .Where(b => b.ClientId == userId);
+
+                if (!string.IsNullOrEmpty(status))
+                {
+                    query = query.Where(b => b.Status == status);
+                }
+
+                var bookings = await query
+                    .OrderByDescending(b => b.BookingDate)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                var bookingDtos = bookings.Select(booking => new BookingDto
+                {
+                    Id = booking.Id.ToString(),
+                    ServiceName = booking.Service?.Name ?? "Unknown Service",
+                    ProviderName = $"{booking.Provider?.FirstName} {booking.Provider?.LastName}",
+                    ProviderImage = booking.Provider?.ProfileImageUrl ?? "",
+                    ProviderPhone = booking.Provider?.PhoneNumber ?? "",
+                    ProviderAddress = "123 Beauty Street, Beverly Hills, CA", // Mock address
+                    Date = booking.BookingDate.ToString("yyyy-MM-dd"),
+                    Time = booking.BookingDate.ToString("HH:mm"),
+                    Duration = booking.DurationMinutes,
+                    Status = booking.Status,
+                    TotalPrice = booking.TotalPrice,
+                    PaymentMethod = booking.PaymentMethod,
+                    Notes = booking.Notes,
+                    CanReschedule = booking.Status == "confirmed" && booking.BookingDate > DateTime.Now.AddHours(24),
+                    CanCancel = booking.Status == "confirmed" && booking.BookingDate > DateTime.Now.AddHours(2)
+                }).ToList();
+
+                return Ok(bookingDtos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user bookings");
+                return StatusCode(500, new { error = "Failed to get bookings", details = ex.Message });
+            }
+        }
+
+        [HttpGet("provider/schedule")]
+        public async Task<ActionResult<List<ScheduleSlotDto>>> GetProviderSchedule(
+            [FromQuery] string date)
+        {
+            try
+            {
+                var userId = GetUserId();
+                var requestDate = DateTime.Parse(date);
+
+                // Check if user is a service provider
+                var provider = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Id == userId && u.IsServiceProvider);
+
+                if (provider == null)
+                {
+                    return Forbid("User is not a service provider");
+                }
+
+                var bookings = await _context.Bookings
+                    .Include(b => b.Service)
+                    .Include(b => b.Client)
+                    .Where(b => b.ProviderId == userId && 
+                               b.BookingDate.Date == requestDate.Date &&
+                               b.Status != "cancelled")
+                    .OrderBy(b => b.BookingDate)
+                    .ToListAsync();
+
+                var scheduleSlots = bookings.Select(booking => new ScheduleSlotDto
+                {
+                    Id = booking.Id.ToString(),
+                    ClientName = $"{booking.Client?.FirstName} {booking.Client?.LastName}",
+                    ClientPhone = booking.Client?.PhoneNumber ?? "",
+                    ServiceName = booking.Service?.Name ?? "Unknown Service",
+                    StartTime = booking.BookingDate.ToString("HH:mm"),
+                    EndTime = booking.BookingDate.AddMinutes(booking.DurationMinutes).ToString("HH:mm"),
+                    Duration = booking.DurationMinutes,
+                    Status = booking.Status,
+                    TotalPrice = booking.TotalPrice,
+                    Notes = booking.Notes
+                }).ToList();
+
+                return Ok(scheduleSlots);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting provider schedule");
+                return StatusCode(500, new { error = "Failed to get schedule", details = ex.Message });
+            }
+        }
+
+        [HttpPost("provider/block-time")]
+        public async Task<ActionResult> BlockTimeSlot([FromBody] BlockTimeDto request)
+        {
+            try
+            {
+                var userId = GetUserId();
+                
+                // Check if user is a service provider
+                var provider = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Id == userId && u.IsServiceProvider);
+
+                if (provider == null)
+                {
+                    return Forbid("User is not a service provider");
+                }
+
+                // Create a blocked time slot (represented as a special booking)
+                var blockDateTime = DateTime.Parse($"{request.Date} {request.StartTime}");
+                var endDateTime = DateTime.Parse($"{request.Date} {request.EndTime}");
+                var duration = (int)(endDateTime - blockDateTime).TotalMinutes;
+
+                var blockBooking = new Booking
+                {
+                    Id = Guid.NewGuid(),
+                    ClientId = userId, // Self-booking for blocked time
+                    ProviderId = userId,
+                    ServiceId = null, // No service for blocked time
+                    BookingDate = blockDateTime,
+                    DurationMinutes = duration,
+                    Status = "blocked",
+                    TotalPrice = 0,
+                    PaymentMethod = "N/A",
+                    Notes = request.Reason,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Bookings.Add(blockBooking);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Time slot blocked successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error blocking time slot");
+                return StatusCode(500, new { error = "Failed to block time slot", details = ex.Message });
+            }
+        }
+    }
+}

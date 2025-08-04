@@ -8,7 +8,8 @@ namespace FYLA2_Backend.Models
     Confirmed,
     InProgress,
     Completed,
-    Cancelled
+    Cancelled,
+    Blocked
   }
 
   public class Booking
@@ -35,6 +36,11 @@ namespace FYLA2_Backend.Models
 
     public string? PaymentIntentId { get; set; }
 
+    public int DurationMinutes { get; set; }
+
+    [MaxLength(50)]
+    public string? PaymentMethod { get; set; } = "stripe";
+
     // Foreign Keys
     [Required]
     public string ClientId { get; set; } = string.Empty;
@@ -49,10 +55,13 @@ namespace FYLA2_Backend.Models
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    public DateTime? CompletedAt { get; set; }
+
     // Navigation properties
     public virtual User Client { get; set; } = null!;
     public virtual User Provider { get; set; } = null!;
     public virtual Service Service { get; set; } = null!;
     public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public virtual ICollection<PaymentRecord> PaymentRecords { get; set; } = new List<PaymentRecord>();
   }
 }

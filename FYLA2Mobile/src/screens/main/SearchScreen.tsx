@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ServiceProvider, SearchFilters, RootStackParamList } from '../../types';
 import ApiService from '../../services/api';
 import SearchService from '../../services/searchService';
@@ -23,6 +24,19 @@ import AdvancedFilterModal from '../../components/AdvancedFilterModal';
 import SearchHistory from '../../components/SearchHistory';
 
 type SearchScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+
+// Instagram-style Color Palette
+const COLORS = {
+  background: '#FAFAFA',
+  surface: '#FFFFFF',
+  text: '#262626',
+  textSecondary: '#8E8E8E',
+  border: '#DBDBDB',
+  borderLight: '#EFEFEF',
+  primary: '#3797F0',
+  accent: '#FF3040',
+  verified: '#3797F0',
+};
 
 const SearchScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -228,18 +242,6 @@ const SearchScreen: React.FC = () => {
     }));
   };
 
-  const loadFeaturedProviders = async () => {
-    setIsLoading(true);
-    try {
-      const response = await ApiService.getServiceProviders(1, 20, {});
-      setProviders(response.data);
-    } catch (error) {
-      console.error('Error loading providers:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const categories = [
     { name: 'All', icon: 'grid-outline', color: '#666' },
     { name: 'Hair', icon: 'cut-outline', color: '#FF6B6B' },
@@ -325,6 +327,12 @@ const SearchScreen: React.FC = () => {
           )}
         </View>
         <TouchableOpacity 
+          style={styles.instagramButton}
+          onPress={() => navigation.navigate('InstagramSearch')}
+        >
+          <Ionicons name="grid" size={20} color="#666" />
+        </TouchableOpacity>
+        <TouchableOpacity 
           style={[
             styles.filterButton,
             SearchService.hasActiveFilters(filters) && styles.activeFilterButton
@@ -396,19 +404,19 @@ const SearchScreen: React.FC = () => {
           <TouchableOpacity
             style={[
               styles.quickFilterPill,
-              filters.rating && styles.activeQuickFilterPill,
+              (filters.rating !== undefined && filters.rating > 0) && styles.activeQuickFilterPill,
             ]}
-            onPress={() => handleQuickFilter('rating', filters.rating ? undefined : 4)}
+            onPress={() => handleQuickFilter('rating', (filters.rating !== undefined && filters.rating > 0) ? undefined : 4)}
           >
             <Ionicons 
               name="star" 
               size={16} 
-              color={filters.rating ? 'white' : '#FFD700'} 
+              color={(filters.rating !== undefined && filters.rating > 0) ? 'white' : '#FFD700'} 
               style={styles.quickFilterIcon}
             />
             <Text style={[
               styles.quickFilterText,
-              filters.rating && styles.activeQuickFilterText,
+              (filters.rating !== undefined && filters.rating > 0) && styles.activeQuickFilterText,
             ]}>
               4+ Stars
             </Text>
@@ -529,243 +537,33 @@ const SearchScreen: React.FC = () => {
       />
     </View>
   );
-
-            >
-              <Text style={[
-                styles.filterPillText,
-                filters.category === category.name && styles.activeFilterPillText,
-              ]}>
-                {category.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-          
-          {/* Price Range Filters */}
-          {priceRanges.map((range, index) => (
-            <TouchableOpacity
-              key={`price-${index}`}
-              style={[
-                styles.filterPill,
-                filters.priceMin === index + 1 && styles.activeFilterPill,
-              ]}
-              onPress={() => setFilters(prev => ({ 
-                ...prev, 
-                priceMin: prev.priceMin === index + 1 ? undefined : index + 1 
-              }))}
-            >
-              <Text style={[
-                styles.filterPillText,
-                filters.priceMin === index + 1 && styles.activeFilterPillText,
-              ]}>
-                {range}
-              </Text>
-            </TouchableOpacity>
-          ))}
-          
-          {/* Distance Filters */}
-          {['1 mi', '5 mi', '10 mi', '25 mi'].map((distance, index) => (
-            <TouchableOpacity
-              key={`distance-${index}`}
-              style={[
-                styles.filterPill,
-                filters.distance === distance && styles.activeFilterPill,
-              ]}
-              onPress={() => setFilters(prev => ({ 
-                ...prev, 
-                distance: prev.distance === distance ? undefined : distance 
-              }))}
-            >
-              <Text style={[
-                styles.filterPillText,
-                filters.distance === distance && styles.activeFilterPillText,
-              ]}>
-                📍 {distance}
-              </Text>
-            </TouchableOpacity>
-          ))}
-          
-          {/* Clear All Filter */}
-          {(filters.category || filters.priceMin || filters.distance || filters.rating) && (
-            <TouchableOpacity
-              style={styles.clearAllPill}
-              onPress={() => setFilters({})}
-            >
-              <Text style={styles.clearAllPillText}>
-                ✕ Clear All
-              </Text>
-            </TouchableOpacity>
-          )}
-        </ScrollView>
-      </View>
-
-      {/* Map Section */}
-      <View style={styles.mapContainer}>
-        <View style={styles.mapHeader}>
-          <Text style={styles.mapTitle}>Find Nearby Providers</Text>
-          <TouchableOpacity 
-            style={styles.mapToggle}
-            onPress={() => setShowMap(!showMap)}
-          >
-            <Ionicons 
-              name={showMap ? "chevron-up" : "chevron-down"} 
-              size={20} 
-              color="#666" 
-            />
-          </TouchableOpacity>
-        </View>
-        
-        {showMap && (
-          <View style={styles.mapView}>
-            {/* Placeholder Map - Replace with actual map component */}
-            <View style={styles.mapPlaceholder}>
-              <Ionicons name="location" size={40} color="#FF6B6B" />
-              <Text style={styles.mapPlaceholderText}>Map View</Text>
-              <Text style={styles.mapSubtext}>
-                {filters.category ? `${filters.category} providers nearby` : 'All providers in your area'}
-              </Text>
-              
-              {/* Mock provider pins */}
-              <View style={styles.mockPins}>
-                {providers.slice(0, 3).map((provider, index) => (
-                  <TouchableOpacity 
-                    key={provider.id}
-                    style={[styles.mapPin, { 
-                      left: 50 + (index * 60), 
-                      top: 60 + (index * 20) 
-                    }]}
-                    onPress={() => navigation.navigate('ProviderProfile', { providerId: provider.id })}
-                  >
-                    <Ionicons name="location" size={20} color="#FF6B6B" />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            
-            {/* Distance Filter */}
-            <View style={styles.distanceFilter}>
-              <Text style={styles.distanceLabel}>Distance:</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {['1 mi', '5 mi', '10 mi', '25 mi'].map((distance, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.distanceChip,
-                      filters.distance === distance && styles.activeDistanceChip,
-                    ]}
-                    onPress={() => setFilters(prev => ({ 
-                      ...prev, 
-                      distance: prev.distance === distance ? undefined : distance 
-                    }))}
-                  >
-                    <Text style={[
-                      styles.distanceChipText,
-                      filters.distance === distance && styles.activeDistanceChipText,
-                    ]}>
-                      {distance}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* Filters Panel */}
-      {showFilters && (
-        <View style={styles.filtersPanel}>
-          <Text style={styles.filterTitle}>Price Range</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {priceRanges.map((range, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.priceChip,
-                  filters.priceMin === index + 1 && styles.activePriceChip,
-                ]}
-                onPress={() => setFilters(prev => ({ 
-                  ...prev, 
-                  priceMin: prev.priceMin === index + 1 ? undefined : index + 1 
-                }))}
-              >
-                <Text style={styles.priceChipText}>{range}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          
-          <View style={styles.filterActions}>
-            <TouchableOpacity
-              style={styles.clearFiltersButton}
-              onPress={() => setFilters({})}
-            >
-              <Text style={styles.clearFiltersText}>Clear All</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.applyFiltersButton}
-              onPress={() => setShowFilters(false)}
-            >
-              <Text style={styles.applyFiltersText}>Apply</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {/* Enhanced Results */}
-            {/* Results */}
-      <View style={{ flex: 1 }}>
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#FF6B6B" />
-            <Text style={styles.loadingText}>Searching...</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={providers}
-            renderItem={renderProviderCard}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContainer}
-            ListEmptyComponent={() => (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="search-outline" size={64} color="#ccc" />
-                <Text style={styles.emptyText}>
-                  {searchQuery ? 'No providers found' : 'Start searching for providers'}
-                </Text>
-                <Text style={styles.emptySubtext}>
-                  {searchQuery 
-                    ? 'Try adjusting your search or filters'
-                    : 'Type in the search box or use filters to find providers'
-                  }
-                </Text>
-              </View>
-            )}
-          />
-        )}
-      </View>
-    </View>
-  );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#FAFAFA',
   },
   searchHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     paddingTop: 60,
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   searchInputContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F5F5F5',
     borderRadius: 25,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     marginRight: 12,
   },
   searchIcon: {
@@ -774,97 +572,142 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: '#262626',
+    fontWeight: '400',
   },
   filterButton: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
-  // Filter Pills Styles
+  instagramButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  // Filter Pills Styles - Enhanced
   filterPillsContainer: {
-    backgroundColor: 'white',
-    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#EFEFEF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   filterPillsContent: {
     paddingHorizontal: 16,
   },
   filterPill: {
-    backgroundColor: '#f8f9fa',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: 'transparent',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 25,
+    marginRight: 12,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   activeFilterPill: {
     backgroundColor: '#FF6B6B',
     borderColor: '#FF6B6B',
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   filterPillText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#666',
   },
   activeFilterPillText: {
-    color: 'white',
+    color: '#FFFFFF',
   },
   clearAllPill: {
     backgroundColor: '#FFE5E5',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 10,
-    borderWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 25,
+    marginRight: 12,
+    borderWidth: 1.5,
     borderColor: '#FF6B6B',
   },
   clearAllPillText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#FF6B6B',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: '#8E8E8E',
+    fontWeight: '400',
   },
   listContainer: {
     paddingBottom: 20,
-    paddingTop: 0,
+    paddingTop: 8,
   },
   filtersPanel: {
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#EFEFEF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   filterTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#262626',
+    marginBottom: 16,
   },
   priceChip: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginRight: 10,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginRight: 12,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   activePriceChip: {
     backgroundColor: '#4ECDC4',
+    borderColor: '#4ECDC4',
+    shadowColor: '#4ECDC4',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   priceChipText: {
     fontSize: 14,
@@ -874,31 +717,39 @@ const styles = StyleSheet.create({
   filterActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
+    marginTop: 24,
+    gap: 12,
   },
   clearFiltersButton: {
     flex: 1,
-    padding: 12,
-    marginRight: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    padding: 14,
+    borderRadius: 25,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   clearFiltersText: {
     color: '#666',
     fontWeight: '600',
+    fontSize: 15,
   },
   applyFiltersButton: {
     flex: 1,
-    padding: 12,
+    padding: 14,
     backgroundColor: '#FF6B6B',
-    borderRadius: 8,
+    borderRadius: 25,
     alignItems: 'center',
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   applyFiltersText: {
-    color: 'white',
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
   },
   resultsContainer: {
     flex: 1,
@@ -908,55 +759,62 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 20,
+    paddingHorizontal: 4,
   },
   resultsCount: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#262626',
   },
   sortButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
   sortText: {
     fontSize: 14,
     color: '#666',
     marginRight: 5,
+    fontWeight: '500',
   },
   providerCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
     marginHorizontal: 16,
-    marginTop: 0,
     flexDirection: 'row',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   providerImage: {
     width: 80,
     height: 80,
-    borderRadius: 12,
-    marginRight: 15,
+    borderRadius: 16,
+    marginRight: 16,
+    backgroundColor: '#F5F5F5',
   },
   providerInfo: {
     flex: 1,
   },
   providerName: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+    fontWeight: '700',
+    color: '#262626',
+    marginBottom: 4,
   },
   providerTitle: {
     fontSize: 14,
-    color: '#666',
+    color: '#8E8E8E',
     marginBottom: 8,
+    fontWeight: '400',
   },
   rating: {
     flexDirection: 'row',
@@ -967,11 +825,12 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 14,
     color: '#666',
+    fontWeight: '500',
   },
   price: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontWeight: '700',
+    color: '#FF6B6B',
   },
   specialtiesContainer: {
     flexDirection: 'row',
@@ -980,38 +839,43 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   specialtyTag: {
-    backgroundColor: '#E8F4FD',
-    paddingHorizontal: 8,
+    backgroundColor: '#F0F8FF',
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     marginRight: 6,
     marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#E6F3FF',
   },
   specialtyText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#007AFF',
   },
   moreSpecialties: {
     fontSize: 12,
-    color: '#666',
+    color: '#8E8E8E',
     fontStyle: 'italic',
+    fontWeight: '400',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 50,
+    paddingVertical: 80,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#666',
-    marginTop: 15,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#8E8E8E',
+    marginTop: 16,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 5,
+    fontSize: 16,
+    color: '#BDBDBD',
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 22,
   },
   // Map Styles
   mapContainer: {
@@ -1101,6 +965,130 @@ const styles = StyleSheet.create({
   },
   activeDistanceChipText: {
     color: 'white',
+  },
+  // Missing styles that were accidentally removed
+  clearButton: {
+    backgroundColor: '#f5f5f5',
+    padding: 8,
+    borderRadius: 20,
+    marginLeft: 8,
+  },
+  activeFilterButton: {
+    backgroundColor: '#FF6B6B',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF6B6B',
+  },
+  activeFiltersContainer: {
+    backgroundColor: 'white',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  activeFiltersContent: {
+    paddingRight: 16,
+  },
+  activeFilterChip: {
+    backgroundColor: '#FFE5E5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activeFilterText: {
+    fontSize: 12,
+    color: '#FF6B6B',
+    fontWeight: '500',
+    marginRight: 4,
+  },
+  removeFilterButton: {
+    marginLeft: 4,
+  },
+  clearAllFiltersButton: {
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  clearAllFiltersText: {
+    fontSize: 12,
+    color: 'white',
+    fontWeight: '500',
+  },
+  quickFiltersContainer: {
+    backgroundColor: 'white',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  quickFiltersContent: {
+    paddingHorizontal: 16,
+  },
+  quickFilterPill: {
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  activeQuickFilterPill: {
+    backgroundColor: '#FF6B6B',
+    borderColor: '#FF6B6B',
+  },
+  quickFilterIcon: {
+    marginRight: 6,
+  },
+  quickFilterText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  activeQuickFilterText: {
+    color: 'white',
+  },
+  sortButtonText: {
+    fontSize: 14,
+    color: '#666',
+    marginRight: 5,
+  },
+  providerList: {
+    paddingBottom: 20,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 16,
+  },
+  adjustFiltersButton: {
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 16,
+  },
+  adjustFiltersText: {
+    color: 'white',
+    fontWeight: '600',
   },
 });
 

@@ -1,0 +1,430 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import api from '../../services/api';
+import { ProviderDashboard } from '../../types';
+
+const DashboardScreen = () => {
+  const [dashboardData, setDashboardData] = useState<ProviderDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getProviderDashboard();
+      setDashboardData(data);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      Alert.alert('Error', 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadDashboardData();
+    setRefreshing(false);
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const formatTime = (timeString: string) => {
+    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  if (loading && !dashboardData) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loadingText}>Loading dashboard...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      {/* Header */}
+      <LinearGradient
+        colors={[Colors.primary.main, Colors.primary.light]}
+        style={styles.header}
+      >
+        <Text style={styles.headerTitle}>Dashboard</Text>
+        <Text style={styles.headerSubtitle}>
+          {new Date().toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}
+        </Text>
+      </LinearGradient>
+
+      {/* Quick Stats */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Ionicons name="calendar-outline" size={24} color={Colors.info} />
+            <Text style={styles.statNumber}>{dashboardData?.todayAppointments || 0}</Text>
+            <Text style={styles.statLabel}>Today's Appointments</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Ionicons name="time-outline" size={24} color={Colors.warning} />
+            <Text style={styles.statNumber}>{dashboardData?.pendingAppointments || 0}</Text>
+            <Text style={styles.statLabel}>Pending Requests</Text>
+          </View>
+        </View>
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Ionicons name="trending-up-outline" size={24} color={Colors.success} />
+            <Text style={styles.statNumber}>{formatCurrency(dashboardData?.weeklyRevenue || 0)}</Text>
+            <Text style={styles.statLabel}>This Week</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Ionicons name="cash-outline" size={24} color={Colors.accent} />
+            <Text style={styles.statNumber}>{formatCurrency(dashboardData?.monthlyRevenue || 0)}</Text>
+            <Text style={styles.statLabel}>This Month</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Additional Stats Row */}
+      <View style={styles.additionalStats}>
+        <View style={styles.additionalStatCard}>
+          <Ionicons name="people-outline" size={20} color={Colors.primary} />
+          <Text style={styles.additionalStatNumber}>{dashboardData?.totalClients || 0}</Text>
+          <Text style={styles.additionalStatLabel}>Total Clients</Text>
+        </View>
+        <View style={styles.additionalStatCard}>
+          <Ionicons name="star-outline" size={20} color={Colors.accent} />
+          <Text style={styles.additionalStatNumber}>{dashboardData?.averageRating?.toFixed(1) || '0.0'}</Text>
+          <Text style={styles.additionalStatLabel}>Rating</Text>
+        </View>
+      </View>
+
+      {/* Next Appointment */}
+      {dashboardData?.nextAppointment && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Next Appointment</Text>
+          <View style={styles.appointmentCard}>
+            <View style={styles.appointmentHeader}>
+              <Text style={styles.appointmentClient}>
+                {dashboardData.nextAppointment.clientName}
+              </Text>
+              <Text style={styles.appointmentPrice}>
+                {formatCurrency(dashboardData.nextAppointment.totalAmount)}
+              </Text>
+            </View>
+            <Text style={styles.appointmentService}>
+              {dashboardData.nextAppointment.serviceName}
+            </Text>
+            <View style={styles.appointmentTime}>
+              <Ionicons name="calendar-outline" size={16} color="#666" />
+              <Text style={styles.appointmentTimeText}>
+                {formatDate(dashboardData.nextAppointment.scheduledDate)} • {dashboardData.nextAppointment.duration} min
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Recent Bookings */}
+      {dashboardData?.recentBookings && dashboardData.recentBookings.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Bookings</Text>
+          {dashboardData.recentBookings.slice(0, 5).map((booking) => (
+            <View key={booking.id} style={styles.appointmentItem}>
+              <View style={styles.appointmentInfo}>
+                <Text style={styles.appointmentItemClient}>{booking.clientName}</Text>
+                <Text style={styles.appointmentItemService}>{booking.serviceName}</Text>
+                <Text style={styles.appointmentItemTime}>
+                  {formatDate(booking.scheduledDate)} • {booking.status}
+                </Text>
+              </View>
+              <Text style={styles.appointmentItemPrice}>
+                {formatCurrency(booking.totalAmount)}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Quick Actions */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <View style={styles.quickActions}>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="add-circle-outline" size={24} color="#4ECDC4" />
+            <Text style={styles.actionButtonText}>Add Service</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="calendar-outline" size={24} color="#45B7D1" />
+            <Text style={styles.actionButtonText}>View Schedule</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="chatbubble-outline" size={24} color="#FF6B6B" />
+            <Text style={styles.actionButtonText}>Messages</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="stats-chart-outline" size={24} color="#96CEB4" />
+            <Text style={styles.actionButtonText}>Analytics</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background.primary,
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    ...Typography.body.large,
+    color: Colors.text.secondary,
+    marginTop: Spacing.sm,
+  },
+  header: {
+    padding: Spacing.lg,
+    paddingTop: 50,
+    paddingBottom: Spacing.xl,
+  },
+  headerTitle: {
+    ...Typography.display.large,
+    color: '#FFFFFF',
+  },
+  headerSubtitle: {
+    ...Typography.body.large,
+    color: '#FFFFFF',
+    opacity: 0.9,
+    marginTop: Spacing.xs,
+  },
+  statsContainer: {
+    marginTop: -Spacing.lg,
+    paddingHorizontal: Spacing.md,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  statCard: {
+    ...ComponentStyles.cards.primary,
+    flex: 1,
+    backgroundColor: Colors.background.card,
+    marginHorizontal: Spacing.xs,
+    alignItems: 'center',
+    ...Shadows.card,
+  },
+  statNumber: {
+    ...Typography.heading.h2,
+    color: Colors.text.primary,
+    marginTop: Spacing.sm,
+  },
+  statLabel: {
+    ...Typography.label.small,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs,
+    textAlign: 'center',
+  },
+  additionalStats: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  additionalStatCard: {
+    ...ComponentStyles.cards.compact,
+    flex: 1,
+    backgroundColor: Colors.background.card,
+    marginHorizontal: Spacing.xs,
+    alignItems: 'center',
+    ...Shadows.small,
+  },
+  additionalStatNumber: {
+    ...Typography.body.large,
+    color: Colors.text.primary,
+    fontWeight: 'bold',
+    marginTop: Spacing.xs,
+  },
+  additionalStatLabel: {
+    ...Typography.label.small,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs,
+  },
+  section: {
+    ...ComponentStyles.cards.primary,
+    backgroundColor: Colors.background.card,
+    marginHorizontal: Spacing.md,
+    marginVertical: Spacing.sm,
+    ...Shadows.card,
+  },
+  sectionTitle: {
+    ...Typography.heading.h3,
+    color: Colors.text.primary,
+    marginBottom: Spacing.md,
+  },
+  appointmentCard: {
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.md,
+  },
+  appointmentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  appointmentClient: {
+    ...Typography.body.large,
+    color: Colors.text.primary,
+    fontWeight: '600',
+  },
+  appointmentPrice: {
+    ...Typography.body.large,
+    color: Colors.accent.main,
+    fontWeight: 'bold',
+  },
+  appointmentService: {
+    ...Typography.body.medium,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.sm,
+  },
+  appointmentTime: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  appointmentTimeText: {
+    ...Typography.label.small,
+    color: Colors.text.secondary,
+    marginLeft: Spacing.xs,
+  },
+  appointmentItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  appointmentInfo: {
+    flex: 1,
+  },
+  appointmentItemClient: {
+    ...Typography.body.medium,
+    color: Colors.text.primary,
+    fontWeight: '600',
+  },
+  appointmentItemService: {
+    ...Typography.label.small,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs,
+  },
+  appointmentItemTime: {
+    ...Typography.label.small,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.xs,
+  },
+  appointmentItemPrice: {
+    ...Typography.body.medium,
+    color: Colors.accent.main,
+    fontWeight: 'bold',
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  activityIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: BorderRadius.round,
+    backgroundColor: Colors.primary.light + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.sm,
+  },
+  activityInfo: {
+    flex: 1,
+  },
+  activityDescription: {
+    ...Typography.body.medium,
+    color: Colors.text.primary,
+  },
+  activityDate: {
+    ...Typography.label.small,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs,
+  },
+  activityAmount: {
+    ...Typography.body.medium,
+    color: Colors.accent.main,
+    fontWeight: 'bold',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  actionButton: {
+    width: '47%',
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.md,
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  actionButtonText: {
+    ...Typography.label.small,
+    color: Colors.text.primary,
+    marginTop: Spacing.sm,
+    fontWeight: '500',
+  },
+});
+
+export default DashboardScreen;

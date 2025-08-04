@@ -11,11 +11,13 @@ import {
   Dimensions,
   FlatList,
   Modal,
+  SafeAreaView,
+  StatusBar,
+  Share,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ServiceProvider, Service, RootStackParamList, Review } from '../../types';
 import ApiService from '../../services/api';
 
@@ -29,14 +31,31 @@ type ProviderProfileScreenRouteProp = {
 
 type ProviderProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
+const COLORS = {
+  primary: '#3797F0',
+  background: '#FFFFFF',
+  surface: '#FFFFFF',
+  text: '#262626',
+  textSecondary: '#8E8E8E',
+  button: '#3797F0',
+  border: '#DBDBDB',
+  borderLight: '#EFEFEF',
+  heart: '#ED4956',
+  success: '#00D563',
+};
+
 const ProviderProfileScreen: React.FC = () => {
   const [provider, setProvider] = useState<ServiceProvider | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<'services' | 'reviews' | 'gallery'>('services');
+  const [selectedTab, setSelectedTab] = useState<'posts' | 'services' | 'reviews'>('posts');
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
   
   const route = useRoute<ProviderProfileScreenRouteProp>();
   const navigation = useNavigation<ProviderProfileScreenNavigationProp>();
@@ -48,15 +67,11 @@ const ProviderProfileScreen: React.FC = () => {
 
   const handleStartChat = () => {
     if (provider) {
-      navigation.navigate('ChatScreen' as never, { 
+      navigation.navigate('Chat', { 
         userId: provider.userId, 
-        user: {
-          id: provider.userId,
-          firstName: provider.firstName,
-          lastName: provider.lastName,
-          profilePictureUrl: provider.profileImageUrl
-        }
-      } as never);
+        userName: `${provider.businessName}`,
+        userImage: provider.profilePictureUrl
+      });
     }
   };
 
@@ -74,11 +89,47 @@ const ProviderProfileScreen: React.FC = () => {
       setProvider(providerData);
       setServices(servicesData);
       setReviews(reviewsData);
+
+      // Load follow status
+      try {
+        const followStatus = await ApiService.getFollowStatus(providerId);
+        setIsFollowing(followStatus.isFollowing);
+        setFollowersCount(followStatus.followersCount);
+      } catch (error) {
+        console.error('Error loading follow status:', error);
+        // Set default values from provider data if available
+        setFollowersCount(providerData.followersCount || 0);
+        setIsFollowing(providerData.isFollowing || false);
+      }
     } catch (error) {
       console.error('Error loading provider data:', error);
       Alert.alert('Error', 'Failed to load provider information. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleFollow = async () => {
+    if (!provider || isFollowLoading) return;
+
+    try {
+      setIsFollowLoading(true);
+      
+      let response;
+      if (isFollowing) {
+        response = await ApiService.unfollowProvider(providerId);
+      } else {
+        response = await ApiService.followProvider(providerId);
+      }
+
+      setIsFollowing(response.isFollowing);
+      setFollowersCount(response.followersCount);
+      
+    } catch (error) {
+      console.error('Error toggling follow status:', error);
+      Alert.alert('Error', 'Failed to update follow status. Please try again.');
+    } finally {
+      setIsFollowLoading(false);
     }
   };
 
@@ -107,11 +158,11 @@ const ProviderProfileScreen: React.FC = () => {
         <Text style={styles.serviceDescription}>{service.description}</Text>
         <View style={styles.serviceDetails}>
           <View style={styles.detailItem}>
-            <Ionicons name="time-outline" size={16} color="#666" />
+            <Ionicons name="time-outline" size={16} color="rgba(255, 255, 255, 0.8)" />
             <Text style={styles.detailText}>{service.duration} min</Text>
           </View>
           <View style={styles.detailItem}>
-            <Ionicons name="pricetag-outline" size={16} color="#4ECDC4" />
+            <Ionicons name="pricetag-outline" size={16} color="#FFD700" />
             <Text style={styles.detailText}>{service.category}</Text>
           </View>
         </View>
@@ -137,23 +188,57 @@ const ProviderProfileScreen: React.FC = () => {
           <Text style={styles.reviewerName}>
             {review.reviewer?.firstName} {review.reviewer?.lastName}
           </Text>
-          <View style={styles.reviewRating}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Ionicons
-                key={star}
-                name={star <= review.rating ? "star" : "star-outline"}
-                size={14}
-                color="#FFD700"
-              />
-            ))}
+          <View style={styles.reviewRatingContainer}>
+            <View style={styles.reviewRating}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Ionicons
+                  key={star}
+                  name={star <= review.rating ? "star" : "star-outline"}
+                  size={16}
+                  color="#FFD700"
+                />
+              ))}
+            </View>
+            <Text style={styles.reviewRatingText}>{review.rating.toFixed(1)}</Text>
           </View>
         </View>
         <Text style={styles.reviewDate}>
           {new Date(review.createdAt).toLocaleDateString()}
         </Text>
       </View>
+      
       {review.comment && (
-        <Text style={styles.reviewComment}>{review.comment}</Text>
+        <View style={styles.reviewCommentContainer}>
+          <Text style={styles.reviewComment}>{review.comment}</Text>
+        </View>
+      )}
+      
+      {/* Show aggregated questionnaire insights to clients (but not detailed data) */}
+      {review.questionnaire && (
+        <View style={styles.publicInsights}>
+          <View style={styles.insightRow}>
+            <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+            <Text style={styles.insightText}>
+              Detailed service assessment completed
+            </Text>
+          </View>
+          {review.questionnaire.wouldRecommend && (
+            <View style={styles.insightRow}>
+              <Ionicons name="thumbs-up" size={16} color="#4CAF50" />
+              <Text style={styles.insightText}>
+                Would recommend this service
+              </Text>
+            </View>
+          )}
+          {review.questionnaire.wouldUseAgain && (
+            <View style={styles.insightRow}>
+              <Ionicons name="repeat" size={16} color="#4CAF50" />
+              <Text style={styles.insightText}>
+                Would use this service again
+              </Text>
+            </View>
+          )}
+        </View>
       )}
     </View>
   );
@@ -172,6 +257,8 @@ const ProviderProfileScreen: React.FC = () => {
 
   const renderTabContent = () => {
     switch (selectedTab) {
+      case 'posts':
+        return renderPosts();
       case 'services':
         return (
           <View style={styles.tabContent}>
@@ -189,448 +276,596 @@ const ProviderProfileScreen: React.FC = () => {
         return (
           <View style={styles.tabContent}>
             {reviews.length > 0 ? (
-              reviews.slice(0, 5).map(renderReviewCard)
+              <View>
+                {reviews.slice(0, 3).map(renderReviewCard)}
+                <TouchableOpacity
+                  style={styles.viewAllReviewsButton}
+                  onPress={() => {
+                    // TODO: Add navigation to ReviewsList when screen is added to navigation
+                    console.log('Navigate to reviews list for provider:', providerId);
+                    Alert.alert('Reviews', `Opening all reviews for ${provider?.businessName}`);
+                  }}
+                >
+                  <Text style={styles.viewAllReviewsText}>
+                    View All {reviews.length} Reviews
+                  </Text>
+                  <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+                </TouchableOpacity>
+              </View>
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="chatbubble-outline" size={48} color="#ccc" />
                 <Text style={styles.emptyText}>No reviews yet</Text>
-              </View>
-            )}
-          </View>
-        );
-      case 'gallery':
-        return (
-          <View style={styles.tabContent}>
-            {provider?.portfolioImages && provider.portfolioImages.length > 0 ? (
-              <FlatList
-                data={provider.portfolioImages}
-                renderItem={renderGalleryImage}
-                numColumns={2}
-                columnWrapperStyle={styles.galleryRow}
-                showsVerticalScrollIndicator={false}
-              />
-            ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="images-outline" size={48} color="#ccc" />
-                <Text style={styles.emptyText}>No photos available</Text>
+                <TouchableOpacity
+                  style={styles.writeReviewButton}
+                  onPress={() => {
+                    // TODO: Add navigation to CreateReview when screen is added to navigation
+                    console.log('Navigate to create review for provider:', providerId);
+                    Alert.alert('Create Review', 'Opening review creation form');
+                  }}
+                >
+                  <Text style={styles.writeReviewText}>Be the first to review</Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
         );
       default:
-        return null;
+        return renderPosts();
     }
   };
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6B6B" />
-        <Text style={styles.loadingText}>Loading provider details...</Text>
-      </View>
+      <>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <View style={styles.container}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#3797F0" />
+            <Text style={styles.loadingText}>Loading provider details...</Text>
+          </View>
+        </View>
+      </>
     );
   }
 
   if (!provider) {
     return (
-      <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={64} color="#FF6B6B" />
-        <Text style={styles.errorText}>Provider not found</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadProviderData}>
-          <Text style={styles.retryButtonText}>Try Again</Text>
-        </TouchableOpacity>
-      </View>
+      <>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <View style={styles.container}>
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={64} color="#8E8E8E" />
+            <Text style={styles.errorText}>Provider not found</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={loadProviderData}>
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </>
     );
   }
 
-  return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header with provider info */}
-      <LinearGradient
-        colors={['#FF6B6B', '#FFE66D']}
-        style={styles.header}
-      >
-        <View style={styles.providerHeader}>
-          <Image
-            source={{
-              uri: provider.profilePictureUrl || 'https://via.placeholder.com/120',
+  // Render Functions
+  const renderPosts = () => {
+    const mockPosts = Array.from({ length: 9 }).map((_, index) => ({
+      id: `post-${index}`,
+      imageUrl: `https://picsum.photos/400/400?random=${index}`,
+      likesCount: Math.floor(Math.random() * 500) + 10,
+      commentsCount: Math.floor(Math.random() * 50) + 1,
+    }));
+
+    return (
+      <FlatList
+        data={mockPosts}
+        numColumns={3}
+        renderItem={({ item, index }) => (
+          <TouchableOpacity
+            style={styles.postItem}
+            onPress={() => {
+              // TODO: Add navigation to PostDetail when screen is added to navigation
+              console.log('Navigate to post detail:', item.id);
+              Alert.alert('Post Detail', `Opening post ${item.id}`);
             }}
-            style={styles.providerImage}
-          />
-          <View style={styles.providerInfo}>
-            <Text style={styles.providerName}>{provider.businessName}</Text>
-            <Text style={styles.providerBio}>{provider.businessDescription}</Text>
+          >
+            <Image
+              source={{ uri: item.imageUrl }}
+              style={styles.postImage}
+            />
+            <View style={styles.postOverlay}>
+              <View style={styles.postStats}>
+                <View style={styles.postStat}>
+                  <Ionicons name="heart" size={16} color="white" />
+                  <Text style={styles.postStatText}>{item.likesCount}</Text>
+                </View>
+                <View style={styles.postStat}>
+                  <Ionicons name="chatbubble" size={16} color="white" />
+                  <Text style={styles.postStatText}>{item.commentsCount}</Text>
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
+        keyExtractor={(item) => item.id}
+        scrollEnabled={false}
+        contentContainerStyle={styles.postsGrid}
+      />
+    );
+  };
+
+  const renderServices = () => (
+    <View style={styles.servicesList}>
+      {services.map((service) => (
+        <View key={service.id} style={styles.serviceCard}>
+          <View style={styles.serviceHeader}>
+            <Text style={styles.serviceName}>{service.name}</Text>
+            <Text style={styles.servicePrice}>${service.price}</Text>
+          </View>
+          <Text style={styles.serviceDescription}>{service.description}</Text>
+          <View style={styles.serviceFooter}>
+            <Text style={styles.serviceDuration}>{service.duration} min</Text>
+            <TouchableOpacity 
+              style={styles.bookServiceButton}
+              onPress={() => handleBookService(service)}
+            >
+              <Text style={styles.bookServiceButtonText}>Book</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderReviews = () => (
+    <View style={styles.reviewsList}>
+      {reviews.map((review) => (
+        <View key={review.id} style={styles.reviewCard}>
+          <View style={styles.reviewHeader}>
+            <Image
+              source={{ uri: review.reviewer?.profilePictureUrl || 'https://via.placeholder.com/40' }}
+              style={styles.reviewerImage}
+            />
+            <View style={styles.reviewerInfo}>
+              <Text style={styles.reviewerName}>
+                {review.reviewer?.firstName} {review.reviewer?.lastName}
+              </Text>
+              <Text style={styles.reviewDate}>
+                {new Date(review.createdAt).toLocaleDateString()}
+              </Text>
+            </View>
+            <View style={styles.reviewRating}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Ionicons
+                  key={i}
+                  name={i < review.rating ? 'star' : 'star-outline'}
+                  size={16}
+                  color="#FFD700"
+                />
+              ))}
+            </View>
+          </View>
+          <Text style={styles.reviewText}>{review.comment}</Text>
+        </View>
+      ))}
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{provider.businessName}</Text>
+        <TouchableOpacity>
+          <Ionicons name="ellipsis-horizontal" size={24} color={COLORS.text} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        {/* Profile Section */}
+        <View style={styles.profileSection}>
+          <View style={styles.profileTop}>
+            <Image
+              source={{
+                uri: provider.profilePictureUrl || 'https://via.placeholder.com/90',
+              }}
+              style={styles.profileImage}
+            />
             
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
-                <Ionicons name="star" size={16} color="#FFD700" />
-                <Text style={styles.statText}>{provider.averageRating || 'New'}</Text>
+                <Text style={styles.statNumber}>{services.length}</Text>
+                <Text style={styles.statLabel}>Services</Text>
               </View>
               <View style={styles.statItem}>
-                <Ionicons name="people-outline" size={16} color="#fff" />
-                <Text style={styles.statText}>{provider.totalReviews} reviews</Text>
+                <Text style={styles.statNumber}>{followersCount.toLocaleString()}</Text>
+                <Text style={styles.statLabel}>Followers</Text>
               </View>
-              {provider.isVerified && (
-                <View style={styles.statItem}>
-                  <Ionicons name="checkmark-circle" size={16} color="#4ECDC4" />
-                  <Text style={styles.statText}>Verified</Text>
-                </View>
-              )}
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{provider.followingCount || 0}</Text>
+                <Text style={styles.statLabel}>Following</Text>
+              </View>
             </View>
           </View>
-        </View>
-      </LinearGradient>
 
-      {/* Quick Actions Bar */}
-      <View style={styles.quickActionsContainer}>
-        <TouchableOpacity style={styles.quickActionButton} onPress={handleStartChat}>
-          <Ionicons name="chatbubble-outline" size={20} color="#FF6B6B" />
-          <Text style={styles.quickActionText}>Message</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.quickActionButton}>
-          <Ionicons name="call-outline" size={20} color="#4ECDC4" />
-          <Text style={styles.quickActionText}>Call</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.quickActionButton}>
-          <Ionicons name="location-outline" size={20} color="#FFE66D" />
-          <Text style={styles.quickActionText}>Directions</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.quickActionButton}>
-          <Ionicons name="heart-outline" size={20} color="#FF69B4" />
-          <Text style={styles.quickActionText}>Save</Text>
-        </TouchableOpacity>
-      </View>
+          {/* Business Info */}
+          <View style={styles.businessInfo}>
+            <Text style={styles.businessName}>{provider.businessName}</Text>
+            <Text style={styles.businessDescription}>{provider.businessDescription}</Text>
+            
+            <View style={styles.ratingContainer}>
+              <Ionicons name="star" size={16} color="#FFD700" />
+              <Text style={styles.ratingText}>{provider.averageRating || 'New'} ({provider.totalReviews || 0} reviews)</Text>
+            </View>
+          </View>
 
-      {/* Specialties */}
-      {provider.specialties && provider.specialties.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Specialties</Text>
-          <View style={styles.specialtiesContainer}>
-            {provider.specialties.map((specialty, index) => (
-              <View key={index} style={styles.specialtyTag}>
-                <Text style={styles.specialtyText}>{specialty}</Text>
-              </View>
-            ))}
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.bookButton]}
+              onPress={() => {
+                if (services.length > 0) {
+                  navigation.navigate('BookingFlow', { 
+                    service: services[0], 
+                    provider: provider 
+                  });
+                }
+              }}
+            >
+              <Text style={styles.bookButtonText}>Book Appointment</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.actionButton, 
+                styles.followButton,
+                isFollowing && styles.followingButton
+              ]}
+              onPress={handleFollow}
+              disabled={isFollowLoading}
+            >
+              {isFollowLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={[
+                  styles.followButtonText,
+                  isFollowing && styles.followingButtonText
+                ]}>
+                  {isFollowing ? 'Following' : 'Follow'}
+                </Text>
+              )}
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.messageButton}
+              onPress={() => navigation.navigate('Chat', { 
+                userId: provider.userId, 
+                userName: provider.businessName,
+                userImage: provider.profilePictureUrl
+              })}
+            >
+              <Ionicons name="chatbubble-outline" size={20} color={COLORS.text} />
+            </TouchableOpacity>
           </View>
         </View>
-      )}
 
-      {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'services' && styles.activeTab]}
-          onPress={() => setSelectedTab('services')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'services' && styles.activeTabText]}>
-            Services ({services.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'reviews' && styles.activeTab]}
-          onPress={() => setSelectedTab('reviews')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'reviews' && styles.activeTabText]}>
-            Reviews ({reviews.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'gallery' && styles.activeTab]}
-          onPress={() => setSelectedTab('gallery')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'gallery' && styles.activeTabText]}>
-            Gallery
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Tab Content */}
-      {renderTabContent()}
-
-      {/* Image Modal for Gallery */}
-      <Modal visible={showImageModal} transparent={true} animationType="fade">
-        <View style={styles.modalContainer}>
-          <TouchableOpacity
-            style={styles.modalCloseButton}
-            onPress={() => setShowImageModal(false)}
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            style={[styles.tab, selectedTab === 'posts' && styles.activeTab]}
+            onPress={() => setSelectedTab('posts')}
           >
-            <Ionicons name="close" size={30} color="#fff" />
-          </TouchableOpacity>
-          {provider?.portfolioImages && (
-            <Image
-              source={{ uri: provider.portfolioImages[selectedImageIndex] }}
-              style={styles.modalImage}
-              resizeMode="contain"
+            <Ionicons 
+              name="grid-outline" 
+              size={24} 
+              color={selectedTab === 'posts' ? COLORS.text : COLORS.textSecondary} 
             />
-          )}
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, selectedTab === 'services' && styles.activeTab]}
+            onPress={() => setSelectedTab('services')}
+          >
+            <Ionicons 
+              name="pricetags-outline" 
+              size={24} 
+              color={selectedTab === 'services' ? COLORS.text : COLORS.textSecondary} 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, selectedTab === 'reviews' && styles.activeTab]}
+            onPress={() => setSelectedTab('reviews')}
+          >
+            <Ionicons 
+              name="star-outline" 
+              size={24} 
+              color={selectedTab === 'reviews' ? COLORS.text : COLORS.textSecondary} 
+            />
+          </TouchableOpacity>
         </View>
-      </Modal>
 
-      <View style={styles.bottomPadding} />
-    </ScrollView>
+        {/* Tab Content */}
+        <View style={styles.tabContent}>
+          {selectedTab === 'posts' && renderPosts()}
+          {selectedTab === 'services' && renderServices()}
+          {selectedTab === 'reviews' && renderReviews()}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  // Base Layout
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.background,
   },
-  loadingContainer: {
+  scrollContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
   },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    color: '#666',
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  retryButton: {
-    backgroundColor: '#FF6B6B',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  
+  // Header
   header: {
-    paddingTop: 60,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-  },
-  providerHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: COLORS.border,
   },
-  providerImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
-    borderColor: '#fff',
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
   },
-  providerInfo: {
-    flex: 1,
-    marginLeft: 16,
+
+  // Profile Section
+  profileSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
-  providerName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  providerBio: {
-    fontSize: 14,
-    color: '#fff',
+  profileTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
-    lineHeight: 20,
+  },
+  profileImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    marginRight: 20,
   },
   statsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-    marginBottom: 4,
-  },
-  statText: {
-    color: '#fff',
-    fontSize: 12,
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  // Quick Actions
-  quickActionsContainer: {
-    backgroundColor: '#fff',
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
-  quickActionButton: {
+  statItem: {
     alignItems: 'center',
-    flex: 1,
   },
-  quickActionText: {
+  statNumber: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  statLabel: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-    fontWeight: '500',
+    color: COLORS.textSecondary,
+    marginTop: 2,
   },
-  // Sections
-  section: {
-    backgroundColor: '#fff',
-    marginTop: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+
+  // Business Info
+  businessInfo: {
     marginBottom: 16,
   },
-  specialtiesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  businessName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
   },
-  specialtyTag: {
-    backgroundColor: '#FFE66D',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
+  businessDescription: {
+    fontSize: 14,
+    color: COLORS.text,
+    lineHeight: 20,
     marginBottom: 8,
   },
-  specialtyText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#333',
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
+  ratingText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginLeft: 4,
+  },
+
+  // Action Buttons
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  bookButton: {
+    backgroundColor: COLORS.button,
+  },
+  bookButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  followButton: {
+    backgroundColor: COLORS.primary,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  followingButton: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  followButtonText: {
+    color: COLORS.background,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  followingButtonText: {
+    color: COLORS.text,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  messageButton: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
   // Tabs
   tabContainer: {
-    backgroundColor: '#fff',
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomWidth: 0.5,
+    borderBottomColor: COLORS.border,
   },
   tab: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 12,
     alignItems: 'center',
-    borderBottomWidth: 2,
+    borderBottomWidth: 1,
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: '#FF6B6B',
+    borderBottomColor: COLORS.text,
   },
-  tabText: {
+
+  // Tab Content
+  tabContent: {
+    flex: 1,
+    paddingTop: 16,
+  },
+
+  // Posts Grid
+  postsGrid: {
+    paddingHorizontal: 1,
+  },
+  postItem: {
+    width: (width - 4) / 3,
+    height: (width - 4) / 3,
+    margin: 1,
+    position: 'relative',
+  },
+  postImage: {
+    width: '100%',
+    height: '100%',
+  },
+  postOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0,
+  },
+  postStats: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  postStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  postStatText: {
+    color: 'white',
     fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  activeTabText: {
-    color: '#FF6B6B',
     fontWeight: '600',
   },
-  tabContent: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+
+  // Services List
+  servicesList: {
+    paddingHorizontal: 16,
   },
-  // Enhanced Service Cards
-  enhancedServiceCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    overflow: 'hidden',
-  },
-  serviceImage: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#f8f9fa',
-  },
-  serviceInfo: {
+  serviceCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
     padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   serviceHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 8,
   },
   serviceName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
     flex: 1,
-  },
-  priceContainer: {
-    backgroundColor: '#E8F4FD',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
   },
   servicePrice: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#007AFF',
+    fontWeight: '600',
+    color: COLORS.button,
   },
   serviceDescription: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
+    color: COLORS.textSecondary,
     lineHeight: 20,
+    marginBottom: 12,
   },
   serviceDetails: {
     flexDirection: 'row',
-    marginBottom: 16,
-  },
-  detailItem: {
-    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginRight: 20,
   },
-  detailText: {
-    fontSize: 13,
-    color: '#666',
-    marginLeft: 6,
-    fontWeight: '500',
+  serviceDuration: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
   },
-  bookButton: {
-    backgroundColor: '#FF6B6B',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 25,
+  serviceBookButton: {
+    backgroundColor: COLORS.button,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
   },
-  bookButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  serviceBookText: {
+    color: 'white',
     fontWeight: '600',
-    marginLeft: 6,
+    fontSize: 14,
   },
-  // Legacy Service Card (keeping for compatibility)
-  serviceCard: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
+
+  // Reviews List
+  reviewsList: {
+    paddingHorizontal: 16,
   },
-  // Reviews
   reviewCard: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   reviewHeader: {
     flexDirection: 'row',
@@ -649,89 +884,220 @@ const styles = StyleSheet.create({
   reviewerName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 2,
+    color: COLORS.text,
+    marginBottom: 4,
   },
   reviewRating: {
     flexDirection: 'row',
   },
+  reviewText: {
+    fontSize: 14,
+    color: COLORS.text,
+    lineHeight: 20,
+  },
+
   reviewDate: {
     fontSize: 12,
-    color: '#999',
+    color: COLORS.textSecondary,
+  },
+  serviceFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  bookServiceButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  bookServiceButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+
+  // Enhanced Service Styles
+  enhancedServiceCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  serviceImage: {
+    width: '100%',
+    height: 120,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  serviceInfo: {
+    flex: 1,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  detailText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginLeft: 4,
+  },
+
+  // Enhanced Review Styles
+  reviewRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewRatingText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginLeft: 4,
+  },
+  reviewCommentContainer: {
+    marginTop: 8,
   },
   reviewComment: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.text,
     lineHeight: 20,
   },
-  // Gallery
-  galleryRow: {
-    justifyContent: 'space-between',
-  },
-  galleryImageContainer: {
-    width: '48%',
-    aspectRatio: 1,
-    marginBottom: 12,
+
+  // Public Insights
+  publicInsights: {
+    backgroundColor: COLORS.surface,
     borderRadius: 12,
-    overflow: 'hidden',
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  insightRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  insightText: {
+    fontSize: 14,
+    color: COLORS.text,
+  },
+
+  // Gallery
+  galleryImageContainer: {
+    margin: 1,
+    flex: 1,
+    aspectRatio: 1,
   },
   galleryImage: {
     width: '100%',
     height: '100%',
+    borderRadius: 8,
   },
-  // Modal
-  modalContainer: {
+  galleryRow: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+
+  // Empty States
+  emptyState: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  modalCloseButton: {
-    position: 'absolute',
-    top: 60,
-    right: 20,
-    zIndex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 20,
-    padding: 8,
-  },
-  modalImage: {
-    width: width * 0.9,
-    height: width * 0.9,
-  },
-  // Other
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: 40,
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
-    marginTop: 12,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
   },
-  contactCard: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-  },
-  contactButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+
+  // Loading States
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#FF6B6B',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
   },
-  contactButtonText: {
-    color: '#FF6B6B',
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 16,
+    backgroundColor: COLORS.button,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 6,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontWeight: '600',
+  },
+
+  // Review Navigation Buttons
+  viewAllReviewsButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  viewAllReviewsText: {
     fontSize: 16,
     fontWeight: '600',
-    marginLeft: 8,
+    color: COLORS.primary,
   },
-  bottomPadding: {
-    height: 24,
+  writeReviewButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  writeReviewText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
 

@@ -9,11 +9,11 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Booking, BookingStatus, RootStackParamList } from '../../types';
 import ApiService from '../../services/api';
 
@@ -166,7 +166,7 @@ const BookingDetailsScreen: React.FC = () => {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6B6B" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.loadingText}>Loading booking details...</Text>
       </View>
     );
@@ -186,16 +186,17 @@ const BookingDetailsScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       {/* Header */}
-      <LinearGradient colors={['#FF6B6B', '#FFE66D']} style={styles.header}>
+      <View style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <Ionicons name="arrow-back" size={24} color="#262626" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Booking Details</Text>
           <View style={styles.placeholder} />
         </View>
-      </LinearGradient>
+      </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Status Card */}
@@ -333,7 +334,7 @@ const BookingDetailsScreen: React.FC = () => {
                 disabled={isUpdating}
               >
                 {isUpdating ? (
-                  <ActivityIndicator size="small" color="white" />
+                  <ActivityIndicator size="small" color={COLORS.primary} />
                 ) : (
                   <Text style={styles.modalConfirmText}>Cancel Booking</Text>
                 )}
@@ -346,15 +347,35 @@ const BookingDetailsScreen: React.FC = () => {
   );
 };
 
+// Instagram-style Color Palette
+const COLORS = {
+  primary: '#3797F0',
+  background: '#FFFFFF',
+  surface: '#FFFFFF',
+  text: '#262626',
+  textSecondary: '#8E8E8E',
+  border: '#DBDBDB',
+  borderLight: '#EFEFEF',
+  error: '#ED4956',
+  success: '#00C851',
+  warning: '#FF6900',
+};
+
 const styles = StyleSheet.create({
+  // Base Layout
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.background,
   },
+  
+  // Header Section
   header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   headerContent: {
     flexDirection: 'row',
@@ -362,41 +383,73 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   backButton: {
-    padding: 8,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    letterSpacing: -0.3,
   },
   placeholder: {
-    width: 40,
+    width: 44,
   },
+  
+  // Content Section
   content: {
     flex: 1,
-    padding: 20,
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
+  
+  // Status Section
   statusCard: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
     borderRadius: 25,
-    gap: 8,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   statusText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: '600',
+    color: COLORS.text,
+    letterSpacing: -0.3,
   },
+  
+  // Card Section
   card: {
-    backgroundColor: 'white',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     borderRadius: 12,
-    padding: 20,
+    padding: 24,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -406,66 +459,91 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '600',
+    color: COLORS.text,
     marginBottom: 16,
+    letterSpacing: -0.3,
   },
+  // Service Info Section
   serviceInfo: {
     flexDirection: 'row',
   },
   serviceImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
+    width: 90,
+    height: 90,
+    borderRadius: 12,
     marginRight: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   serviceDetails: {
     flex: 1,
   },
   serviceName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
     marginBottom: 4,
+    letterSpacing: -0.3,
   },
   serviceDescription: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.textSecondary,
     marginBottom: 8,
     lineHeight: 20,
+    fontWeight: '400',
   },
   serviceCategory: {
-    fontSize: 12,
-    color: '#FF6B6B',
-    backgroundColor: '#FFE5E5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    fontSize: 14,
+    color: '#FFD700',
+    fontWeight: '700',
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.4)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 12,
     alignSelf: 'flex-start',
   },
+  
+  // Provider Info Section
   providerInfo: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   providerImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     marginRight: 16,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   providerDetails: {
     flex: 1,
   },
   providerName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
     marginBottom: 4,
+    letterSpacing: -0.3,
   },
   providerDescription: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.textSecondary,
     lineHeight: 20,
+    fontWeight: '400',
   },
   appointmentDetails: {
     gap: 16,
@@ -475,142 +553,172 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detailLabel: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: COLORS.textSecondary,
     marginLeft: 12,
     flex: 1,
-  },
-  detailValue: {
-    fontSize: 16,
-    color: '#333',
     fontWeight: '500',
   },
+  detailValue: {
+    fontSize: 14,
+    color: COLORS.text,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
   priceRow: {
-    marginTop: 8,
-    paddingTop: 16,
+    marginTop: 16,
+    paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
   },
   priceValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FF6B6B',
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFD700',
+    letterSpacing: -0.3,
   },
   notesText: {
     fontSize: 16,
-    color: '#333',
+    color: 'rgba(255, 255, 255, 0.9)',
     lineHeight: 24,
+    fontWeight: '500',
   },
   actionsContainer: {
-    gap: 12,
-    marginTop: 8,
-    marginBottom: 20,
+    gap: 16,
+    marginTop: 16,
+    marginBottom: 32,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF6B6B',
-    borderRadius: 12,
+    backgroundColor: 'rgba(255, 107, 107, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.3)',
+    borderRadius: 20,
     padding: 16,
     gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   disabledButton: {
+    backgroundColor: COLORS.borderLight,
+    borderColor: COLORS.border,
+    shadowColor: '#000',
     opacity: 0.6,
   },
   actionButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    letterSpacing: -0.2,
   },
+  
+  // Loading & Error States
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.background,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.background,
     padding: 20,
   },
   errorText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#E74C3C',
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
     marginTop: 16,
-    marginBottom: 20,
+    marginBottom: 24,
+    textAlign: 'center',
   },
   backButtonText: {
-    color: '#FF6B6B',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '700',
   },
+  
+  // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   cancelModal: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
-    minWidth: 300,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 24,
+    padding: 32,
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 1,
+    shadowRadius: 25,
+    elevation: 15,
+    minWidth: 320,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#333',
-    marginBottom: 12,
+    marginBottom: 16,
     textAlign: 'center',
+    letterSpacing: -0.4,
   },
   modalMessage: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: 32,
     lineHeight: 24,
+    fontWeight: '500',
   },
   modalActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 16,
   },
   modalCancelButton: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   modalCancelText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#666',
   },
   modalConfirmButton: {
     flex: 1,
     backgroundColor: '#E74C3C',
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     alignItems: 'center',
+    shadowColor: 'rgba(231, 76, 60, 0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   modalConfirmText: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '600',
     color: 'white',
   },
 });

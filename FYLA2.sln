@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FYLA2_Backend", "FYLA2_Backend\FYLA2_Backend.csproj", "{0CBAA508-E359-5DFF-874E-D2FA8D263B4C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FYLA2", "FYLA2\FYLA2.csproj", "{3B309A95-2F5F-468B-570C-107DE7A9021D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0CBAA508-E359-5DFF-874E-D2FA8D263B4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0CBAA508-E359-5DFF-874E-D2FA8D263B4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0CBAA508-E359-5DFF-874E-D2FA8D263B4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0CBAA508-E359-5DFF-874E-D2FA8D263B4C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B309A95-2F5F-468B-570C-107DE7A9021D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B309A95-2F5F-468B-570C-107DE7A9021D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B309A95-2F5F-468B-570C-107DE7A9021D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B309A95-2F5F-468B-570C-107DE7A9021D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {29C48FBF-4A20-414C-8C46-1DCED1A7C1BE}
+	EndGlobalSection
+EndGlobal

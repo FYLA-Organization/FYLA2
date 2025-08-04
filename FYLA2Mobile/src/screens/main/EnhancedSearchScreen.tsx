@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -252,14 +253,15 @@ const EnhancedSearchScreen: React.FC = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
       {/* Search Header */}
       <View style={styles.searchHeader}>
         <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <Ionicons name="search" size={20} color="rgba(255, 255, 255, 0.8)" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search providers, services..."
+            placeholderTextColor="rgba(255, 255, 255, 0.7)"
             value={searchQuery}
             onChangeText={setSearchQuery}
             onFocus={() => {
@@ -354,19 +356,19 @@ const EnhancedSearchScreen: React.FC = () => {
           <TouchableOpacity
             style={[
               styles.quickFilterPill,
-              filters.rating && styles.activeQuickFilterPill,
+              !!filters.rating && styles.activeQuickFilterPill,
             ]}
             onPress={() => handleQuickFilter('rating', filters.rating ? undefined : 4)}
           >
             <Ionicons 
               name="star" 
               size={16} 
-              color={filters.rating ? 'white' : '#FFD700'} 
+              color={!!filters.rating ? 'white' : '#FFD700'} 
               style={styles.quickFilterIcon}
             />
             <Text style={[
               styles.quickFilterText,
-              filters.rating && styles.activeQuickFilterText,
+              !!filters.rating && styles.activeQuickFilterText,
             ]}>
               4+ Stars
             </Text>
@@ -485,271 +487,373 @@ const EnhancedSearchScreen: React.FC = () => {
         onSaveFilters={handleSaveFilters}
         onResetFilters={handleResetFilters}
       />
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
+  // Base Layout
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#667eea',
+    paddingBottom: 100,
   },
+  
+  // Search Header
   searchHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    paddingTop: 50,
-    backgroundColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    gap: 12,
+    padding: 20,
+    paddingTop: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
+    gap: 16,
   },
   searchInputContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 25,
-    paddingHorizontal: 16,
-    height: 48,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderRadius: 28,
+    paddingHorizontal: 20,
+    height: 56,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   searchIcon: {
     marginRight: 12,
+    opacity: 0.8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: '#333',
+    fontSize: 17,
+    color: 'white',
+    fontWeight: '500',
   },
   clearButton: {
-    padding: 4,
+    padding: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   filterButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#f5f5f5',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   activeFilterButton: {
-    backgroundColor: '#fff5f5',
+    backgroundColor: 'rgba(255, 107, 107, 0.9)',
   },
   filterBadge: {
     position: 'absolute',
     top: 8,
     right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FF6B6B',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FFD700',
+    borderWidth: 2,
+    borderColor: 'white',
   },
+  
+  // Active Filters
   activeFiltersContainer: {
-    backgroundColor: 'white',
-    paddingVertical: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
   },
   activeFiltersContent: {
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingHorizontal: 20,
+    gap: 12,
   },
   activeFilterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff5f5',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#FF6B6B',
-    gap: 6,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    gap: 8,
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   activeFilterText: {
-    fontSize: 12,
-    color: '#FF6B6B',
-    fontWeight: '600',
+    fontSize: 14,
+    color: 'white',
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   removeFilterButton: {
-    padding: 2,
+    padding: 4,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   clearAllFiltersButton: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   clearAllFiltersText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 14,
+    color: 'white',
     fontWeight: '600',
+    opacity: 0.9,
   },
+  
+  // Quick Filters
   quickFiltersContainer: {
-    backgroundColor: 'white',
-    paddingVertical: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
   },
   quickFiltersContent: {
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingHorizontal: 20,
+    gap: 12,
   },
   quickFilterPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    gap: 6,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    gap: 8,
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   activeQuickFilterPill: {
-    backgroundColor: '#FF6B6B',
-    borderColor: '#FF6B6B',
+    backgroundColor: 'rgba(255, 107, 107, 0.9)',
+    borderColor: 'rgba(255, 107, 107, 1)',
+    shadowColor: 'rgba(255, 107, 107, 0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 8,
   },
   quickFilterIcon: {
-    // No additional styles needed
+    opacity: 0.9,
   },
   quickFilterText: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '600',
+    fontSize: 14,
+    color: 'white',
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    opacity: 0.9,
   },
   activeQuickFilterText: {
     color: 'white',
+    opacity: 1,
   },
+  
+  // Results Section
   resultsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: 'white',
+    padding: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
   },
   resultsCount: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 18,
+    fontWeight: '800',
+    color: 'white',
+    letterSpacing: -0.2,
   },
   sortButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    gap: 6,
   },
   sortButtonText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 15,
+    color: 'white',
+    fontWeight: '600',
+    opacity: 0.9,
   },
+  
+  // Provider Cards
   providerList: {
-    padding: 16,
-    gap: 16,
+    padding: 20,
+    gap: 20,
+    backgroundColor: 'transparent',
   },
   providerCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 24,
+    padding: 20,
     flexDirection: 'row',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   providerImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginRight: 16,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    marginRight: 20,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   providerInfo: {
     flex: 1,
+    justifyContent: 'space-between',
   },
   providerName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: 20,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 6,
+    letterSpacing: -0.3,
   },
   providerTitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginBottom: 12,
+    fontWeight: '500',
+    lineHeight: 20,
   },
   specialtiesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 4,
-    marginBottom: 8,
+    gap: 6,
+    marginBottom: 12,
   },
   specialtyTag: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
   },
   specialtyText: {
-    fontSize: 10,
-    color: '#666',
+    fontSize: 12,
+    color: 'white',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   moreSpecialties: {
-    fontSize: 10,
-    color: '#999',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '500',
     fontStyle: 'italic',
+    alignSelf: 'center',
   },
   rating: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
-  },
-  ratingText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  price: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FF6B6B',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 64,
-    paddingHorizontal: 32,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 12,
-  },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 16,
+    gap: 6,
     marginBottom: 8,
   },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
+  ratingText: {
+    fontSize: 15,
+    color: 'white',
+    fontWeight: '600',
+    opacity: 0.9,
+  },
+  price: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFD700',
+    letterSpacing: 0.2,
+  },
+  
+  // Empty States
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: 40,
+  },
+  loadingText: {
+    fontSize: 18,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 16,
+    fontWeight: '500',
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: 'white',
+    marginTop: 20,
+    marginBottom: 12,
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  emptyText: {
+    fontSize: 17,
+    color: 'rgba(255, 255, 255, 0.85)',
+    textAlign: 'center',
+    lineHeight: 26,
+    marginBottom: 32,
+    fontWeight: '500',
   },
   adjustFiltersButton: {
-    backgroundColor: '#FF6B6B',
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 28,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 8,
   },
   adjustFiltersText: {
     color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
+    fontWeight: '800',
+    fontSize: 16,
+    letterSpacing: 0.3,
   },
 });
 

@@ -62,7 +62,7 @@ namespace FYLA2_Backend.Controllers
               businessName = $"{s.Provider.FirstName} {s.Provider.LastName}",
               averageRating = 4.5, // TODO: Calculate from reviews
               totalReviews = 0, // TODO: Count from reviews
-              profilePictureUrl = s.Provider.ProfileImageUrl
+              profilePictureUrl = s.Provider.ProfilePictureUrl
             }
           })
           .ToListAsync();
@@ -97,7 +97,7 @@ namespace FYLA2_Backend.Controllers
               businessName = $"{s.Provider.FirstName} {s.Provider.LastName}",
               averageRating = s.Reviews.Any() ? s.Reviews.Average(r => r.Rating) : 0,
               totalReviews = s.Reviews.Count(),
-              profilePictureUrl = s.Provider.ProfileImageUrl,
+              profilePictureUrl = s.Provider.ProfilePictureUrl,
               bio = s.Provider.Bio
             },
             reviews = s.Reviews.Take(5).Select(r => new
@@ -110,7 +110,7 @@ namespace FYLA2_Backend.Controllers
               {
                 firstName = r.Reviewer.FirstName,
                 lastName = r.Reviewer.LastName,
-                profilePictureUrl = r.Reviewer.ProfileImageUrl
+                profilePictureUrl = r.Reviewer.ProfilePictureUrl
               }
             }).ToList()
           })
@@ -187,7 +187,7 @@ namespace FYLA2_Backend.Controllers
               businessName = $"{s.Provider.FirstName} {s.Provider.LastName}",
               averageRating = 4.5, // TODO: Calculate from reviews
               totalReviews = 0, // TODO: Count from reviews
-              profilePictureUrl = s.Provider.ProfileImageUrl
+              profilePictureUrl = s.Provider.ProfilePictureUrl
             }
           })
           .ToListAsync();
@@ -409,6 +409,40 @@ namespace FYLA2_Backend.Controllers
         isActive = service.IsActive,
         message = service.IsActive ? "Service activated" : "Service deactivated"
       });
+    }
+
+    // GET: api/services/provider/{providerId}
+    [HttpGet("provider/{providerId}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<IEnumerable<object>>> GetServicesByProvider(string providerId)
+    {
+      var services = await _context.Services
+          .Include(s => s.Provider)
+          .Where(s => s.ProviderId == providerId && s.IsActive)
+          .Select(s => new
+          {
+            id = s.Id.ToString(),
+            serviceProviderId = s.ProviderId,
+            name = s.Name,
+            description = s.Description,
+            price = s.Price,
+            duration = s.DurationMinutes,
+            category = s.Category,
+            imageUrl = s.ImageUrl,
+            isActive = s.IsActive,
+            createdAt = s.CreatedAt,
+            updatedAt = s.UpdatedAt,
+            serviceProvider = new
+            {
+              id = s.Provider.Id,
+              businessName = $"{s.Provider.FirstName} {s.Provider.LastName}",
+              businessDescription = s.Provider.Bio,
+              profilePictureUrl = s.Provider.ProfilePictureUrl
+            }
+          })
+          .ToListAsync();
+
+      return Ok(services);
     }
   }
 

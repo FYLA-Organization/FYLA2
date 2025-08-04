@@ -30,8 +30,14 @@ namespace FYLA2_Backend.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("EndTime")
                         .HasColumnType("TEXT");
@@ -41,6 +47,10 @@ namespace FYLA2_Backend.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PaymentIntentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ProviderId")
@@ -88,6 +98,9 @@ namespace FYLA2_Backend.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("PostId")
                         .HasColumnType("INTEGER");
 
@@ -102,6 +115,76 @@ namespace FYLA2_Backend.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Comments");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.CommentLike", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CommentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("CommentId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("CommentLikes");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.LoyaltyTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("BookingId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TransactionType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("ProviderId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("LoyaltyTransactions");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.Message", b =>
@@ -172,6 +255,272 @@ namespace FYLA2_Backend.Migrations
                     b.ToTable("Messages");
                 });
 
+            modelBuilder.Entity("FYLA2_Backend.Models.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RelatedId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Notifications");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.PaymentRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("BookingId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StripeChargeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripePaymentIntentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("SubscriptionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("SubscriptionId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PaymentRecords");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.PaymentSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AcceptCreditCards")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AcceptDebitCards")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AcceptDigitalWallets")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AutoPayoutEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("DepositPercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("FixedFeeAmount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsStripeConnected")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PayoutSchedule")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ProviderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("ServiceFeePercentage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeAccountId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("PaymentSettings");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.PaymentTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("BookingId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ClientId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("NetAmount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("OriginalTransactionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("PlatformFeeAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ProviderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("RefundAmount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ServiceAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ServiceFee")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StripeChargeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripePaymentIntentId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("OriginalTransactionId");
+
+                    b.HasIndex("ProviderId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PaymentTransactions");
+                });
+
             modelBuilder.Entity("FYLA2_Backend.Models.Post", b =>
                 {
                     b.Property<int>("Id")
@@ -189,6 +538,9 @@ namespace FYLA2_Backend.Migrations
                     b.Property<string>("ImageUrl")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsBusinessPost")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -201,6 +553,32 @@ namespace FYLA2_Backend.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Posts");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.PostBookmark", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PostId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("PostId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("PostBookmarks");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.PostLike", b =>
@@ -227,6 +605,83 @@ namespace FYLA2_Backend.Migrations
                         .IsUnique();
 
                     b.ToTable("PostLikes");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderBlockedTime", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId");
+
+                    b.ToTable("ProviderBlockedTimes");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<TimeSpan?>("BreakEndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<TimeSpan?>("BreakStartTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<TimeSpan?>("EndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("SpecificDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<TimeSpan?>("StartTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId");
+
+                    b.ToTable("ProviderSchedules");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.PushToken", b =>
@@ -347,6 +802,9 @@ namespace FYLA2_Backend.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("ServiceProviderId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -354,7 +812,169 @@ namespace FYLA2_Backend.Migrations
 
                     b.HasIndex("ProviderId");
 
+                    b.HasIndex("ServiceProviderId");
+
                     b.ToTable("Services");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ServiceProvider", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BusinessAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BusinessDescription")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BusinessEmail")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BusinessName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BusinessPhone")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BusinessWebsite")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsVerified")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PaymentSettingsId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentSettingsId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("ServiceProviders");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.Subscription", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("AnnualPrice")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("CanAcceptOnlinePayments")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("CanUseAdvancedAnalytics")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("CanUseAutomatedMarketing")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("CanUseCustomBranding")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("HasPrioritySupport")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MaxPhotosPerService")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MaxServices")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("MonthlyPrice")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StripeCustomerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripePriceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeSubscriptionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Tier")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("TrialEndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Subscriptions");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.SubscriptionFeature", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("FeatureLimit")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FeatureName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FeatureValue")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SubscriptionId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubscriptionId");
+
+                    b.ToTable("SubscriptionFeature");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.User", b =>
@@ -405,6 +1025,9 @@ namespace FYLA2_Backend.Migrations
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("LoyaltyPoints")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
@@ -422,7 +1045,7 @@ namespace FYLA2_Backend.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("ProfileImageUrl")
+                    b.Property<string>("ProfilePictureUrl")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SecurityStamp")
@@ -654,6 +1277,51 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FYLA2_Backend.Models.CommentLike", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.Comment", "Comment")
+                        .WithMany("Likes")
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.User", "User")
+                        .WithMany("CommentLikes")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Comment");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.LoyaltyTransaction", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("FYLA2_Backend.Models.User", "Provider")
+                        .WithMany("LoyaltyTransactionsAsProvider")
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.User", "User")
+                        .WithMany("LoyaltyTransactionsAsClient")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("Provider");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("FYLA2_Backend.Models.Message", b =>
                 {
                     b.HasOne("FYLA2_Backend.Models.Booking", "Booking")
@@ -679,6 +1347,96 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("Sender");
                 });
 
+            modelBuilder.Entity("FYLA2_Backend.Models.Notification", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.PaymentRecord", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.Booking", "Booking")
+                        .WithMany("PaymentRecords")
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("FYLA2_Backend.Models.Subscription", null)
+                        .WithMany("PaymentRecords")
+                        .HasForeignKey("SubscriptionId");
+
+                    b.HasOne("FYLA2_Backend.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.PaymentSettings", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.ServiceProvider", "Provider")
+                        .WithOne()
+                        .HasForeignKey("FYLA2_Backend.Models.PaymentSettings", "ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("FYLA2_Backend.Models.User", "User")
+                        .WithOne("PaymentSettings")
+                        .HasForeignKey("FYLA2_Backend.Models.PaymentSettings", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.PaymentTransaction", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FYLA2_Backend.Models.User", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FYLA2_Backend.Models.PaymentTransaction", "OriginalTransaction")
+                        .WithMany("RefundTransactions")
+                        .HasForeignKey("OriginalTransactionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FYLA2_Backend.Models.ServiceProvider", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FYLA2_Backend.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("Client");
+
+                    b.Navigation("OriginalTransaction");
+
+                    b.Navigation("Provider");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("FYLA2_Backend.Models.Post", b =>
                 {
                     b.HasOne("FYLA2_Backend.Models.User", "User")
@@ -686,6 +1444,25 @@ namespace FYLA2_Backend.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.PostBookmark", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.Post", "Post")
+                        .WithMany("Bookmarks")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.User", "User")
+                        .WithMany("PostBookmarks")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
 
                     b.Navigation("User");
                 });
@@ -707,6 +1484,28 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("Post");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderBlockedTime", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderSchedule", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.PushToken", b =>
@@ -759,7 +1558,50 @@ namespace FYLA2_Backend.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("FYLA2_Backend.Models.ServiceProvider", null)
+                        .WithMany("Services")
+                        .HasForeignKey("ServiceProviderId");
+
                     b.Navigation("Provider");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ServiceProvider", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.PaymentSettings", "PaymentSettings")
+                        .WithMany()
+                        .HasForeignKey("PaymentSettingsId");
+
+                    b.HasOne("FYLA2_Backend.Models.User", "User")
+                        .WithOne("ServiceProvider")
+                        .HasForeignKey("FYLA2_Backend.Models.ServiceProvider", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PaymentSettings");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.Subscription", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.SubscriptionFeature", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.Subscription", "Subscription")
+                        .WithMany("Features")
+                        .HasForeignKey("SubscriptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Subscription");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.UserFollow", b =>
@@ -834,11 +1676,25 @@ namespace FYLA2_Backend.Migrations
 
             modelBuilder.Entity("FYLA2_Backend.Models.Booking", b =>
                 {
+                    b.Navigation("PaymentRecords");
+
                     b.Navigation("Reviews");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.Comment", b =>
+                {
+                    b.Navigation("Likes");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.PaymentTransaction", b =>
+                {
+                    b.Navigation("RefundTransactions");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.Post", b =>
                 {
+                    b.Navigation("Bookmarks");
+
                     b.Navigation("Comments");
 
                     b.Navigation("Likes");
@@ -851,11 +1707,25 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("Reviews");
                 });
 
+            modelBuilder.Entity("FYLA2_Backend.Models.ServiceProvider", b =>
+                {
+                    b.Navigation("Services");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.Subscription", b =>
+                {
+                    b.Navigation("Features");
+
+                    b.Navigation("PaymentRecords");
+                });
+
             modelBuilder.Entity("FYLA2_Backend.Models.User", b =>
                 {
                     b.Navigation("BookingsAsClient");
 
                     b.Navigation("BookingsAsProvider");
+
+                    b.Navigation("CommentLikes");
 
                     b.Navigation("Comments");
 
@@ -863,9 +1733,17 @@ namespace FYLA2_Backend.Migrations
 
                     b.Navigation("Following");
 
+                    b.Navigation("LoyaltyTransactionsAsClient");
+
+                    b.Navigation("LoyaltyTransactionsAsProvider");
+
                     b.Navigation("MessagesReceived");
 
                     b.Navigation("MessagesSent");
+
+                    b.Navigation("PaymentSettings");
+
+                    b.Navigation("PostBookmarks");
 
                     b.Navigation("PostLikes");
 
@@ -874,6 +1752,8 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("ReviewsGiven");
 
                     b.Navigation("ReviewsReceived");
+
+                    b.Navigation("ServiceProvider");
 
                     b.Navigation("Services");
                 });

@@ -75,6 +75,9 @@ builder.Services.AddScoped<DataSeedingService>();
 // Add Push Notification Service
 builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 
+// Add Loyalty Service
+builder.Services.AddScoped<ILoyaltyService, LoyaltyService>();
+
 // Add CORS
 builder.Services.AddCors(options =>
 {
