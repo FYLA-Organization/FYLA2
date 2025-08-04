@@ -9,17 +9,51 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
-  ScrollView,
   Modal,
   Dimensions,
   StatusBar,
+  Image,
+  ScrollView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { Booking } from '../../types';
-import { COLORS, COMMON_STYLES } from '../../constants/colors';
 import ApiService from '../../services/api';
 
 const { width } = Dimensions.get('window');
+
+// Instagram-style Color Palette
+const COLORS = {
+  background: '#F0F0F0',
+  surface: '#FFFFFF',
+  text: '#1A1A1A',
+  textSecondary: '#666666',
+  border: '#C0C0C0',
+  borderLight: '#E0E0E0',
+  primary: '#2B7CE6',
+  accent: '#E6283A',
+  success: '#00B355',
+  warning: '#E6A800',
+  verified: '#2B7CE6',
+  instagram: '#C7285F',
+  gradient1: '#5A6FD8',
+  gradient2: '#674BA8',
+  pending: '#FFD93D',
+  confirmed: '#4ECDC4',
+  inProgress: '#45B7D1',
+  completed: '#96CEB4',
+  cancelled: '#FF6B6B',
+};
+
+interface AppointmentFilters {
+  status: string;
+  dateRange: string;
+  client: string;
+  service: string;
+  minAmount: string;
+  maxAmount: string;
+}
 
 const AppointmentsScreen = () => {
   const [appointments, setAppointments] = useState<Booking[]>([]);
@@ -27,9 +61,10 @@ const AppointmentsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<{ [appointmentId: string]: boolean }>({});
   
   // Filter states
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<AppointmentFilters>({
     status: 'All',
     dateRange: 'All',
     client: '',
@@ -170,17 +205,6 @@ const AppointmentsScreen = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Pending': return '#FFD93D'; // Yellow for pending
-      case 'Confirmed': return '#4ECDC4'; // Teal for confirmed
-      case 'InProgress': return '#45B7D1'; // Blue for in progress
-      case 'Completed': return '#96CEB4'; // Mint for completed
-      case 'Cancelled': return '#FF6B6B'; // Red for cancelled
-      default: return '#666';
-    }
-  };
-
   const renderStatusActions = (item: Booking) => {
     if (item.status === 'Pending') {
       return (
@@ -218,47 +242,149 @@ const AppointmentsScreen = () => {
     return null;
   };
 
-  const renderAppointment = ({ item }: { item: Booking }) => (
-    <TouchableOpacity style={styles.appointmentCard}>
-      <View style={styles.appointmentHeader}>
-        <View style={styles.appointmentInfo}>
-          <Text style={styles.clientName}>
-            {item.client?.firstName} {item.client?.lastName || 'Unknown Client'}
-          </Text>
-          <Text style={styles.serviceName}>
-            {item.service?.name || 'Unknown Service'}
-          </Text>
-        </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Text style={styles.statusText}>{item.status}</Text>
-        </View>
-      </View>
-      
-      <View style={styles.appointmentDetails}>
-        <View style={styles.detailRow}>
-          <Ionicons name="calendar-outline" size={16} color={COLORS.textLight} />
-          <Text style={styles.detailText}>
-            {new Date(item.bookingDate).toLocaleDateString()}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="time-outline" size={16} color={COLORS.textLight} />
-          <Text style={styles.detailText}>
-            {new Date(item.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="card-outline" size={16} color={COLORS.textLight} />
-          <Text style={styles.detailText}>${item.totalAmount}</Text>
-        </View>
-      </View>
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Pending': return COLORS.pending;
+      case 'Confirmed': return COLORS.confirmed;
+      case 'InProgress': return COLORS.inProgress;
+      case 'Completed': return COLORS.completed;
+      case 'Cancelled': return COLORS.cancelled;
+      default: return COLORS.textSecondary;
+    }
+  };
 
-      {/* Action buttons for status changes */}
-      {renderStatusActions(item)}
-    </TouchableOpacity>
-  );
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+    });
+  };
 
-  if (loading) {
+  const formatTime = (timeString: string) => {
+    const time = new Date(timeString);
+    return time.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const toggleCardExpansion = (appointmentId: string) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [appointmentId]: !prev[appointmentId]
+    }));
+  };
+
+  const renderAppointmentCard = ({ item }: { item: Booking }) => {
+    const isExpanded = expandedCards[item.id] || false;
+    
+    return (
+      <View style={styles.appointmentCard}>
+        {/* Status Strip */}
+        <View style={[styles.statusStrip, { backgroundColor: getStatusColor(item.status) }]} />
+        
+        {/* Card Header - Always Visible */}
+        <TouchableOpacity
+          onPress={() => toggleCardExpansion(item.id)}
+          style={styles.cardHeader}
+          activeOpacity={0.8}
+        >
+          <View style={styles.clientSection}>
+            <View style={styles.clientImageContainer}>
+              <Image
+                source={{
+                  uri: item.client?.profilePictureUrl || `https://ui-avatars.com/api/?name=${item.client?.firstName}+${item.client?.lastName}&background=5A6FD8&color=fff`,
+                }}
+                style={styles.clientImage}
+              />
+              <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
+            </View>
+            <View style={styles.clientInfo}>
+              <Text style={styles.clientName} numberOfLines={1}>
+                {item.client?.firstName} {item.client?.lastName || 'Unknown Client'}
+              </Text>
+              <Text style={styles.serviceName} numberOfLines={1}>
+                {item.service?.name || 'Unknown Service'}
+              </Text>
+              <View style={styles.serviceCategory}>
+                <Ionicons name="cut-outline" size={12} color={COLORS.warning} />
+                <Text style={styles.categoryText}>
+                  {item.service?.category || 'General Service'}
+                </Text>
+              </View>
+            </View>
+          </View>
+          
+          <View style={styles.priceStatusContainer}>
+            <Text style={styles.priceText}>${item.totalAmount?.toFixed(2) || '0.00'}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+              <Text style={styles.statusText}>{item.status}</Text>
+            </View>
+            <TouchableOpacity style={styles.expandButton}>
+              <Ionicons 
+                name={isExpanded ? "chevron-up" : "chevron-down"} 
+                size={20} 
+                color={COLORS.textSecondary} 
+              />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+
+        {/* Quick Info - Always Visible */}
+        <View style={styles.quickInfo}>
+          <View style={styles.quickInfoItem}>
+            <Ionicons name="calendar" size={14} color={COLORS.primary} />
+            <Text style={styles.quickInfoText}>{formatDate(item.bookingDate)}</Text>
+          </View>
+          <View style={styles.quickInfoItem}>
+            <Ionicons name="time" size={14} color={COLORS.accent} />
+            <Text style={styles.quickInfoText}>{formatTime(item.startTime)}</Text>
+          </View>
+          {!isExpanded && item.notes && (
+            <View style={styles.quickInfoItem}>
+              <Ionicons name="chatbubble-outline" size={14} color={COLORS.warning} />
+              <Text style={styles.quickInfoText}>Has Notes</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Expandable Content */}
+        {isExpanded && (
+          <View style={styles.expandableContent}>
+            {/* Detailed Info */}
+            <View style={styles.appointmentDetails}>
+              {item.endTime && (
+                <View style={styles.durationContainer}>
+                  <Ionicons name="stopwatch-outline" size={14} color={COLORS.warning} />
+                  <Text style={styles.durationText}>
+                    Duration: {formatTime(item.startTime)} - {formatTime(item.endTime)}
+                  </Text>
+                </View>
+              )}
+
+              {item.notes && (
+                <View style={styles.notesSection}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="chatbubble-outline" size={14} color={COLORS.warning} />
+                    <Text style={styles.sectionTitle}>Notes</Text>
+                  </View>
+                  <Text style={styles.notesText} numberOfLines={3}>
+                    {item.notes}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Action Buttons */}
+            {renderStatusActions(item)}
+          </View>
+        )}
+      </View>
+    );
+  };  if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
@@ -396,16 +522,17 @@ const AppointmentsScreen = () => {
 
         <FlatList
           data={filteredAppointments}
-          renderItem={renderAppointment}
+          renderItem={renderAppointmentCard}
           keyExtractor={(item) => item.id}
           style={styles.list}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="calendar-outline" size={64} color={COLORS.textLight} />
+              <Ionicons name="calendar-outline" size={64} color={COLORS.textSecondary} />
               <Text style={styles.emptyText}>
                 {getActiveFilterCount() > 0 ? 'No appointments match your filters' : 'No appointments found'}
               </Text>
@@ -424,14 +551,15 @@ const AppointmentsScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  // Base Layout
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
   content: {
     flex: 1,
-    padding: 16,
-    paddingBottom: 90,
+    padding: 20,
+    paddingBottom: 100, // Extra padding for tab navigation
   },
   
   // Loading
@@ -442,15 +570,15 @@ const styles = StyleSheet.create({
   },
   loadingCard: {
     backgroundColor: COLORS.surface,
-    padding: 24,
+    padding: 32,
     borderRadius: 20,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    borderColor: COLORS.borderLight,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
     elevation: 8,
   },
   loadingText: {
@@ -463,19 +591,19 @@ const styles = StyleSheet.create({
   // Header
   header: {
     backgroundColor: COLORS.surface,
-    padding: 16,
+    padding: 20,
     borderRadius: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
   title: {
     fontSize: 24,
@@ -484,18 +612,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   filterButton: {
-    padding: 8,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 16,
     backgroundColor: COLORS.background,
     position: 'relative',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
   },
   filterBadge: {
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: COLORS.error,
+    backgroundColor: COLORS.accent,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -512,16 +640,16 @@ const styles = StyleSheet.create({
   filterPanel: {
     backgroundColor: COLORS.surface,
     borderRadius: 20,
-    padding: 16,
-    marginBottom: 16,
+    padding: 20,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     maxHeight: 300,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
   filterSection: {
     marginBottom: 16,
@@ -538,19 +666,19 @@ const styles = StyleSheet.create({
   },
   filterChip: {
     backgroundColor: COLORS.background,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
   },
   filterChipActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
   filterChipText: {
-    color: COLORS.textLight,
+    color: COLORS.textSecondary,
     fontSize: 12,
     fontWeight: '500',
   },
@@ -565,12 +693,12 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     backgroundColor: COLORS.background,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 12,
     color: COLORS.text,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
   },
   amountRow: {
     flexDirection: 'row',
@@ -580,25 +708,25 @@ const styles = StyleSheet.create({
   amountInput: {
     flex: 1,
     backgroundColor: COLORS.background,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 12,
     color: COLORS.text,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
   },
   amountSeparator: {
-    color: COLORS.textLight,
+    color: COLORS.textSecondary,
     fontSize: 14,
     fontWeight: '500',
   },
   clearButton: {
-    backgroundColor: COLORS.error,
+    backgroundColor: COLORS.accent,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 16,
     gap: 6,
   },
   clearButtonText: {
@@ -612,111 +740,237 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingBottom: 16,
+    paddingBottom: 100,
   },
 
-  // Appointment Cards (matching client booking card style)
+  // Modern Appointment Cards
   appointmentCard: {
+    borderRadius: 20,
     backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    ...COMMON_STYLES.shadow,
+    marginBottom: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  appointmentHeader: {
+  
+  statusStrip: {
+    height: 4,
+    width: '100%',
+  },
+  
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    padding: 20,
+    paddingBottom: 16,
   },
-  appointmentInfo: {
+  clientSection: {
+    flexDirection: 'row',
     flex: 1,
+    alignItems: 'flex-start',
+  },
+  clientImageContainer: {
+    position: 'relative',
+    marginRight: 16,
+  },
+  clientImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  statusIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: COLORS.surface,
+  },
+  clientInfo: {
+    flex: 1,
+    justifyContent: 'center',
   },
   clientName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: COLORS.text,
     marginBottom: 4,
+    letterSpacing: -0.3,
   },
   serviceName: {
-    fontSize: 14,
-    color: COLORS.textLight,
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    marginBottom: 6,
+    fontWeight: '500',
   },
-  statusBadge: {
+  serviceCategory: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(230, 168, 0, 0.1)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  categoryText: {
+    fontSize: 12,
+    color: COLORS.warning,
+    marginLeft: 4,
+    fontWeight: '600',
+  },
+  
+  priceStatusContainer: {
+    alignItems: 'flex-end',
+  },
+  priceText: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.success,
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginBottom: 8,
   },
   statusText: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  appointmentDetails: {
+  expandButton: {
+    padding: 4,
+  },
+  
+  quickInfo: {
     flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
     gap: 16,
-    marginBottom: 12,
   },
-  detailRow: {
+  quickInfoItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    backgroundColor: 'rgba(43, 124, 230, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  detailText: {
+  quickInfoText: {
     fontSize: 12,
-    color: COLORS.textLight,
+    color: COLORS.primary,
+    marginLeft: 4,
+    fontWeight: '600',
+  },
+  
+  expandableContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+  },
+  appointmentDetails: {
+    marginBottom: 16,
+  },
+  durationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(230, 168, 0, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  durationText: {
+    fontSize: 14,
+    color: COLORS.warning,
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  notesSection: {
+    backgroundColor: 'rgba(102, 102, 102, 0.05)',
+    padding: 12,
+    borderRadius: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginLeft: 6,
+  },
+  notesText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
   },
 
-  // Action Buttons
   actionButtons: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    gap: 12,
   },
   actionButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    gap: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    gap: 6,
   },
   actionButtonText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 
-  // Empty
   emptyContainer: {
     backgroundColor: COLORS.surface,
-    padding: 32,
+    padding: 40,
     borderRadius: 20,
     alignItems: 'center',
     marginTop: 40,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginTop: 12,
+    marginTop: 16,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: COLORS.textLight,
+    color: COLORS.textSecondary,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
   },
 });
 

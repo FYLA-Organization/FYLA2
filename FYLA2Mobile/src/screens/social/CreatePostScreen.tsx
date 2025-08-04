@@ -736,6 +736,8 @@ const CreatePostScreen: React.FC = () => {
 
   return (
     <Animated.View style={[styles.container, { opacity: opacityAnim }]}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      
       {step === 'camera' && renderCameraScreen()}
       {step === 'edit' && renderEditScreen()}
       {step === 'post' && renderPostScreen()}

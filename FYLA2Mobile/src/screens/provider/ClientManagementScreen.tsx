@@ -85,7 +85,7 @@ const ClientManagementScreen: React.FC = () => {
           throw new Error('No auth token');
         }
 
-        const response = await fetch('http://192.168.1.185:5224/api/analytics/provider-clients', {
+        const response = await fetch('http://192.168.1.201:5224/api/analytics/provider-clients', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',

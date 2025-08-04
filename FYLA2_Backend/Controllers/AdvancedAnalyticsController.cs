@@ -423,7 +423,7 @@ namespace FYLA2_Backend.Controllers
                      p.UpdatedAt < endDate)
           .Select(p => p.Amount)
           .ToListAsync();
-      
+
       var currentRevenue = currentPayments.Sum();
 
       var previousPayments = await _context.PaymentRecords
@@ -435,7 +435,7 @@ namespace FYLA2_Backend.Controllers
                      p.UpdatedAt < previousEndDate)
           .Select(p => p.Amount)
           .ToListAsync();
-      
+
       var previousRevenue = previousPayments.Sum();
 
       if (previousRevenue == 0) return currentRevenue > 0 ? 100 : 0;

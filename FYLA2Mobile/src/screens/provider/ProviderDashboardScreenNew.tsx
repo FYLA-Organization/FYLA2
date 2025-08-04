@@ -152,30 +152,30 @@ const ProviderDashboardScreen: React.FC = () => {
   const quickActions: QuickAction[] = [
     {
       id: '1',
-      title: 'Client Management',
-      icon: 'people',
+      title: 'Schedule',
+      icon: 'calendar',
       color: COLORS.primary,
-      onPress: () => navigation.navigate('ClientManagement'),
+      onPress: () => navigation.navigate('Schedule'),
     },
     {
       id: '2',
-      title: 'Schedule',
-      icon: 'calendar',
-      color: COLORS.success,
-      onPress: () => navigation.navigate('EnhancedSchedule'),
+      title: 'Services',
+      icon: 'list',
+      color: COLORS.secondary,
+      onPress: () => navigation.navigate('ServiceManagement'),
     },
     {
       id: '3',
-      title: 'Coupons & Loyalty',
-      icon: 'gift',
-      color: COLORS.accent,
-      onPress: () => navigation.navigate('CouponsLoyalty'),
+      title: 'Clients',
+      icon: 'people',
+      color: COLORS.success,
+      onPress: () => navigation.navigate('Clients'),
     },
     {
       id: '4',
       title: 'Analytics',
       icon: 'analytics',
-      color: COLORS.analytics,
+      color: COLORS.warning,
       onPress: () => navigation.navigate('Analytics'),
     },
   ];
@@ -187,7 +187,7 @@ const ProviderDashboardScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+        <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
         <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.loadingText}>Loading dashboard...</Text>
       </View>
@@ -212,24 +212,23 @@ const ProviderDashboardScreen: React.FC = () => {
         </View>
       </View>
 
-        <ScrollView 
-          style={styles.content}
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Revenue Overview Card */}
-          <View style={styles.overviewCard}>
-            <View style={styles.overviewHeader}>
-              <Text style={styles.overviewTitle}>Today's Overview</Text>
-              <View style={styles.periodSelector}>
-                <Text style={styles.selectedPeriod}>Today</Text>
-              </View>
+      <ScrollView 
+        style={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Revenue Overview Card */}
+        <View style={styles.overviewCard}>
+          <View style={styles.overviewHeader}>
+            <Text style={styles.overviewTitle}>Today's Overview</Text>
+            <View style={styles.periodSelector}>
+              <Text style={styles.selectedPeriod}>Today</Text>
             </View>
-            
-            {/* Main Revenue Display */}
-            <View style={styles.mainRevenue}>
-              <Text style={styles.revenueLabel}>Total Revenue</Text>
+          </View>
+          
+          <View style={styles.revenueRow}>
+            <View style={styles.revenueMain}>
+              <Text style={styles.revenueLabel}>Revenue</Text>
               <Text style={styles.revenueValue}>
                 {formatCurrency(dashboardData.todayRevenue)}
               </Text>
@@ -239,90 +238,93 @@ const ProviderDashboardScreen: React.FC = () => {
               </View>
             </View>
             
-            {/* Quick Stats Row */}
-            <View style={styles.overviewStats}>
-              <View style={styles.overviewStat}>
-                <View style={styles.overviewStatIcon}>
-                  <Ionicons name="calendar" size={18} color={COLORS.primary} />
-                </View>
-                <View style={styles.overviewStatContent}>
-                  <Text style={styles.overviewStatValue}>{dashboardData.appointmentsToday}</Text>
-                </View>
-              </View>
-              
-              <View style={styles.overviewStat}>
-                <View style={styles.overviewStatIcon}>
-                  <Ionicons name="people" size={18} color={COLORS.success} />
-                </View>
-                <View style={styles.overviewStatContent}>
-                  <Text style={styles.overviewStatValue}>{dashboardData.totalClients}</Text>
-                </View>
-              </View>
-              
-              <View style={styles.overviewStat}>
-                <View style={styles.overviewStatIcon}>
-                  <Ionicons name="star" size={18} color={COLORS.warning} />
-                </View>
-                <View style={styles.overviewStatContent}>
-                  <Text style={styles.overviewStatValue}>{dashboardData.averageRating.toFixed(1)}</Text>
-                </View>
-              </View>
+            <View style={styles.appointmentsWidget}>
+              <Text style={styles.appointmentsCount}>{dashboardData.appointmentsToday}</Text>
+              <Text style={styles.appointmentsLabel}>Appointments</Text>
             </View>
           </View>
+        </View>
 
-          {/* Quick Actions */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <View style={styles.actionsGrid}>
-              {quickActions.map((action) => (
-                <TouchableOpacity
-                  key={action.id}
-                  style={styles.actionButton}
-                  onPress={action.onPress}
-                >
-                  <View style={[styles.actionIconContainer, { backgroundColor: action.color + '15' }]}>
-                    <Ionicons name={action.icon as any} size={22} color={action.color} />
-                  </View>
-                  <Text style={styles.actionText}>{action.title}</Text>
-                </TouchableOpacity>
-              ))}
+        {/* Quick Stats Grid */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <View style={styles.statIcon}>
+              <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
             </View>
+            <Text style={styles.statValue}>{dashboardData.appointmentsThisWeek}</Text>
+            <Text style={styles.statLabel}>This Week</Text>
           </View>
+          
+          <View style={styles.statCard}>
+            <View style={styles.statIcon}>
+              <Ionicons name="people-outline" size={20} color={COLORS.success} />
+            </View>
+            <Text style={styles.statValue}>{dashboardData.totalClients}</Text>
+            <Text style={styles.statLabel}>Total Clients</Text>
+          </View>
+          
+          <View style={styles.statCard}>
+            <View style={styles.statIcon}>
+              <Ionicons name="star-outline" size={20} color={COLORS.warning} />
+            </View>
+            <Text style={styles.statValue}>{dashboardData.averageRating.toFixed(1)}</Text>
+            <Text style={styles.statLabel}>Rating</Text>
+          </View>
+        </View>
 
-          {/* Recent Activity */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent Activity</Text>
-              <TouchableOpacity>
-                <Text style={styles.seeAllText}>See All</Text>
+        {/* Quick Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.actionsRow}>
+            {quickActions.map((action) => (
+              <TouchableOpacity
+                key={action.id}
+                style={styles.actionButton}
+                onPress={action.onPress}
+              >
+                <View style={[styles.actionIconContainer, { backgroundColor: action.color + '15' }]}>
+                  <Ionicons name={action.icon as any} size={22} color={action.color} />
+                </View>
+                <Text style={styles.actionText}>{action.title}</Text>
               </TouchableOpacity>
-            </View>
-            
-            <View style={styles.activityList}>
-              {dashboardData.recentActivity.slice(0, 4).map((activity, index) => (
-                <View key={index} style={styles.activityItem}>
-                  <View style={[styles.activityDot, { 
-                    backgroundColor: activity.type === 'booking' ? COLORS.primary :
-                                   activity.type === 'payment' ? COLORS.success :
-                                   COLORS.warning
-                  }]} />
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityText}>{activity.message}</Text>
-                    <Text style={styles.activityTime}>
-                      {new Date(activity.timestamp).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </View>
+            ))}
           </View>
-        </ScrollView>
-      </View>
-    );
-  };
+        </View>
+
+        {/* Recent Activity */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.activityList}>
+            {dashboardData.recentActivity.slice(0, 4).map((activity, index) => (
+              <View key={index} style={styles.activityItem}>
+                <View style={[styles.activityDot, { 
+                  backgroundColor: activity.type === 'booking' ? COLORS.primary :
+                                 activity.type === 'payment' ? COLORS.success :
+                                 COLORS.warning
+                }]} />
+                <View style={styles.activityContent}>
+                  <Text style={styles.activityText}>{activity.message}</Text>
+                  <Text style={styles.activityTime}>
+                    {new Date(activity.timestamp).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -378,17 +380,14 @@ const styles = StyleSheet.create({
   // Content Styles
   content: {
     flex: 1,
-  },
-  scrollContent: {
     paddingHorizontal: SPACING.lg,
-    paddingBottom: 100, // Extra padding for tab navigation
   },
   // Overview Card
   overviewCard: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
-    padding: SPACING.xl,
-    marginBottom: SPACING.xl,
+    padding: SPACING.lg,
+    marginBottom: SPACING.lg,
     ...COMMON_STYLES.shadow,
   },
   overviewHeader: {
@@ -413,28 +412,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: COLORS.primary,
   },
-  revenueLabel: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  revenueValue: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
   revenueRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginTop: SPACING.md,
+    alignItems: 'center',
   },
   revenueMain: {
     flex: 1,
-    marginRight: SPACING.lg,
   },
   revenueLabel: {
     fontSize: 14,
@@ -445,12 +429,11 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     color: COLORS.text,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   trendRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
   },
   trendText: {
     fontSize: 14,
@@ -458,49 +441,12 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontWeight: '500',
   },
-  // New Overview Card Layout
-  mainRevenue: {
-    alignItems: 'center',
-    paddingVertical: SPACING.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    marginBottom: SPACING.md,
-  },
-  overviewStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  overviewStat: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.xs,
-  },
-  overviewStatIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.sm,
-  },
-  overviewStatContent: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  overviewStatValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
   appointmentsWidget: {
     alignItems: 'center',
     backgroundColor: COLORS.primary + '10',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    borderRadius: RADIUS.lg,
-    minWidth: 100,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: RADIUS.md,
   },
   appointmentsCount: {
     fontSize: 24,
@@ -510,33 +456,30 @@ const styles = StyleSheet.create({
   appointmentsLabel: {
     fontSize: 12,
     color: COLORS.primary,
-    marginTop: 4,
-    fontWeight: '500',
+    marginTop: 2,
   },
   // Stats Grid
   statsGrid: {
     flexDirection: 'row',
-    marginBottom: SPACING.xl,
-    gap: 16,
-    marginTop: SPACING.sm,
+    marginBottom: SPACING.lg,
+    gap: 12,
   },
   statCard: {
     flex: 1,
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
     alignItems: 'center',
-    minHeight: 100,
     ...COMMON_STYLES.shadow,
   },
   statIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   statValue: {
     fontSize: 18,
@@ -551,13 +494,13 @@ const styles = StyleSheet.create({
   },
   // Section Styles
   section: {
-    marginBottom: SPACING.xl * 1.5,
+    marginBottom: SPACING.xl,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   sectionTitle: {
     fontSize: 18,
@@ -570,35 +513,31 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   // Quick Actions
-  actionsGrid: {
+  actionsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 12,
-    marginTop: SPACING.sm,
   },
   actionButton: {
-    width: (width - (SPACING.lg * 2) - 12) / 2, // 2 columns with gap
+    flex: 1,
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
     alignItems: 'center',
-    minHeight: 90,
     ...COMMON_STYLES.shadow,
   },
   actionIconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   actionText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
     color: COLORS.text,
     textAlign: 'center',
-    lineHeight: 16,
   },
   // Activity List
   activityList: {

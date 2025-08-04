@@ -25,11 +25,8 @@ import MessagesScreen from '../screens/main/MessagesScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 
 // Provider Screens (Business Dashboard)
-import DashboardScreen from '../screens/provider/DashboardScreen';
 import ProviderDashboardScreen from '../screens/provider/ProviderDashboardScreen';
-import EnhancedDashboardScreen from '../screens/provider/EnhancedDashboardScreen';
 import AppointmentsScreen from '../screens/provider/AppointmentsScreenSimple';
-import EnhancedAppointmentsScreen from '../screens/provider/EnhancedAppointmentsScreen';
 import AnalyticsScreen from '../screens/provider/AnalyticsScreen';
 import AnalyticsDashboardScreen from '../screens/provider/AnalyticsDashboardScreen';
 import ScheduleScreen from '../screens/provider/ScheduleScreen';
@@ -151,7 +148,11 @@ const ClientTabNavigator = () => {
       <ClientTab.Screen 
         name="AddPost" 
         component={CreatePostScreen}
-        options={{ tabBarLabel: 'Add Post' }}
+        options={{ 
+          tabBarLabel: 'Add Post',
+          tabBarStyle: { display: 'none' },
+          headerShown: false
+        }}
       />
       <ClientTab.Screen 
         name="Bookings" 
@@ -233,7 +234,11 @@ const ProviderTabNavigator = () => {
       <ProviderTab.Screen 
         name="AddPost" 
         component={CreatePostScreen}
-        options={{ tabBarLabel: 'Create' }}
+        options={{ 
+          tabBarLabel: 'Create',
+          tabBarStyle: { display: 'none' },
+          headerShown: false
+        }}
       />
       <ProviderTab.Screen 
         name="Appointments" 
@@ -423,11 +428,6 @@ const AppNavigator = () => {
               options={{ headerShown: false }}
             />
             <RootStack.Screen 
-              name="EnhancedAppointments" 
-              component={EnhancedAppointmentsScreen}
-              options={{ headerShown: false }}
-            />
-            <RootStack.Screen 
               name="ServiceManagement" 
               component={ServiceManagementScreen}
               options={{ headerShown: false }}
@@ -438,30 +438,7 @@ const AppNavigator = () => {
               name="Analytics" 
               component={AnalyticsDashboardScreen}
               options={{ 
-                headerShown: true, 
-                title: 'Business Intelligence',
-                headerStyle: {
-                  backgroundColor: 'transparent',
-                },
-                headerBackground: () => (
-                  <BlurView
-                    intensity={100}
-                    tint="dark"
-                    style={{
-                      flex: 1,
-                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                      borderBottomWidth: 1,
-                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-                    }}
-                  />
-                ),
-                headerTintColor: 'white',
-                headerTitleStyle: {
-                  fontSize: 18,
-                  fontWeight: '700',
-                  letterSpacing: -0.3,
-                },
-                headerBackTitleVisible: false,
+                headerShown: false
               }}
             />
             <RootStack.Screen 
@@ -595,30 +572,8 @@ const AppNavigator = () => {
               name="CreatePost" 
               component={CreatePostScreen}
               options={{ 
-                headerShown: true, 
-                title: 'Create Post',
-                headerStyle: {
-                  backgroundColor: 'transparent',
-                },
-                headerBackground: () => (
-                  <BlurView
-                    intensity={100}
-                    tint="dark"
-                    style={{
-                      flex: 1,
-                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                      borderBottomWidth: 1,
-                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-                    }}
-                  />
-                ),
-                headerTintColor: 'white',
-                headerTitleStyle: {
-                  fontSize: 18,
-                  fontWeight: '700',
-                  letterSpacing: -0.3,
-                },
-                headerBackTitleVisible: false,
+                headerShown: false,
+                presentation: 'fullScreenModal'
               }}
             />
             <RootStack.Screen 
