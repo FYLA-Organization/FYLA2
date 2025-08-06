@@ -20,6 +20,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Booking, BookingStatus, RootStackParamList } from '../../types/index';
 import ApiService from '../../services/api';
 import ReviewModal from '../../components/ReviewModal';
+import { useAuth } from '../../context/AuthContext';
 
 type BookingsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -57,6 +58,7 @@ interface FilterOptions {
 }
 
 const BookingsScreen: React.FC = () => {
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -663,7 +665,7 @@ const BookingsScreen: React.FC = () => {
                 </>
               )}
               
-              {booking.status === BookingStatus.InProgress && (
+              {booking.status === BookingStatus.InProgress && user?.isServiceProvider && (
                 <TouchableOpacity style={[styles.actionButton, styles.inProgressAction]}>
                   <Ionicons name="checkmark-circle-outline" size={16} color="white" />
                   <Text style={[styles.actionButtonText, styles.primaryActionText]}>Mark Complete</Text>

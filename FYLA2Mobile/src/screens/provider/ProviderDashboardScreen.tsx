@@ -13,6 +13,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import apiService from '../../services/apiService';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -89,52 +90,34 @@ const ProviderDashboardScreen: React.FC = () => {
     try {
       setLoading(true);
       
-      // Load real analytics data from backend
-      const token = await AsyncStorage.getItem('authToken');
-      if (!token) {
-        console.log('No auth token available');
-        return;
-      }
-
-      const response = await fetch('http://192.168.1.201:5224/api/analytics/dashboard', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const analyticsData = await response.json();
-        console.log('Raw API data:', analyticsData);
-        
-        // Transform API data to match dashboard metrics format
-        const transformedData = {
-          todayRevenue: analyticsData.weeklyRevenue || 0,
-          weekRevenue: analyticsData.weeklyRevenue || 0,
-          monthRevenue: analyticsData.monthlyRevenue || 0,
-          totalClients: analyticsData.totalClients || 0,
-          newClientsThisMonth: Math.floor((analyticsData.totalClients || 0) * 0.3), // Estimate 30% new
-          appointmentsToday: analyticsData.todayAppointments || 0,
-          appointmentsThisWeek: analyticsData.todayAppointments ? (analyticsData.todayAppointments * 5) : 0, // Estimate 5x daily
-          averageRating: analyticsData.averageRating || 0,
-          topServices: analyticsData.recentBookings?.slice(0, 3).map((booking: any, index: number) => ({
-            name: booking.serviceName || `Service ${index + 1}`,
-            revenue: booking.totalAmount || 0,
-            bookings: index + 1 // Simple count
-          })) || [],
-          recentActivity: analyticsData.recentBookings?.slice(0, 4).map((booking: any) => ({
-            type: 'booking',
-            message: `${booking.status} booking with ${booking.clientName}`,
-            timestamp: booking.scheduledDate
-          })) || []
-        };
-        
-        setDashboardData(transformedData);
-        console.log('Updated dashboard with real data:', transformedData);
-      } else {
-        console.error('Dashboard API failed:', response.status, response.statusText);
-        Alert.alert('Error', 'Failed to load dashboard data');
-      }
+      // Load real analytics data from backend using ApiService
+      const analyticsData = await apiService.getDashboardData();
+      console.log('Raw API data:', analyticsData);
+      
+      // Transform API data to match dashboard metrics format
+      const transformedData = {
+        todayRevenue: analyticsData.weeklyRevenue || 0,
+        weekRevenue: analyticsData.weeklyRevenue || 0,
+        monthRevenue: analyticsData.monthlyRevenue || 0,
+        totalClients: analyticsData.totalClients || 0,
+        newClientsThisMonth: Math.floor((analyticsData.totalClients || 0) * 0.3), // Estimate 30% new
+        appointmentsToday: analyticsData.todayAppointments || 0,
+        appointmentsThisWeek: analyticsData.todayAppointments ? (analyticsData.todayAppointments * 5) : 0, // Estimate 5x daily
+        averageRating: analyticsData.averageRating || 0,
+        topServices: analyticsData.recentBookings?.slice(0, 3).map((booking: any, index: number) => ({
+          name: booking.serviceName || `Service ${index + 1}`,
+          revenue: booking.totalAmount || 0,
+          bookings: index + 1 // Simple count
+        })) || [],
+        recentActivity: analyticsData.recentBookings?.slice(0, 4).map((booking: any) => ({
+          type: 'booking',
+          message: `${booking.status} booking with ${booking.clientName}`,
+          timestamp: booking.scheduledDate
+        })) || []
+      };
+      
+      setDashboardData(transformedData);
+      console.log('Updated dashboard with real data:', transformedData);
     } catch (error) {
       console.error('Error loading dashboard:', error);
       Alert.alert('Error', 'Network error loading dashboard');
@@ -152,27 +135,34 @@ const ProviderDashboardScreen: React.FC = () => {
   const quickActions: QuickAction[] = [
     {
       id: '1',
-      title: 'Client Management',
-      icon: 'people',
+      title: 'Services Management',
+      icon: 'briefcase',
       color: COLORS.primary,
-      onPress: () => navigation.navigate('ClientManagement'),
+      onPress: () => navigation.navigate('ServicesManagement'),
     },
     {
       id: '2',
+      title: 'Client Management',
+      icon: 'people',
+      color: COLORS.instagram,
+      onPress: () => navigation.navigate('ClientManagement'),
+    },
+    {
+      id: '3',
       title: 'Schedule',
       icon: 'calendar',
       color: COLORS.success,
       onPress: () => navigation.navigate('EnhancedSchedule'),
     },
     {
-      id: '3',
+      id: '4',
       title: 'Coupons & Loyalty',
       icon: 'gift',
       color: COLORS.accent,
       onPress: () => navigation.navigate('CouponsLoyalty'),
     },
     {
-      id: '4',
+      id: '5',
       title: 'Analytics',
       icon: 'analytics',
       color: COLORS.analytics,

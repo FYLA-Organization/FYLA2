@@ -18,8 +18,7 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import ApiService from '../../services/api';
+import apiService from '../../services/apiService';
 import { RootStackParamList, ProviderDashboard, DashboardMetrics, BusinessLocation } from '../../types';
 import { COLORS } from '../../constants/colors';
 import { demoDashboardMetrics, demoBusinessLocation, generateRevenueAnalytics } from '../../data/providerDemoData';
@@ -120,22 +119,9 @@ const EnhancedDashboardScreen: React.FC = () => {
     try {
       setLoading(true);
       
-      // Load real analytics data from backend
+      // Load real analytics data from backend using ApiService
       try {
-        const token = await AsyncStorage.getItem('authToken');
-        if (!token) {
-          throw new Error('No auth token');
-        }
-
-        const response = await fetch('http://192.168.1.201:5224/api/analytics/dashboard', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.ok) {
-          const analyticsData = await response.json();
+        const analyticsData = await apiService.getDashboardData();
           
           // Transform API data to match enhanced dashboard format
           const transformedData: EnhancedDashboardData = {

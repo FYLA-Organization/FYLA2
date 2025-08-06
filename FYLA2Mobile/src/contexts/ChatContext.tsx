@@ -105,13 +105,51 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const sendMessage = useCallback(async (request: SendMessageRequest) => {
     try {
+      // Optimistically add message to UI immediately for better UX
+      const optimisticMessage: ChatMessage = {
+        id: `temp-${Date.now()}`, // Temporary ID
+        senderId: user?.id || '',
+        receiverId: request.receiverId,
+        content: request.content,
+        messageType: request.messageType || 'text',
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        status: 'Sent',
+        attachmentUrl: request.attachmentUrl,
+      };
+      
+      setMessages(prev => [...prev, optimisticMessage]);
+      
+      // Also update the last message in rooms
+      setRooms(prev => prev.map(room => 
+        room.id === request.receiverId 
+          ? {
+              ...room,
+              lastMessage: {
+                id: optimisticMessage.id,
+                content: optimisticMessage.content,
+                timestamp: optimisticMessage.timestamp,
+                senderId: optimisticMessage.senderId
+              },
+            }
+          : room
+      ));
+
+      // Send the actual message
       const message = await chatService.sendMessage(request);
-      // Message will be added via SignalR callback for real-time update
+      
+      // Replace the optimistic message with the real one when it comes back
+      setMessages(prev => prev.map(msg => 
+        msg.id === optimisticMessage.id ? message : msg
+      ));
+      
     } catch (error) {
+      // Remove the optimistic message if sending failed
+      setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')));
       console.error('Failed to send message:', error);
       throw error;
     }
-  }, []);
+  }, [user?.id]);
 
   const loadChatRooms = useCallback(async () => {
     try {

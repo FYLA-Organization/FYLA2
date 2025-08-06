@@ -29,9 +29,7 @@ import ProviderDashboardScreen from '../screens/provider/ProviderDashboardScreen
 import AppointmentsScreen from '../screens/provider/AppointmentsScreenSimple';
 import AnalyticsScreen from '../screens/provider/AnalyticsScreen';
 import AnalyticsDashboardScreen from '../screens/provider/AnalyticsDashboardScreen';
-import ScheduleScreen from '../screens/provider/ScheduleScreen';
 import EnhancedScheduleScreen from '../screens/provider/EnhancedScheduleScreen';
-import EnhancedScheduleManagementScreen from '../screens/provider/EnhancedScheduleManagementScreen';
 import ClientsScreen from '../screens/provider/ClientsScreen';
 import ClientManagementScreen from '../screens/provider/ClientManagementScreen';
 import CouponsLoyaltyScreen from '../screens/provider/CouponsLoyaltyScreen';
@@ -57,6 +55,7 @@ import PostCommentsScreen from '../screens/social/PostCommentsScreen';
 import UserProfileScreen from '../screens/social/UserProfileScreen';
 import FollowingBookmarksScreen from '../screens/social/FollowingBookmarksScreen';
 import WorkingEnhancedProviderProfileScreen from '../screens/provider/WorkingEnhancedProviderProfileScreen';
+import ServicesManagementScreen from '../screens/provider/ServicesManagementScreen';
 
 // Instagram-style Search
 import InstagramSearchScreen from '../screens/main/InstagramSearchScreen';
@@ -424,7 +423,7 @@ const AppNavigator = () => {
             />
             <RootStack.Screen 
               name="EnhancedScheduleManagement" 
-              component={EnhancedScheduleManagementScreen}
+              component={EnhancedScheduleScreen}
               options={{ headerShown: false }}
             />
             <RootStack.Screen 
@@ -443,32 +442,9 @@ const AppNavigator = () => {
             />
             <RootStack.Screen 
               name="Schedule" 
-              component={ScheduleScreen}
+              component={EnhancedScheduleScreen}
               options={{ 
-                headerShown: true, 
-                title: 'Schedule',
-                headerStyle: {
-                  backgroundColor: 'transparent',
-                },
-                headerBackground: () => (
-                  <BlurView
-                    intensity={100}
-                    tint="dark"
-                    style={{
-                      flex: 1,
-                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                      borderBottomWidth: 1,
-                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-                    }}
-                  />
-                ),
-                headerTintColor: 'white',
-                headerTitleStyle: {
-                  fontSize: 18,
-                  fontWeight: '700',
-                  letterSpacing: -0.3,
-                },
-                headerBackTitleVisible: false,
+                headerShown: false
               }}
             />
             <RootStack.Screen 
@@ -573,7 +549,7 @@ const AppNavigator = () => {
               component={CreatePostScreen}
               options={{ 
                 headerShown: false,
-                presentation: 'fullScreenModal'
+                presentation: 'modal'
               }}
             />
             <RootStack.Screen 
@@ -694,6 +670,14 @@ const AppNavigator = () => {
                   letterSpacing: -0.3,
                 },
                 headerBackTitleVisible: false,
+              }}
+            />
+            <RootStack.Screen 
+              name="ServicesManagement" 
+              component={ServicesManagementScreen}
+              options={{ 
+                headerShown: false, 
+                title: 'Manage Services',
               }}
             />
           </>

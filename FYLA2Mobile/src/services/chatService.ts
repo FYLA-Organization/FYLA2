@@ -1,6 +1,7 @@
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import { ChatMessage, ChatRoom, SendMessageRequest } from '../types';
 import ApiService from './api';
+import Config from '../config/environment';
 
 class ChatService {
   private connection: HubConnection | null = null;
@@ -16,8 +17,11 @@ class ChatService {
       return;
     }
 
+    // Ensure config is initialized
+    await Config.initialize();
+
     this.connection = new HubConnectionBuilder()
-      .withUrl('http://10.0.12.121:5224/chathub', {
+      .withUrl(Config.chatHubURL, {
         accessTokenFactory: () => token
       })
       .withAutomaticReconnect()

@@ -46,39 +46,38 @@ const ChatListScreen: React.FC = () => {
     }
   };
 
-  const renderChatRoom = ({ item }: { item: ChatRoom }) => (
+    const renderChatRoomItem = ({ item }: { item: ChatRoom }) => (
     <TouchableOpacity
       style={styles.chatRoomItem}
       onPress={() => navigation.navigate('ChatScreen' as never, { userId: item.id, user: item.user } as never)}
     >
       <View style={styles.avatarContainer}>
-        {item.user.profilePictureUrl ? (
+        {item.user?.profilePictureUrl ? (
           <Image source={{ uri: item.user.profilePictureUrl }} style={styles.avatar} />
         ) : (
           <View style={[styles.avatar, styles.defaultAvatar]}>
             <Text style={styles.avatarText}>
-              {item.user.firstName.charAt(0)}{item.user.lastName.charAt(0)}
+              {item.user?.firstName?.charAt(0) || 'U'}{item.user?.lastName?.charAt(0) || 'U'}
             </Text>
           </View>
         )}
         {item.unreadCount > 0 && (
           <View style={styles.unreadBadge}>
-            <Text style={styles.unreadText}>{item.unreadCount}</Text>
+            <Text style={styles.unreadBadgeText}>{item.unreadCount}</Text>
           </View>
         )}
       </View>
-
-      <View style={styles.chatContent}>
-        <View style={styles.chatHeader}>
+      <View style={styles.chatRoomContent}>
+        <View style={styles.chatRoomHeader}>
           <Text style={styles.userName}>
-            {item.user.firstName} {item.user.lastName}
+            {item.user?.firstName || 'Unknown'} {item.user?.lastName || 'User'}
           </Text>
-          <Text style={styles.timestamp}>
-            {formatTimestamp(item.lastMessage.timestamp)}
+          <Text style={styles.messageTime}>
+            {item.lastMessage?.timestamp ? formatTimestamp(item.lastMessage.timestamp) : ''}
           </Text>
         </View>
-        <Text style={[styles.lastMessage, item.unreadCount > 0 && styles.unreadMessage]} numberOfLines={1}>
-          {item.lastMessage.content}
+        <Text style={styles.lastMessage} numberOfLines={1}>
+          {item.lastMessage?.content || 'No messages yet'}
         </Text>
       </View>
     </TouchableOpacity>
@@ -110,7 +109,7 @@ const ChatListScreen: React.FC = () => {
 
       <FlatList
         data={rooms}
-        renderItem={renderChatRoom}
+        renderItem={renderChatRoomItem}
         keyExtractor={(item) => item.id}
         style={styles.chatList}
         ListEmptyComponent={renderEmptyState}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,21 +7,16 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
-  Modal,
-  Switch,
   ActivityIndicator,
   StatusBar,
-  FlatList,
   Dimensions,
+  Switch,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../../constants/colors';
-import { generateDemoWeekSchedule } from '../../data/providerDemoData';
-import ApiService from '../../services/api';
 import { RootStackParamList } from '../../types';
 
 const { width } = Dimensions.get('window');
@@ -29,203 +24,178 @@ const { width } = Dimensions.get('window');
 type ScheduleNavigationProp = StackNavigationProp<RootStackParamList>;
 
 interface TimeSlot {
-  hour: number;
-  minute: number;
-  available: boolean;
-}
-
-interface DaySchedule {
-  dayOfWeek: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
-  isWorkingDay: boolean;
-  startTime: TimeSlot;
-  endTime: TimeSlot;
-  breakStart?: TimeSlot;
-  breakEnd?: TimeSlot;
-  timeSlots: ScheduleSlot[];
-}
-
-interface ScheduleSlot {
   id: string;
-  startTime: TimeSlot;
-  endTime: TimeSlot;
-  isBooked: boolean;
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
   isBlocked: boolean;
   appointment?: {
+    id: string;
     clientName: string;
     serviceName: string;
-    duration: number;
     status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
+    duration: number;
   };
 }
 
-interface WeeklySchedule {
+interface DaySchedule {
+  dayOfWeek: string;
+  date: string;
+  isWorkingDay: boolean;
+  startTime: string;
+  endTime: string;
+  breakStart?: string;
+  breakEnd?: string;
+  timeSlots: TimeSlot[];
+  appointmentCount: number;
+  revenue: number;
+}
+
+interface WeekSchedule {
   weekStartDate: Date;
+  weekEndDate: Date;
   days: DaySchedule[];
+  totalAppointments: number;
+  totalRevenue: number;
 }
 
 const EnhancedScheduleScreen: React.FC = () => {
   const navigation = useNavigation<ScheduleNavigationProp>();
   
+  // State Management
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule | null>(null);
-  const [selectedDay, setSelectedDay] = useState<DaySchedule | null>(null);
-  const [showDayModal, setShowDayModal] = useState(false);
-  const [showConflictModal, setShowConflictModal] = useState(false);
-  const [conflictDetails, setConflictDetails] = useState<any>(null);
+  const [weekSchedule, setWeekSchedule] = useState<WeekSchedule | null>(null);
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
+  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
 
-  useEffect(() => {
-    loadWeeklySchedule();
-  }, [currentWeekOffset]);
-
-  const loadWeeklySchedule = async () => {
+  // Load schedule data
+  const loadScheduleData = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Calculate week start date
+      // Calculate week dates
       const today = new Date();
       const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() - today.getDay() + (currentWeekOffset * 7));
+      weekStart.setDate(today.getDate() - today.getDay() + 1 + (currentWeekOffset * 7)); // Start on Monday
       
-      // Load mock data - in real app, this would be API call
-      const mockSchedule: WeeklySchedule = {
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+
+      // Generate mock schedule data
+      const mockSchedule: WeekSchedule = {
         weekStartDate: weekStart,
-        days: [
-          {
-            dayOfWeek: 'Monday',
-            isWorkingDay: true,
-            startTime: { hour: 9, minute: 0, available: true },
-            endTime: { hour: 17, minute: 0, available: true },
-            breakStart: { hour: 12, minute: 0, available: false },
-            breakEnd: { hour: 13, minute: 0, available: false },
-            timeSlots: generateDaySlots('Monday', weekStart),
-          },
-          {
-            dayOfWeek: 'Tuesday',
-            isWorkingDay: true,
-            startTime: { hour: 9, minute: 0, available: true },
-            endTime: { hour: 17, minute: 0, available: true },
-            breakStart: { hour: 12, minute: 0, available: false },
-            breakEnd: { hour: 13, minute: 0, available: false },
-            timeSlots: generateDaySlots('Tuesday', weekStart),
-          },
-          {
-            dayOfWeek: 'Wednesday',
-            isWorkingDay: true,
-            startTime: { hour: 9, minute: 0, available: true },
-            endTime: { hour: 17, minute: 0, available: true },
-            breakStart: { hour: 12, minute: 0, available: false },
-            breakEnd: { hour: 13, minute: 0, available: false },
-            timeSlots: generateDaySlots('Wednesday', weekStart),
-          },
-          {
-            dayOfWeek: 'Thursday',
-            isWorkingDay: true,
-            startTime: { hour: 9, minute: 0, available: true },
-            endTime: { hour: 17, minute: 0, available: true },
-            breakStart: { hour: 12, minute: 0, available: false },
-            breakEnd: { hour: 13, minute: 0, available: false },
-            timeSlots: generateDaySlots('Thursday', weekStart),
-          },
-          {
-            dayOfWeek: 'Friday',
-            isWorkingDay: true,
-            startTime: { hour: 9, minute: 0, available: true },
-            endTime: { hour: 17, minute: 0, available: true },
-            breakStart: { hour: 12, minute: 0, available: false },
-            breakEnd: { hour: 13, minute: 0, available: false },
-            timeSlots: generateDaySlots('Friday', weekStart),
-          },
-          {
-            dayOfWeek: 'Saturday',
-            isWorkingDay: true,
-            startTime: { hour: 10, minute: 0, available: true },
-            endTime: { hour: 16, minute: 0, available: true },
-            timeSlots: generateDaySlots('Saturday', weekStart),
-          },
-          {
-            dayOfWeek: 'Sunday',
-            isWorkingDay: false,
-            startTime: { hour: 0, minute: 0, available: false },
-            endTime: { hour: 0, minute: 0, available: false },
-            timeSlots: [],
-          },
-        ],
+        weekEndDate: weekEnd,
+        days: generateWeekDays(weekStart),
+        totalAppointments: 0,
+        totalRevenue: 0,
       };
-      
-      setWeeklySchedule(mockSchedule);
+
+      // Calculate totals
+      mockSchedule.totalAppointments = mockSchedule.days.reduce((sum, day) => sum + day.appointmentCount, 0);
+      mockSchedule.totalRevenue = mockSchedule.days.reduce((sum, day) => sum + day.revenue, 0);
+
+      setWeekSchedule(mockSchedule);
     } catch (error) {
       console.error('Error loading schedule:', error);
-      Alert.alert('Error', 'Failed to load schedule');
+      Alert.alert('Error', 'Failed to load schedule data');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, [currentWeekOffset]);
+
+  // Generate week days with mock data
+  const generateWeekDays = (weekStart: Date): DaySchedule[] => {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const workingDays = [true, true, true, true, true, true, false];
+    
+    return days.map((dayName, index) => {
+      const currentDate = new Date(weekStart);
+      currentDate.setDate(weekStart.getDate() + index);
+      
+      const isWorking = workingDays[index];
+      const timeSlots = isWorking ? generateDayTimeSlots(dayName) : [];
+      const appointmentCount = timeSlots.filter(slot => slot.appointment).length;
+      const revenue = timeSlots.reduce((sum, slot) => {
+        if (slot.appointment) {
+          return sum + (slot.appointment.duration === 30 ? 80 : slot.appointment.duration === 60 ? 120 : 180);
+        }
+        return sum;
+      }, 0);
+
+      return {
+        dayOfWeek: dayName,
+        date: currentDate.toISOString().split('T')[0],
+        isWorkingDay: isWorking,
+        startTime: isWorking ? '09:00' : '',
+        endTime: isWorking ? (dayName === 'Saturday' ? '16:00' : '18:00') : '',
+        breakStart: isWorking && dayName !== 'Saturday' ? '12:00' : undefined,
+        breakEnd: isWorking && dayName !== 'Saturday' ? '13:00' : undefined,
+        timeSlots,
+        appointmentCount,
+        revenue,
+      };
+    });
   };
 
-  const generateDaySlots = (dayName: string, weekStart: Date): ScheduleSlot[] => {
-    const slots: ScheduleSlot[] = [];
-    const dayIndex = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(dayName);
-    
-    // Generate 30-minute slots for the day
-    for (let hour = 9; hour < 17; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        if (hour === 12 && minute < 60) continue; // Skip lunch break
+  // Generate time slots for a day
+  const generateDayTimeSlots = (dayName: string): TimeSlot[] => {
+    const slots: TimeSlot[] = [];
+    const startHour = 9;
+    const endHour = dayName === 'Saturday' ? 16 : 18;
+    const slotDuration = 30; // 30 minutes
+
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let minute = 0; minute < 60; minute += slotDuration) {
+        // Skip lunch break for weekdays
+        if (dayName !== 'Saturday' && hour === 12) continue;
+
+        const startTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        const endMinute = minute + slotDuration;
+        const endHour = endMinute >= 60 ? hour + 1 : hour;
+        const endTime = `${endHour.toString().padStart(2, '0')}:${(endMinute % 60).toString().padStart(2, '0')}`;
         
-        const slotId = `${dayName}-${hour}-${minute}`;
-        const isBooked = Math.random() > 0.7; // 30% chance of being booked
+        const slotId = `${dayName}-${startTime}`;
+        const hasAppointment = Math.random() > 0.7; // 30% chance of appointment
         
-        slots.push({
+        const slot: TimeSlot = {
           id: slotId,
-          startTime: { hour, minute, available: !isBooked },
-          endTime: { hour: minute === 30 ? hour + 1 : hour, minute: minute === 30 ? 0 : 30, available: !isBooked },
-          isBooked,
+          startTime,
+          endTime,
+          isAvailable: !hasAppointment,
           isBlocked: false,
-          appointment: isBooked ? {
-            clientName: ['Sarah Johnson', 'Emma Wilson', 'Lisa Chen', 'Maria Garcia'][Math.floor(Math.random() * 4)],
-            serviceName: ['Hair Cut', 'Facial', 'Manicure', 'Hair Color'][Math.floor(Math.random() * 4)],
+          appointment: hasAppointment ? {
+            id: `apt-${slotId}`,
+            clientName: ['Sarah Johnson', 'Emma Wilson', 'Lisa Chen', 'Maria Garcia', 'Ashley Brown'][Math.floor(Math.random() * 5)],
+            serviceName: ['Hair Cut & Style', 'Color Treatment', 'Facial Treatment', 'Manicure', 'Hair Wash'][Math.floor(Math.random() * 5)],
+            status: ['confirmed', 'pending', 'completed'][Math.floor(Math.random() * 3)] as any,
             duration: [30, 60, 90][Math.floor(Math.random() * 3)],
-            status: ['confirmed', 'pending'][Math.floor(Math.random() * 2)] as any,
           } : undefined,
-        });
+        };
+
+        slots.push(slot);
       }
     }
-    
+
     return slots;
   };
 
-  const onRefresh = async () => {
+  // Event handlers
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
-    await loadWeeklySchedule();
-    setRefreshing(false);
+    loadScheduleData();
+  }, [loadScheduleData]);
+
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    setCurrentWeekOffset(prev => prev + (direction === 'next' ? 1 : -1));
   };
 
-  const formatTime = (timeSlot: TimeSlot) => {
-    const hour = timeSlot.hour;
-    const minute = timeSlot.minute;
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-    return `${displayHour}:${minute.toString().padStart(2, '0')} ${ampm}`;
-  };
-
-  const formatWeekRange = (weekStart: Date) => {
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    
-    return `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-  };
-
-  const handleDayPress = (day: DaySchedule) => {
-    setSelectedDay(day);
-    setShowDayModal(true);
-  };
-
-  const handleSlotPress = (slot: ScheduleSlot) => {
-    if (slot.isBooked) {
-      // Show appointment details
+  const handleSlotPress = (slot: TimeSlot) => {
+    if (slot.appointment) {
       Alert.alert(
         'Appointment Details',
-        `Client: ${slot.appointment?.clientName}\nService: ${slot.appointment?.serviceName}\nTime: ${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}\nStatus: ${slot.appointment?.status}`,
+        `Client: ${slot.appointment.clientName}\nService: ${slot.appointment.serviceName}\nTime: ${slot.startTime} - ${slot.endTime}\nStatus: ${slot.appointment.status}`,
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Edit', onPress: () => console.log('Edit appointment') },
@@ -233,116 +203,140 @@ const EnhancedScheduleScreen: React.FC = () => {
         ]
       );
     } else {
-      // Block/unblock time slot
       Alert.alert(
         'Time Slot',
-        'What would you like to do with this time slot?',
+        `${slot.startTime} - ${slot.endTime}`,
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: slot.isBlocked ? 'Unblock' : 'Block', onPress: () => handleToggleSlot(slot) },
+          { text: slot.isBlocked ? 'Unblock' : 'Block', onPress: () => handleToggleBlock(slot) },
           { text: 'Add Appointment', onPress: () => handleAddAppointment(slot) },
         ]
       );
     }
   };
 
-  const handleCompleteAppointment = (slot: ScheduleSlot) => {
-    // Mark appointment as completed
-    console.log('Completing appointment:', slot.id);
+  const handleCompleteAppointment = (slot: TimeSlot) => {
+    console.log('Completing appointment:', slot.appointment?.id);
+    // In real app, call API to complete appointment
   };
 
-  const handleToggleSlot = (slot: ScheduleSlot) => {
-    // Toggle slot blocked status
-    console.log('Toggling slot:', slot.id);
+  const handleToggleBlock = (slot: TimeSlot) => {
+    console.log('Toggling block status for:', slot.id);
+    // In real app, call API to block/unblock time slot
   };
 
-  const handleAddAppointment = (slot: ScheduleSlot) => {
-    // Navigate to add appointment screen
-    console.log('Adding appointment to slot:', slot.id);
+  const handleAddAppointment = (slot: TimeSlot) => {
+    console.log('Adding appointment for:', slot.id);
+    // In real app, navigate to add appointment screen
   };
 
-  const handleToggleWorkingDay = (dayName: string, isWorking: boolean) => {
-    if (!weeklySchedule) return;
+  const toggleWorkingDay = (dayIndex: number) => {
+    if (!weekSchedule) return;
     
-    setWeeklySchedule(prev => ({
+    setWeekSchedule(prev => ({
       ...prev!,
-      days: prev!.days.map(day => 
-        day.dayOfWeek === dayName 
-          ? { ...day, isWorkingDay: isWorking }
+      days: prev!.days.map((day, index) => 
+        index === dayIndex 
+          ? { 
+              ...day, 
+              isWorkingDay: !day.isWorkingDay,
+              timeSlots: !day.isWorkingDay ? generateDayTimeSlots(day.dayOfWeek) : []
+            }
           : day
       ),
     }));
   };
 
-  const getSlotColor = (slot: ScheduleSlot) => {
-    if (slot.isBooked) {
-      if (slot.appointment?.status === 'confirmed') return COLORS.success;
-      if (slot.appointment?.status === 'pending') return COLORS.warning;
-      if (slot.appointment?.status === 'completed') return COLORS.primary;
-      return COLORS.textSecondary;
-    }
-    if (slot.isBlocked) return COLORS.error;
-    return COLORS.borderLight;
+  // Utility functions
+  const formatWeekRange = (startDate: Date, endDate: Date) => {
+    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+    const start = startDate.toLocaleDateString('en-US', options);
+    const end = endDate.toLocaleDateString('en-US', { ...options, year: 'numeric' });
+    return `${start} - ${end}`;
   };
 
+  const getSlotColor = (slot: TimeSlot) => {
+    if (slot.isBlocked) return '#E74C3C';
+    if (slot.appointment) {
+      switch (slot.appointment.status) {
+        case 'confirmed': return COLORS.primary;
+        case 'pending': return '#F39C12';
+        case 'completed': return '#27AE60';
+        case 'cancelled': return '#95A5A6';
+        default: return COLORS.primary;
+      }
+    }
+    return '#E8F4FD';
+  };
+
+  const getSlotTextColor = (slot: TimeSlot) => {
+    if (slot.isBlocked || slot.appointment) return 'white';
+    return COLORS.text;
+  };
+
+  // Load data on mount and week change
+  useEffect(() => {
+    loadScheduleData();
+  }, [loadScheduleData]);
+
+  // Render components
   const renderDayCard = (day: DaySchedule, index: number) => {
-    const dayDate = new Date(weeklySchedule!.weekStartDate);
-    dayDate.setDate(dayDate.getDate() + index);
-    
-    const bookedSlots = day.timeSlots.filter(slot => slot.isBooked).length;
-    const totalSlots = day.timeSlots.length;
+    const dayDate = new Date(day.date);
+    const isToday = dayDate.toDateString() === new Date().toDateString();
     
     return (
-      <TouchableOpacity
+      <TouchableOpacity 
         key={day.dayOfWeek}
-        style={styles.dayCard}
-        onPress={() => handleDayPress(day)}
+        style={[styles.dayCard, isToday && styles.todayCard]}
+        activeOpacity={0.7}
       >
         <LinearGradient
-          colors={day.isWorkingDay ? COLORS.gradientSuccess : ['#ccc', '#999'] as const}
-          style={styles.dayGradient}
+          colors={day.isWorkingDay ? [COLORS.primary, COLORS.primaryDark] : ['#BDC3C7', '#95A5A6']}
+          style={styles.dayCardGradient}
         >
-          <Text style={styles.dayName}>{day.dayOfWeek}</Text>
-          <Text style={styles.dayDate}>
-            {dayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-          </Text>
+          <Text style={styles.dayName}>{day.dayOfWeek.substring(0, 3)}</Text>
+          <Text style={styles.dayDate}>{dayDate.getDate()}</Text>
           
           {day.isWorkingDay ? (
-            <>
-              <Text style={styles.dayHours}>
-                {formatTime(day.startTime)} - {formatTime(day.endTime)}
-              </Text>
-              <View style={styles.dayStats}>
-                <Text style={styles.dayStatsText}>
-                  {bookedSlots}/{totalSlots} booked
-                </Text>
-              </View>
-            </>
+            <View style={styles.dayStats}>
+              <Text style={styles.dayStatsText}>{day.appointmentCount} apt</Text>
+              <Text style={styles.dayStatsText}>${day.revenue}</Text>
+            </View>
           ) : (
-            <Text style={styles.dayOff}>Day Off</Text>
+            <Text style={styles.dayOffText}>Off</Text>
           )}
         </LinearGradient>
       </TouchableOpacity>
     );
   };
 
-  const renderTimeSlot = (slot: ScheduleSlot) => (
+  const renderTimeSlot = (slot: TimeSlot) => (
     <TouchableOpacity
       key={slot.id}
-      style={[styles.timeSlot, { backgroundColor: getSlotColor(slot) }]}
+      style={[
+        styles.timeSlot,
+        { backgroundColor: getSlotColor(slot) }
+      ]}
       onPress={() => handleSlotPress(slot)}
+      activeOpacity={0.8}
     >
-      <Text style={[styles.slotTime, { color: slot.isBooked ? 'white' : COLORS.text }]}>
-        {formatTime(slot.startTime)}
+      <Text style={[styles.slotTime, { color: getSlotTextColor(slot) }]}>
+        {slot.startTime}
       </Text>
-      {slot.isBooked && slot.appointment && (
+      
+      {slot.appointment && (
         <>
-          <Text style={styles.slotClient}>{slot.appointment.clientName}</Text>
-          <Text style={styles.slotService}>{slot.appointment.serviceName}</Text>
+          <Text style={styles.slotClient} numberOfLines={1}>
+            {slot.appointment.clientName.split(' ')[0]}
+          </Text>
+          <Text style={styles.slotService} numberOfLines={1}>
+            {slot.appointment.serviceName}
+          </Text>
         </>
       )}
+      
       {slot.isBlocked && (
-        <Text style={styles.slotBlocked}>Blocked</Text>
+        <Text style={styles.slotBlocked}>BLOCKED</Text>
       )}
     </TouchableOpacity>
   );
@@ -351,7 +345,7 @@ const EnhancedScheduleScreen: React.FC = () => {
     return (
       <View style={styles.loadingContainer}>
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-        <LinearGradient colors={COLORS.gradient} style={styles.loadingGradient}>
+        <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.loadingGradient}>
           <ActivityIndicator size="large" color="white" />
           <Text style={styles.loadingText}>Loading schedule...</Text>
         </LinearGradient>
@@ -359,171 +353,141 @@ const EnhancedScheduleScreen: React.FC = () => {
     );
   }
 
-  if (!weeklySchedule) {
+  if (!weekSchedule) {
     return (
       <View style={styles.container}>
-        <Text>No schedule data available</Text>
+        <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+        <View style={styles.errorContainer}>
+          <Ionicons name="calendar-outline" size={64} color={COLORS.textSecondary} />
+          <Text style={styles.errorText}>No schedule data available</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadScheduleData}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
   return (
-    <>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-      <View style={styles.container}>
-        <LinearGradient colors={COLORS.gradient} style={styles.header}>
-          <View style={styles.headerContent}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={24} color="white" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Schedule Management</Text>
-            <TouchableOpacity onPress={() => console.log('Settings')}>
-              <Ionicons name="settings" size={24} color="white" />
-            </TouchableOpacity>
+      
+      {/* Header */}
+      <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.header}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          
+          <Text style={styles.headerTitle}>Schedule</Text>
+          
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={() => console.log('Settings')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="settings-outline" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Week Navigation */}
+        <View style={styles.weekNavigation}>
+          <TouchableOpacity 
+            style={styles.weekNavButton}
+            onPress={() => navigateWeek('prev')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-back" size={20} color="white" />
+          </TouchableOpacity>
+          
+          <View style={styles.weekInfo}>
+            <Text style={styles.weekRange}>
+              {formatWeekRange(weekSchedule.weekStartDate, weekSchedule.weekEndDate)}
+            </Text>
+            <Text style={styles.weekStats}>
+              {weekSchedule.totalAppointments} appointments • ${weekSchedule.totalRevenue}
+            </Text>
           </View>
           
-          {/* Week Navigation */}
-          <View style={styles.weekNavigation}>
-            <TouchableOpacity 
-              style={styles.weekNavButton}
-              onPress={() => setCurrentWeekOffset(currentWeekOffset - 1)}
-            >
-              <Ionicons name="chevron-back" size={20} color="white" />
-            </TouchableOpacity>
-            
-            <Text style={styles.weekRange}>
-              {formatWeekRange(weeklySchedule.weekStartDate)}
-            </Text>
-            
-            <TouchableOpacity 
-              style={styles.weekNavButton}
-              onPress={() => setCurrentWeekOffset(currentWeekOffset + 1)}
-            >
-              <Ionicons name="chevron-forward" size={20} color="white" />
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
+          <TouchableOpacity 
+            style={styles.weekNavButton}
+            onPress={() => navigateWeek('next')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-forward" size={20} color="white" />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
-        <ScrollView 
-          style={styles.content}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Week Overview */}
-          <View style={styles.weekOverview}>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.daysContainer}
-            >
-              {weeklySchedule.days.map((day, index) => renderDayCard(day, index))}
-            </ScrollView>
-          </View>
+      {/* Content */}
+      <ScrollView 
+        style={styles.content}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            colors={[COLORS.primary]}
+            tintColor={COLORS.primary}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Week Overview */}
+        <View style={styles.weekOverview}>
+          <Text style={styles.sectionTitle}>Week Overview</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.daysScrollContainer}
+          >
+            {weekSchedule.days.map((day, index) => renderDayCard(day, index))}
+          </ScrollView>
+        </View>
 
-          {/* Daily Schedules */}
-          {weeklySchedule.days.filter(day => day.isWorkingDay).map((day) => (
-            <View key={day.dayOfWeek} style={styles.daySection}>
-              <View style={styles.daySectionHeader}>
-                <Text style={styles.daySectionTitle}>{day.dayOfWeek}</Text>
+        {/* Daily Schedules */}
+        <View style={styles.dailySchedules}>
+          <Text style={styles.sectionTitle}>Daily Schedules</Text>
+          
+          {weekSchedule.days.map((day, dayIndex) => (
+            <View key={day.dayOfWeek} style={styles.dayScheduleCard}>
+              <View style={styles.dayScheduleHeader}>
+                <View style={styles.dayScheduleInfo}>
+                  <Text style={styles.dayScheduleTitle}>{day.dayOfWeek}</Text>
+                  <Text style={styles.dayScheduleSubtitle}>
+                    {day.isWorkingDay ? `${day.startTime} - ${day.endTime}` : 'Day off'}
+                  </Text>
+                </View>
+                
                 <Switch
                   value={day.isWorkingDay}
-                  onValueChange={(value) => handleToggleWorkingDay(day.dayOfWeek, value)}
-                  trackColor={{ false: COLORS.border, true: COLORS.primary }}
-                  thumbColor="white"
+                  onValueChange={() => toggleWorkingDay(dayIndex)}
+                  trackColor={{ false: '#E0E0E0', true: COLORS.primary }}
+                  thumbColor={day.isWorkingDay ? 'white' : '#f4f3f4'}
                 />
               </View>
               
-              <View style={styles.timeSlotsGrid}>
-                {day.timeSlots.map(renderTimeSlot)}
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-
-        {/* Day Details Modal */}
-        <Modal
-          visible={showDayModal}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowDayModal(false)}
-        >
-          <BlurView intensity={80} style={styles.modalOverlay}>
-            <View style={styles.dayModalContent}>
-              {selectedDay && (
-                <>
-                  <View style={styles.dayModalHeader}>
-                    <Text style={styles.dayModalTitle}>{selectedDay.dayOfWeek} Schedule</Text>
-                    <TouchableOpacity onPress={() => setShowDayModal(false)}>
-                      <Ionicons name="close" size={24} color={COLORS.text} />
-                    </TouchableOpacity>
+              {day.isWorkingDay && day.timeSlots.length > 0 && (
+                <View style={styles.timeSlotsContainer}>
+                  <View style={styles.timeSlotsGrid}>
+                    {day.timeSlots.map(slot => renderTimeSlot(slot))}
                   </View>
-                  
-                  <ScrollView style={styles.dayModalBody}>
-                    <View style={styles.daySettings}>
-                      <View style={styles.daySettingItem}>
-                        <Text style={styles.daySettingLabel}>Working Day</Text>
-                        <Switch
-                          value={selectedDay.isWorkingDay}
-                          onValueChange={(value) => handleToggleWorkingDay(selectedDay.dayOfWeek, value)}
-                          trackColor={{ false: COLORS.border, true: COLORS.primary }}
-                          thumbColor="white"
-                        />
-                      </View>
-                      
-                      {selectedDay.isWorkingDay && (
-                        <>
-                          <View style={styles.daySettingItem}>
-                            <Text style={styles.daySettingLabel}>Start Time</Text>
-                            <TouchableOpacity style={styles.timeButton}>
-                              <Text style={styles.timeButtonText}>
-                                {formatTime(selectedDay.startTime)}
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                          
-                          <View style={styles.daySettingItem}>
-                            <Text style={styles.daySettingLabel}>End Time</Text>
-                            <TouchableOpacity style={styles.timeButton}>
-                              <Text style={styles.timeButtonText}>
-                                {formatTime(selectedDay.endTime)}
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                          
-                          {selectedDay.breakStart && selectedDay.breakEnd && (
-                            <>
-                              <View style={styles.daySettingItem}>
-                                <Text style={styles.daySettingLabel}>Break Start</Text>
-                                <TouchableOpacity style={styles.timeButton}>
-                                  <Text style={styles.timeButtonText}>
-                                    {formatTime(selectedDay.breakStart)}
-                                  </Text>
-                                </TouchableOpacity>
-                              </View>
-                              
-                              <View style={styles.daySettingItem}>
-                                <Text style={styles.daySettingLabel}>Break End</Text>
-                                <TouchableOpacity style={styles.timeButton}>
-                                  <Text style={styles.timeButtonText}>
-                                    {formatTime(selectedDay.breakEnd)}
-                                  </Text>
-                                </TouchableOpacity>
-                              </View>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </View>
-                  </ScrollView>
-                </>
+                </View>
+              )}
+              
+              {day.isWorkingDay && day.timeSlots.length === 0 && (
+                <View style={styles.noSlotsContainer}>
+                  <Text style={styles.noSlotsText}>No time slots configured</Text>
+                </View>
               )}
             </View>
-          </BlurView>
-        </Modal>
-      </View>
-    </>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -546,16 +510,48 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 12,
   },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xl,
+  },
+  errorText: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.lg,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   header: {
     paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingBottom: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: SPACING.lg,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 20,
@@ -571,186 +567,176 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  weekInfo: {
+    alignItems: 'center',
+    flex: 1,
   },
   weekRange: {
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+    marginBottom: 4,
+  },
+  weekStats: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   content: {
     flex: 1,
   },
   weekOverview: {
-    paddingVertical: 20,
+    paddingVertical: SPACING.lg,
   },
-  daysContainer: {
-    paddingHorizontal: 20,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+  },
+  daysScrollContainer: {
+    paddingHorizontal: SPACING.lg,
   },
   dayCard: {
-    width: (width - 60) / 4,
-    marginRight: 12,
-    borderRadius: 12,
+    width: 80,
+    marginRight: SPACING.md,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  dayGradient: {
-    padding: 12,
+  todayCard: {
+    transform: [{ scale: 1.05 }],
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  dayCardGradient: {
+    padding: SPACING.md,
     alignItems: 'center',
     minHeight: 100,
   },
   dayName: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: 'white',
     marginBottom: 4,
   },
   dayDate: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 8,
-  },
-  dayHours: {
-    fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
-    marginBottom: 8,
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: SPACING.sm,
   },
   dayStats: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
   },
   dayStatsText: {
     fontSize: 10,
     color: 'white',
     fontWeight: '600',
-  },
-  dayOff: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
   },
-  daySection: {
-    backgroundColor: COLORS.surface,
-    margin: 20,
-    borderRadius: 16,
-    padding: 20,
+  dayOffText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
+  },
+  dailySchedules: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xl,
+  },
+  dayScheduleCard: {
+    backgroundColor: 'white',
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.lg,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  daySectionHeader: {
+  dayScheduleHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    padding: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
   },
-  daySectionTitle: {
-    fontSize: 18,
+  dayScheduleInfo: {
+    flex: 1,
+  },
+  dayScheduleTitle: {
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.text,
+    marginBottom: 2,
+  },
+  dayScheduleSubtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  timeSlotsContainer: {
+    padding: SPACING.lg,
+    paddingTop: SPACING.md,
   },
   timeSlotsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: SPACING.sm,
   },
   timeSlot: {
-    width: (width - 76) / 3, // Account for margins and gaps
-    borderRadius: 8,
-    padding: 8,
-    minHeight: 60,
+    width: (width - (SPACING.lg * 2) - (SPACING.sm * 2)) / 3,
+    borderRadius: RADIUS.md,
+    padding: SPACING.sm,
+    minHeight: 70,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
   },
   slotTime: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 2,
   },
   slotClient: {
     fontSize: 10,
     color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '500',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 1,
   },
   slotService: {
     fontSize: 9,
     color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
   },
   slotBlocked: {
     fontSize: 10,
     color: 'white',
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  dayModalContent: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    width: '100%',
-    maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  dayModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
-  },
-  dayModalTitle: {
-    fontSize: 20,
     fontWeight: '700',
-    color: COLORS.text,
+    textAlign: 'center',
   },
-  dayModalBody: {
-    maxHeight: 400,
-  },
-  daySettings: {
-    padding: 20,
-  },
-  daySettingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  noSlotsContainer: {
+    padding: SPACING.lg,
     alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
   },
-  daySettingLabel: {
-    fontSize: 16,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  timeButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  timeButtonText: {
-    color: 'white',
+  noSlotsText: {
     fontSize: 14,
-    fontWeight: '600',
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
   },
 });
 

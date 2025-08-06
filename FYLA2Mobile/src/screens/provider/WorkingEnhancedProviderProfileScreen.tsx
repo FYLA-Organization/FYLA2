@@ -281,25 +281,49 @@ const WorkingEnhancedProviderProfileScreen: React.FC = () => {
 
                 {/* Action Buttons */}
                 <View style={styles.actionButtons}>
-                  <TouchableOpacity 
-                    style={[styles.followButton, isFollowing && styles.followingButton]}
-                    onPress={handleFollow}
-                  >
-                    <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
-                      {isFollowing ? 'Following' : 'Follow'}
-                    </Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={styles.messageButton}
-                    onPress={() => navigation.navigate('Chat', { 
-                      userId: profileData.provider.userId,
-                      userName: profileData.provider.businessName
-                    })}
-                  >
-                    <Ionicons name="chatbubble-outline" size={18} color={COLORS.surface} />
-                    <Text style={styles.messageButtonText}>Message</Text>
-                  </TouchableOpacity>
+                  {user?.id === providerId ? (
+                    // Provider's own profile - show management buttons
+                    <>
+                      <TouchableOpacity 
+                        style={styles.manageServicesButton}
+                        onPress={() => navigation.navigate('ServicesManagement')}
+                      >
+                        <Ionicons name="briefcase-outline" size={18} color={COLORS.surface} />
+                        <Text style={styles.manageServicesButtonText}>Manage Services</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity 
+                        style={styles.editProfileButton}
+                        onPress={() => {/* TODO: Add edit profile functionality */}}
+                      >
+                        <Ionicons name="pencil-outline" size={18} color={COLORS.primary} />
+                        <Text style={styles.editProfileButtonText}>Edit Profile</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    // Viewing another provider's profile
+                    <>
+                      <TouchableOpacity 
+                        style={[styles.followButton, isFollowing && styles.followingButton]}
+                        onPress={handleFollow}
+                      >
+                        <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
+                          {isFollowing ? 'Following' : 'Follow'}
+                        </Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity 
+                        style={styles.messageButton}
+                        onPress={() => navigation.navigate('Chat', { 
+                          userId: profileData.provider.userId,
+                          userName: profileData.provider.businessName
+                        })}
+                      >
+                        <Ionicons name="chatbubble-outline" size={18} color={COLORS.surface} />
+                        <Text style={styles.messageButtonText}>Message</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </View>
               </View>
             </LinearGradient>
@@ -568,6 +592,37 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   messageButtonText: {
+    color: COLORS.surface,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  manageServicesButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  manageServicesButtonText: {
+    color: COLORS.surface,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  editProfileButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: COLORS.surface,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  editProfileButtonText: {
     color: COLORS.surface,
     fontSize: 16,
     fontWeight: '600',

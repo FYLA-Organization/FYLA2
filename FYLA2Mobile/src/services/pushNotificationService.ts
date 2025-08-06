@@ -28,7 +28,8 @@ export interface PushNotificationData {
 // Configure notification behavior
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -79,7 +80,6 @@ export class PushNotificationService {
             allowAlert: true,
             allowBadge: true,
             allowSound: true,
-            allowAnnouncements: true,
           },
         });
         finalStatus = status;
@@ -194,7 +194,7 @@ export class PushNotificationService {
   // Handle received notifications
   static handleNotificationReceived(notification: Notifications.Notification): void {
     const { request } = notification;
-    const data = request.content.data as PushNotificationData;
+    const data = request.content.data as unknown as PushNotificationData;
 
     // Update badge count
     this.updateBadgeCount();
@@ -220,7 +220,7 @@ export class PushNotificationService {
 
   // Handle notification response (when user taps notification)
   static handleNotificationResponse(response: Notifications.NotificationResponse): void {
-    const data = response.notification.request.content.data as PushNotificationData;
+    const data = response.notification.request.content.data as unknown as PushNotificationData;
 
     // Navigate to appropriate screen based on notification type
     switch (data?.type) {
@@ -294,6 +294,7 @@ export class PushNotificationService {
         serviceName,
       },
       {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
         date: reminderTime,
       }
     );

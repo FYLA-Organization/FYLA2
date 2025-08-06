@@ -414,6 +414,7 @@ export type RootStackParamList = {
   ClientManagement: undefined;
   CouponsLoyalty: undefined;
   ServiceManagement: undefined;
+  ServicesManagement: undefined;
   // Social Media Screens
   SocialFeed: undefined;
   InstagramSearch: undefined;
