@@ -158,9 +158,9 @@ const ServicesManagementScreen: React.FC = () => {
         name: formData.name.trim(),
         description: formData.description.trim(),
         price: parseFloat(formData.price),
-        duration: formData.duration ? parseInt(formData.duration) : 60,
+        durationMinutes: formData.duration ? parseInt(formData.duration) : 60,
         category: formData.category || 'Other',
-        serviceProviderId: user?.id,
+        imageUrl: null,
       };
 
       if (editingService) {

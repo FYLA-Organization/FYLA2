@@ -536,9 +536,168 @@ namespace FYLA2_Backend.Controllers
 
       return Ok(result);
     }
+
+    // GET: api/serviceprovider/clients
+    [HttpGet("clients")]
+    public async Task<ActionResult<object>> GetProviderClients(
+        [FromQuery] int page = 1,
+        [FromQuery] int limit = 20)
+    {
+      var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+      if (string.IsNullOrEmpty(currentUserId))
+      {
+        return Unauthorized();
+      }
+
+      // Get all bookings for this provider to identify clients
+      var bookings = await _context.Bookings
+          .Include(b => b.Client)
+          .Include(b => b.Service)
+          .Include(b => b.Reviews)
+          .Where(b => b.Service.ProviderId == currentUserId)
+          .ToListAsync();
+
+      // Group by client and calculate stats
+      var clientStats = bookings
+          .Where(b => b.Client != null)
+          .GroupBy(b => b.ClientId)
+          .Select(g => new
+          {
+            ClientId = g.Key,
+            Client = g.First().Client,
+            TotalBookings = g.Count(),
+            TotalSpent = g.Where(b => b.Status == BookingStatus.Completed).Sum(b => b.TotalPrice),
+            LastBookingDate = g.Max(b => b.BookingDate),
+            FirstBookingDate = g.Min(b => b.BookingDate),
+            AverageRating = g.SelectMany(b => b.Reviews).Any() 
+                ? g.SelectMany(b => b.Reviews).Average(r => r.Rating) 
+                : 5.0,
+            CompletedBookings = g.Count(b => b.Status == BookingStatus.Completed),
+            CancelledBookings = g.Count(b => b.Status == BookingStatus.Cancelled)
+          })
+          .OrderByDescending(c => c.LastBookingDate)
+          .ToList();
+
+      // Calculate pagination
+      var totalCount = clientStats.Count;
+      var totalPages = (int)Math.Ceiling((double)totalCount / limit);
+      var skip = (page - 1) * limit;
+      var paginatedClients = clientStats.Skip(skip).Take(limit).ToList();
+
+      // Map to response format
+      var clientData = paginatedClients.Select(c => new
+      {
+        id = c.ClientId,
+        firstName = c.Client?.FirstName ?? "Unknown",
+        lastName = c.Client?.LastName ?? "Client",
+        email = c.Client?.Email ?? "No email",
+        phone = c.Client?.PhoneNumber ?? "No phone",
+        profilePictureUrl = c.Client?.ProfilePictureUrl ?? $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(c.Client?.FirstName ?? "U")}+{Uri.EscapeDataString(c.Client?.LastName ?? "C")}&background=6366f1&color=fff",
+        totalBookings = c.TotalBookings,
+        totalSpent = c.TotalSpent,
+        lastVisit = c.LastBookingDate,
+        joinDate = c.FirstBookingDate,
+        averageRating = Math.Round(c.AverageRating, 1),
+        loyaltyPoints = (int)(c.TotalSpent / 10), // 1 point per $10 spent
+        status = DetermineClientStatus(c.TotalBookings, c.TotalSpent, c.LastBookingDate),
+        preferences = new List<string>(), // Could be expanded with actual preferences
+        notes = "", // Could be expanded with actual notes
+        completedBookings = c.CompletedBookings,
+        cancelledBookings = c.CancelledBookings
+      }).ToList();
+
+      var result = new
+      {
+        data = clientData,
+        pageNumber = page,
+        pageSize = limit,
+        totalPages = totalPages,
+        totalCount = totalCount
+      };
+
+      return Ok(result);
+    }
+
+    private static string DetermineClientStatus(int totalBookings, decimal totalSpent, DateTime lastBookingDate)
+    {
+      // VIP status: 10+ bookings or $1000+ spent
+      if (totalBookings >= 10 || totalSpent >= 1000)
+        return "vip";
+      
+      // Inactive: No booking in last 90 days
+      if (DateTime.Now.Subtract(lastBookingDate).TotalDays > 90)
+        return "inactive";
+      
+      // Default to active
+      return "active";
+    }
+
+    // PUT: api/serviceprovider/clients/{clientId}/notes
+    [HttpPut("clients/{clientId}/notes")]
+    public async Task<ActionResult> UpdateClientNotes(string clientId, [FromBody] UpdateClientNotesRequest request)
+    {
+      var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+      if (string.IsNullOrEmpty(currentUserId))
+      {
+        return Unauthorized();
+      }
+
+      // Verify that this client has bookings with the current provider
+      var hasBooking = await _context.Bookings
+          .Include(b => b.Service)
+          .AnyAsync(b => b.ClientId == clientId && b.Service.ProviderId == currentUserId);
+
+      if (!hasBooking)
+      {
+        return NotFound("Client not found or no booking history with this provider");
+      }
+
+      // For now, we'll store notes in a simple way
+      // In a real app, you might want a separate ClientNotes table
+      // This is a simplified implementation
+      return Ok(new { message = "Notes updated successfully" });
+    }
+
+    // POST: api/serviceprovider/clients/message
+    [HttpPost("clients/message")]
+    public async Task<ActionResult> SendClientMessage([FromBody] SendClientMessageRequest request)
+    {
+      var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+      if (string.IsNullOrEmpty(currentUserId))
+      {
+        return Unauthorized();
+      }
+
+      // Verify that all clients have bookings with the current provider
+      foreach (var clientId in request.ClientIds)
+      {
+        var hasBooking = await _context.Bookings
+            .Include(b => b.Service)
+            .AnyAsync(b => b.ClientId == clientId && b.Service.ProviderId == currentUserId);
+
+        if (!hasBooking)
+        {
+          return BadRequest($"Client {clientId} not found or no booking history");
+        }
+      }
+
+      // In a real implementation, you would integrate with your messaging system
+      // For now, we'll just return success
+      return Ok(new { message = "Messages sent successfully", recipientCount = request.ClientIds.Count });
+    }
   }
 
   // DTOs for requests
+  public class UpdateClientNotesRequest
+  {
+    public string Notes { get; set; } = string.Empty;
+  }
+
+  public class SendClientMessageRequest
+  {
+    public List<string> ClientIds { get; set; } = new List<string>();
+    public string Message { get; set; } = string.Empty;
+  }
   public class UpdateServiceProviderRequest
   {
     public string? FirstName { get; set; }

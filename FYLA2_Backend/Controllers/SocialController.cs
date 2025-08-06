@@ -102,9 +102,54 @@ namespace FYLA2_Backend.Controllers
                     isBookmarked = false // Add bookmarks functionality if needed
                 }).ToList();
 
-                // Check if there are more posts
+                // Check if there are more posts - for infinite scroll, if we have posts, repeat them
                 var totalPosts = await _context.Posts.CountAsync();
-                var hasMore = (page * pageSize) < totalPosts;
+                var hasRealMore = (page * pageSize) < totalPosts;
+                
+                // If no new posts but we have some posts, repeat the existing ones for infinite scroll
+                if (!hasRealMore && totalPosts > 0 && transformedPosts.Count == 0)
+                {
+                    _logger.LogInformation("No more new posts, repeating existing posts for infinite scroll");
+                    
+                    // Get posts from the beginning again
+                    var repeatedPosts = await _context.Posts
+                        .Include(p => p.User)
+                        .OrderByDescending(p => p.CreatedAt)
+                        .Take(pageSize)
+                        .ToListAsync();
+
+                    // Transform repeated posts with updated IDs to avoid conflicts
+                    transformedPosts = repeatedPosts.Select((p, index) => new
+                    {
+                        id = $"{p.Id}_repeat_{page}_{index}",
+                        userId = p.UserId,
+                        user = new
+                        {
+                            id = p.User.Id,
+                            firstName = p.User.FirstName,
+                            lastName = p.User.LastName,
+                            profilePictureUrl = p.User.ProfilePictureUrl,
+                            isServiceProvider = p.User.IsServiceProvider
+                        },
+                        content = p.Content,
+                        images = !string.IsNullOrEmpty(p.ImageUrl) ? new[] { p.ImageUrl } : new string[0],
+                        location = "",
+                        tags = new string[0],
+                        isBusinessPost = p.IsBusinessPost,
+                        serviceCategory = "",
+                        priceRange = "",
+                        allowBooking = false,
+                        createdAt = p.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                        likes = likeCounts.FirstOrDefault(lc => lc.PostId == p.Id)?.Count ?? 0,
+                        comments = commentCounts.FirstOrDefault(cc => cc.PostId == p.Id)?.Count ?? 0,
+                        shares = 0,
+                        isLiked = userLikes.Contains(p.Id),
+                        isBookmarked = false
+                    }).ToList();
+                }
+
+                // Always return hasMore as true for infinite scroll experience
+                var hasMore = totalPosts > 0; // If we have any posts, always allow more scrolling
 
                 var response = new
                 {
@@ -122,27 +167,157 @@ namespace FYLA2_Backend.Controllers
             }
         }
 
+        [HttpGet("posts/user/{userId}")]
+        [AllowAnonymous] // Temporarily allow anonymous access for testing
+        public async Task<ActionResult<object>> GetUserPosts(
+            string userId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var currentUserId = GetUserId();
+                _logger.LogInformation($"Getting posts for user {userId}, page {page}, pageSize {pageSize}");
+
+                // Get posts from database for specific user with user information and stats
+                var query = _context.Posts
+                    .Include(p => p.User)
+                    .Where(p => p.UserId == userId)
+                    .OrderByDescending(p => p.CreatedAt)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize);
+
+                var posts = await query.ToListAsync();
+
+                // Get like counts and user likes for each post
+                var postIds = posts.Select(p => p.Id).ToList();
+                var likeCounts = await _context.PostLikes
+                    .Where(pl => postIds.Contains(pl.PostId))
+                    .GroupBy(pl => pl.PostId)
+                    .Select(g => new { PostId = g.Key, Count = g.Count() })
+                    .ToListAsync();
+
+                // Only get user likes if user is authenticated
+                var userLikes = new List<int>();
+                if (!string.IsNullOrEmpty(currentUserId))
+                {
+                    userLikes = await _context.PostLikes
+                        .Where(pl => postIds.Contains(pl.PostId) && pl.UserId == currentUserId)
+                        .Select(pl => pl.PostId)
+                        .ToListAsync();
+                }
+
+                // Get comment counts for each post
+                var commentCounts = await _context.Comments
+                    .Where(c => postIds.Contains(c.PostId))
+                    .GroupBy(c => c.PostId)
+                    .Select(g => new { PostId = g.Key, Count = g.Count() })
+                    .ToListAsync();
+
+                // Transform to frontend format
+                var transformedPosts = posts.Select(p => new
+                {
+                    id = p.Id.ToString(),
+                    userId = p.UserId,
+                    user = new
+                    {
+                        id = p.User.Id,
+                        firstName = p.User.FirstName,
+                        lastName = p.User.LastName,
+                        profilePictureUrl = p.User.ProfilePictureUrl,
+                        isServiceProvider = p.User.IsServiceProvider
+                    },
+                    content = p.Content,
+                    images = !string.IsNullOrEmpty(p.ImageUrl) ? new[] { p.ImageUrl } : new string[0],
+                    location = "", // Not available in Post model
+                    tags = new string[0], // Add tags field to Post model if needed
+                    isBusinessPost = p.IsBusinessPost,
+                    serviceCategory = "", // Add if needed
+                    priceRange = "", // Add if needed
+                    allowBooking = false, // Add if needed
+                    createdAt = p.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    likes = likeCounts.FirstOrDefault(lc => lc.PostId == p.Id)?.Count ?? 0,
+                    comments = commentCounts.FirstOrDefault(cc => cc.PostId == p.Id)?.Count ?? 0,
+                    shares = 0, // Add shares functionality if needed
+                    isLiked = userLikes.Contains(p.Id),
+                    isBookmarked = false // Add bookmarks functionality if needed
+                }).ToList();
+
+                // Check if there are more posts for this user
+                var totalPosts = await _context.Posts.Where(p => p.UserId == userId).CountAsync();
+                var hasMore = (page * pageSize) < totalPosts;
+
+                var response = new
+                {
+                    data = transformedPosts,
+                    pageNumber = page,
+                    pageSize = pageSize,
+                    totalPages = (int)Math.Ceiling((double)totalPosts / pageSize),
+                    totalCount = totalPosts
+                };
+
+                _logger.LogInformation($"Returning {transformedPosts.Count} posts for user {userId}, hasMore: {hasMore}");
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting posts for user {userId}");
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+
         [HttpPost("posts")]
-        public ActionResult<object> CreateSocialPost([FromBody] CreateSocialPostRequest request)
+        public async Task<ActionResult<object>> CreateSocialPost([FromBody] CreateSocialPostRequest request)
         {
             try
             {
                 var userId = GetUserId();
                 _logger.LogInformation($"Creating social post for user {userId}");
 
-                var post = new
+                // Validate required data
+                if (string.IsNullOrWhiteSpace(request.Content) && (request.Images == null || request.Images.Count == 0))
                 {
-                    id = Guid.NewGuid().ToString(),
-                    userId = userId,
-                    content = request.Content,
+                    return BadRequest("Post must contain either content or images");
+                }
+
+                // Create the post in the database
+                var post = new Post
+                {
+                    UserId = userId,
+                    Content = request.Content?.Trim() ?? "",
+                    ImageUrl = request.Images?.FirstOrDefault(), // For now, use first image
+                    IsBusinessPost = request.IsBusinessPost,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.Posts.Add(post);
+                await _context.SaveChangesAsync();
+
+                // Get the user info for the response
+                var user = await _context.Users.FindAsync(userId);
+
+                var response = new
+                {
+                    id = post.Id.ToString(),
+                    userId = post.UserId,
+                    user = new
+                    {
+                        id = user?.Id ?? userId,
+                        firstName = user?.FirstName ?? "",
+                        lastName = user?.LastName ?? "",
+                        profilePictureUrl = user?.ProfilePictureUrl,
+                        isServiceProvider = user?.IsServiceProvider ?? false
+                    },
+                    content = post.Content,
                     images = request.Images ?? new List<string>(),
                     location = request.Location,
                     tags = request.Tags ?? new List<string>(),
-                    isBusinessPost = request.IsBusinessPost,
+                    isBusinessPost = post.IsBusinessPost,
                     serviceCategory = request.ServiceCategory,
                     priceRange = request.PriceRange,
                     allowBooking = request.AllowBooking,
-                    createdAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    createdAt = post.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
                     likes = 0,
                     comments = 0,
                     shares = 0,
@@ -150,7 +325,8 @@ namespace FYLA2_Backend.Controllers
                     isBookmarked = false
                 };
 
-                return Ok(post);
+                _logger.LogInformation($"Successfully created post with ID {post.Id}");
+                return Ok(response);
             }
             catch (Exception ex)
             {
