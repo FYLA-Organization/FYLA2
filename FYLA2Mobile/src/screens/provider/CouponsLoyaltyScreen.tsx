@@ -15,7 +15,6 @@ import {
   FlatList,
   Dimensions,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -236,17 +235,14 @@ const CouponsLoyaltyScreen: React.FC = () => {
   };
 
   const renderCouponCard = ({ item: coupon }: { item: Coupon }) => (
-    <View style={styles.couponCard}>
-      <LinearGradient 
-        colors={coupon.isActive ? COLORS.gradientSuccess : ['#ccc', '#999']} 
-        style={styles.couponGradient}
-      >
+    <View style={[styles.couponCard, { backgroundColor: coupon.isActive ? COLORS.primary : COLORS.textSecondary }]}>
+      <View style={styles.couponGradient}>
         <View style={styles.couponHeader}>
           <Text style={styles.couponTitle}>{coupon.title}</Text>
           <Switch
             value={coupon.isActive}
             onValueChange={(value) => handleToggleCoupon(coupon.id, value)}
-            trackColor={{ false: 'rgba(255,255,255,0.3)', true: 'rgba(255,255,255,0.5)' }}
+            trackColor={{ false: COLORS.borderLight, true: 'rgba(255,255,255,0.3)' }}
             thumbColor="white"
           />
         </View>
@@ -280,13 +276,13 @@ const CouponsLoyaltyScreen: React.FC = () => {
         >
           <Ionicons name="create-outline" size={20} color="white" />
         </TouchableOpacity>
-      </LinearGradient>
+      </View>
     </View>
   );
 
   const renderLoyaltyCard = ({ item: program }: { item: LoyaltyProgram }) => (
-    <View style={styles.loyaltyCard}>
-      <LinearGradient colors={COLORS.gradient} style={styles.loyaltyGradient}>
+    <View style={[styles.loyaltyCard, { backgroundColor: COLORS.accent }]}>
+      <View style={styles.loyaltyGradient}>
         <View style={styles.loyaltyHeader}>
           <Text style={styles.loyaltyTitle}>{program.name}</Text>
           <TouchableOpacity onPress={() => handleEditLoyalty(program)}>
@@ -319,7 +315,7 @@ const CouponsLoyaltyScreen: React.FC = () => {
             <Text style={styles.loyaltyStatLabel}>Points Issued</Text>
           </View>
         </View>
-      </LinearGradient>
+      </View>
     </View>
   );
 
@@ -376,10 +372,10 @@ const CouponsLoyaltyScreen: React.FC = () => {
     return (
       <View style={styles.loadingContainer}>
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-        <LinearGradient colors={COLORS.gradient} style={styles.loadingGradient}>
-          <ActivityIndicator size="large" color="white" />
+        <View style={styles.loadingGradient}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>Loading...</Text>
-        </LinearGradient>
+        </View>
       </View>
     );
   }
@@ -388,17 +384,21 @@ const CouponsLoyaltyScreen: React.FC = () => {
     <>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
       <View style={styles.container}>
-        <LinearGradient colors={COLORS.gradient} style={styles.header}>
+        {/* Clean Modern Header */}
+        <View style={styles.header}>
           <View style={styles.headerContent}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
               <Ionicons name="arrow-back" size={24} color="white" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Marketing Hub</Text>
-            <View style={{ width: 24 }} />
+            <View style={styles.headerRight} />
           </View>
-        </LinearGradient>
+        </View>
 
-        {/* Tabs */}
+        {/* Modern Tab Bar */}
         <View style={styles.tabsContainer}>
           <TabButton 
             title="Coupons" 
@@ -430,10 +430,10 @@ const CouponsLoyaltyScreen: React.FC = () => {
               }
               ListHeaderComponent={
                 <TouchableOpacity style={styles.createButton} onPress={handleCreateCoupon}>
-                  <LinearGradient colors={COLORS.gradientSecondary} style={styles.createButtonGradient}>
+                  <View style={styles.createButtonGradient}>
                     <Ionicons name="add" size={24} color="white" />
                     <Text style={styles.createButtonText}>Create New Coupon</Text>
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               }
               showsVerticalScrollIndicator={false}
@@ -451,10 +451,10 @@ const CouponsLoyaltyScreen: React.FC = () => {
               }
               ListHeaderComponent={
                 <TouchableOpacity style={styles.createButton} onPress={handleCreateLoyalty}>
-                  <LinearGradient colors={COLORS.gradientSecondary} style={styles.createButtonGradient}>
+                  <View style={styles.createButtonGradient}>
                     <Ionicons name="add" size={24} color="white" />
                     <Text style={styles.createButtonText}>Create Loyalty Program</Text>
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               }
               showsVerticalScrollIndicator={false}
@@ -472,10 +472,10 @@ const CouponsLoyaltyScreen: React.FC = () => {
               }
               ListHeaderComponent={
                 <TouchableOpacity style={styles.createButton} onPress={handleCreateMessage}>
-                  <LinearGradient colors={COLORS.gradientSecondary} style={styles.createButtonGradient}>
+                  <View style={styles.createButtonGradient}>
                     <Ionicons name="add" size={24} color="white" />
                     <Text style={styles.createButtonText}>Create Auto Message</Text>
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               }
               showsVerticalScrollIndicator={false}
@@ -499,45 +499,76 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: COLORS.background,
   },
   loadingText: {
-    color: 'white',
+    color: COLORS.text,
     fontSize: 16,
     fontWeight: '600',
     marginTop: 12,
   },
   header: {
+    backgroundColor: COLORS.primary,
     paddingTop: 50,
     paddingBottom: 20,
     paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: 'white',
+    textAlign: 'center',
+    flex: 1,
+  },
+  headerRight: {
+    width: 40,
   },
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: COLORS.surface,
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.borderLight,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   tabButton: {
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 25,
     marginHorizontal: 4,
+    backgroundColor: 'transparent',
   },
   activeTabButton: {
     backgroundColor: COLORS.primary,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   tabButtonText: {
     fontSize: 14,
@@ -549,62 +580,69 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    backgroundColor: COLORS.background,
   },
   listContainer: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   createButton: {
-    borderRadius: 16,
+    borderRadius: 25,
     overflow: 'hidden',
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
   createButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: COLORS.primary,
   },
   createButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     marginLeft: 8,
   },
   couponCard: {
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+    backgroundColor: COLORS.surface,
   },
   couponGradient: {
-    padding: 20,
+    padding: 24,
     position: 'relative',
   },
   couponHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
   couponTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: 'white',
     flex: 1,
+    marginRight: 12,
   },
   couponDescription: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 16,
+    marginBottom: 18,
+    lineHeight: 20,
   },
   couponDetails: {
     flexDirection: 'row',
@@ -613,68 +651,76 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   couponCode: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   couponCodeText: {
     color: 'white',
     fontWeight: '700',
-    letterSpacing: 1,
+    fontSize: 14,
+    letterSpacing: 1.5,
   },
   couponDiscount: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: 'white',
   },
   couponStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: 4,
   },
   couponStat: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
   },
   editButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 25,
+    width: 50,
+    height: 50,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   loyaltyCard: {
-    borderRadius: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
   },
   loyaltyGradient: {
-    padding: 20,
+    padding: 24,
   },
   loyaltyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
   loyaltyTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: 'white',
+    flex: 1,
+    marginRight: 12,
   },
   loyaltyDescription: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 16,
+    marginBottom: 18,
+    lineHeight: 20,
   },
   loyaltyDetails: {
     marginBottom: 16,
@@ -683,15 +729,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+    paddingVertical: 2,
   },
   loyaltyDetailLabel: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
   },
   loyaltyDetailValue: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: 'white',
   },
   loyaltyStats: {
@@ -712,61 +760,76 @@ const styles = StyleSheet.create({
   },
   messageCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
   },
   messageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
   messageInfo: {
     flex: 1,
+    marginRight: 12,
   },
   messageName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: COLORS.text,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   messageTrigger: {
     fontSize: 12,
     color: COLORS.primary,
     fontWeight: '600',
+    backgroundColor: `${COLORS.primary}15`,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
   },
   messageActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
   messageEditButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
   },
   messageText: {
     fontSize: 14,
     color: COLORS.text,
     lineHeight: 20,
-    marginBottom: 12,
+    marginBottom: 16,
+    marginTop: 8,
   },
   messageStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
   },
   messageStat: {
     fontSize: 12,
     color: COLORS.textSecondary,
+    fontWeight: '500',
   },
 });
 

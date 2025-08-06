@@ -13,11 +13,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Service, ServiceProvider, RootStackParamList, CreateBookingRequest } from '../../types';
 import ApiService from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import PushNotificationService from '../../services/pushNotificationService';
+import { COLORS, TYPOGRAPHY } from '../../constants/colors';
 
 type BookingFlowScreenRouteProp = {
   key: string;
@@ -245,7 +245,7 @@ const BookingFlowScreen: React.FC = () => {
         // Show loyalty points notification
         Alert.alert(
           'Booking Confirmed! 🎉',
-          `Your booking has been confirmed!\n\n🏆 You earned ${bookingResponse.loyaltyPoints.pointsEarned} loyalty points!\nTotal Points: ${bookingResponse.loyaltyPoints.totalPoints}\nMembership: ${bookingResponse.loyaltyPoints.membershipTier}`,
+          `Your booking has been confirmed!\n\n🏆 You earned ${bookingResponse.loyaltyPoints.pointsEarned} loyalty points!\nTotal Points: ${bookingResponse.loyaltyPoints.totalPoints}`,
           [
             {
               text: 'Awesome!',
@@ -285,7 +285,7 @@ const BookingFlowScreen: React.FC = () => {
       
       try {
         await PushNotificationService.scheduleBookingReminder(
-          bookingResponse.booking?.id || bookingResponse.id || 'unknown',
+          bookingResponse.booking?.id || 'unknown',
           provider.businessName,
           service.name,
           appointmentDateTime,
@@ -650,11 +650,8 @@ const BookingFlowScreen: React.FC = () => {
 
   const renderPaymentStep = () => (
     <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-      {/* Enhanced Header with Gradient */}
-      <LinearGradient 
-        colors={['#667eea', '#764ba2']} 
-        style={styles.enhancedPaymentHeader}
-      >
+      {/* Enhanced Header */}
+      <View style={styles.enhancedPaymentHeader}>
         <View style={styles.serviceHeaderRow}>
           <View style={styles.serviceInfo}>
             <Text style={styles.enhancedServiceName}>{service.name}</Text>
@@ -668,19 +665,19 @@ const BookingFlowScreen: React.FC = () => {
         
         <View style={styles.appointmentRowEnhanced}>
           <View style={styles.appointmentDetailEnhanced}>
-            <Ionicons name="calendar-outline" size={16} color="rgba(255,255,255,0.9)" />
+            <Ionicons name="calendar-outline" size={16} color={COLORS.textSecondary} />
             <Text style={styles.appointmentTextEnhanced}>{formatDate(selectedDate)}</Text>
           </View>
           <View style={styles.appointmentDetailEnhanced}>
-            <Ionicons name="time-outline" size={16} color="rgba(255,255,255,0.9)" />
+            <Ionicons name="time-outline" size={16} color={COLORS.textSecondary} />
             <Text style={styles.appointmentTextEnhanced}>{formatTime(selectedTimeSlot)}</Text>
           </View>
           <View style={styles.appointmentDetailEnhanced}>
-            <Ionicons name="hourglass-outline" size={16} color="rgba(255,255,255,0.9)" />
+            <Ionicons name="hourglass-outline" size={16} color={COLORS.textSecondary} />
             <Text style={styles.appointmentTextEnhanced}>{service.duration}min</Text>
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Payment Methods Section */}
       <View style={styles.enhancedPaymentSection}>
@@ -809,24 +806,21 @@ const BookingFlowScreen: React.FC = () => {
           onPress={handleConfirmBooking}
           disabled={!selectedPaymentMethod || isBooking || (selectedPaymentMethod === 'credit-card' && !validateCard)}
         >
-          <LinearGradient 
-            colors={['#667eea', '#764ba2']} 
-            style={styles.payButtonGradient}
-          >
+          <View style={styles.payButtonGradient}>
             {isBooking ? (
               <View style={styles.paymentLoadingContainer}>
-                <ActivityIndicator size="small" color="white" />
+                <ActivityIndicator size="small" color={COLORS.surface} />
                 <Text style={styles.enhancedPayButtonText}>Processing...</Text>
               </View>
             ) : (
               <View style={styles.payButtonContent}>
-                <Ionicons name="card-outline" size={24} color="white" />
+                <Ionicons name="card-outline" size={24} color={COLORS.surface} />
                 <Text style={styles.enhancedPayButtonText}>
                   Pay ${pricing.total.toFixed(2)}
                 </Text>
               </View>
             )}
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -867,27 +861,27 @@ const BookingFlowScreen: React.FC = () => {
   };
 
   return (
-    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
-      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
+      <View style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity 
             style={styles.headerBackButton}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Book Appointment</Text>
           <TouchableOpacity 
             style={styles.testButton}
             onPress={testNotification}
           >
-            <Ionicons name="flask" size={20} color="white" />
+            <Ionicons name="flask" size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>
         </View>
         
         {renderStepIndicator()}
-      </LinearGradient>
+      </View>
 
       {/* Step Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -903,7 +897,7 @@ const BookingFlowScreen: React.FC = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.successCard}>
             <View style={styles.successIcon}>
-              <Ionicons name="checkmark-circle" size={64} color="#27AE60" />
+              <Ionicons name="checkmark-circle" size={64} color={COLORS.success} />
             </View>
             <Text style={styles.successTitle}>Booking Confirmed!</Text>
             <Text style={styles.successMessage}>
@@ -923,19 +917,22 @@ const BookingFlowScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: COLORS.background,
   },
   header: {
     paddingTop: 60,
     paddingBottom: 24,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   headerContent: {
     flexDirection: 'row',
@@ -944,43 +941,33 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   headerBackButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: 'white',
+    fontSize: TYPOGRAPHY['2xl'],
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.text,
     letterSpacing: -0.5,
   },
   placeholder: {
-    width: 40,
+    width: 44,
   },
   testButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   stepIndicatorContainer: {
     alignItems: 'center',
@@ -1002,58 +989,52 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: COLORS.background,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: 'rgba(0, 0, 0, 0.15)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
     marginBottom: 8,
   },
   activeStepCircle: {
-    backgroundColor: 'white',
-    borderColor: 'white',
-    shadowColor: 'rgba(255, 255, 255, 0.4)',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 8,
-    transform: [{ scale: 1.1 }],
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+    shadowColor: COLORS.primaryAlpha,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   stepNumber: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.textSecondary,
     letterSpacing: 0.3,
   },
   activeStepNumber: {
-    color: '#667eea',
-    fontSize: 20,
+    color: COLORS.surface,
+    fontSize: TYPOGRAPHY.xl,
   },
   stepLineContainer: {
     flex: 1,
     paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 22, // Half of circle height to center line with circles
+    marginTop: 22,
   },
   stepLine: {
     width: '100%',
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    height: 3,
+    backgroundColor: COLORS.borderLight,
     borderRadius: 2,
   },
   activeStepLine: {
-    backgroundColor: 'white',
-    shadowColor: 'rgba(255, 255, 255, 0.6)',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: COLORS.primary,
   },
   stepLabelsContainer: {
     flexDirection: 'row',
@@ -1075,40 +1056,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   stepLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: TYPOGRAPHY.xs,
+    fontWeight: TYPOGRAPHY.medium,
+    color: COLORS.textSecondary,
     letterSpacing: 0.3,
     textAlign: 'center',
     lineHeight: 14,
     minWidth: 44,
   },
   activeStepLabel: {
-    color: 'white',
-    fontWeight: '800',
-    fontSize: 13,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    color: COLORS.primary,
+    fontWeight: TYPOGRAPHY.semibold,
+    fontSize: TYPOGRAPHY.sm,
   },
   content: {
     flex: 1,
   },
   stepContent: {
-    padding: 24,
+    padding: 20,
   },
   stepTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: 'white',
+    fontSize: TYPOGRAPHY['3xl'],
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.text,
     marginBottom: 8,
     letterSpacing: -0.3,
   },
   stepSubtitle: {
-    fontSize: 17,
-    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: TYPOGRAPHY.lg,
+    color: COLORS.textSecondary,
     marginBottom: 32,
-    fontWeight: '500',
+    fontWeight: TYPOGRAPHY.regular,
     lineHeight: 24,
   },
   dateScroll: {
@@ -1121,8 +1099,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   dateCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
     padding: 16,
     alignItems: 'center',
     width: '31%',
@@ -1130,12 +1108,12 @@ const styles = StyleSheet.create({
     marginRight: '3.5%',
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 6,
+    borderColor: COLORS.border,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
     position: 'relative',
     justifyContent: 'center',
   },
@@ -1143,57 +1121,57 @@ const styles = StyleSheet.create({
     marginRight: 0,
   },
   selectedDateCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderColor: 'white',
-    shadowColor: 'rgba(255, 255, 255, 0.3)',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 8,
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+    shadowColor: COLORS.primaryAlpha,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   dateDay: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: TYPOGRAPHY.sm,
+    color: COLORS.textSecondary,
     marginBottom: 6,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.medium,
     letterSpacing: 0.3,
   },
   dateNumber: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: 'white',
+    fontSize: TYPOGRAPHY['2xl'],
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.text,
     marginBottom: 6,
     letterSpacing: -0.5,
   },
   dateMonth: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sm,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.medium,
     letterSpacing: 0.3,
   },
   selectedDateText: {
-    color: 'white',
+    color: COLORS.surface,
   },
   todayBadge: {
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: '#4ECDC4',
+    backgroundColor: COLORS.success,
     borderRadius: 12,
     paddingHorizontal: 6,
     paddingVertical: 4,
     borderWidth: 2,
-    borderColor: 'white',
-    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    borderColor: COLORS.surface,
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
   todayText: {
     fontSize: 9,
-    color: 'white',
-    fontWeight: '800',
+    color: COLORS.surface,
+    fontWeight: TYPOGRAPHY.bold,
     letterSpacing: 0.2,
   },
   loadingContainer: {
@@ -1202,9 +1180,9 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    fontSize: 17,
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontWeight: '500',
+    fontSize: TYPOGRAPHY.lg,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.regular,
   },
   timeSlotsContainer: {
     flex: 1,
@@ -1212,37 +1190,35 @@ const styles = StyleSheet.create({
   noSlotsContainer: {
     alignItems: 'center',
     paddingVertical: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 24,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: COLORS.border,
     marginHorizontal: 4,
   },
   noSlotsText: {
-    fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: TYPOGRAPHY.lg,
+    color: COLORS.text,
     marginTop: 16,
     marginBottom: 24,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.medium,
     textAlign: 'center',
   },
   changeDateButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 24,
     paddingVertical: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 6,
+    borderRadius: 12,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   changeDateText: {
-    color: 'white',
-    fontWeight: '700',
-    fontSize: 16,
+    color: COLORS.surface,
+    fontWeight: TYPOGRAPHY.semibold,
+    fontSize: TYPOGRAPHY.base,
     letterSpacing: 0.3,
   },
   timeGrid: {
@@ -1252,87 +1228,87 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   timeSlot: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 18,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     width: '47%',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    borderColor: COLORS.border,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  selectedTimeSlot: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+    shadowColor: COLORS.primaryAlpha,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
   },
-  selectedTimeSlot: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderColor: 'white',
-    shadowColor: 'rgba(255, 255, 255, 0.3)',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 8,
-  },
   unavailableTimeSlot: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: COLORS.borderLight,
+    borderColor: COLORS.border,
     opacity: 0.5,
   },
   timeSlotText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: 'white',
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: TYPOGRAPHY.semibold,
+    color: COLORS.text,
     letterSpacing: 0.2,
   },
   selectedTimeSlotText: {
-    color: 'white',
-    fontWeight: '800',
+    color: COLORS.surface,
+    fontWeight: TYPOGRAPHY.bold,
   },
   unavailableTimeSlotText: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: COLORS.textSecondary,
   },
   timeSlotPrice: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: TYPOGRAPHY.sm,
+    color: COLORS.textSecondary,
     marginTop: 6,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.medium,
   },
   selectedTimeSlotPrice: {
-    color: 'white',
-    fontWeight: '700',
+    color: COLORS.surface,
+    fontWeight: TYPOGRAPHY.semibold,
   },
   reviewCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 28,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
     padding: 24,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    shadowColor: 'rgba(0, 0, 0, 0.15)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 10,
+    borderColor: COLORS.border,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   serviceInfo: {
     marginBottom: 24,
     paddingBottom: 24,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+    borderBottomColor: COLORS.border,
   },
   serviceName: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: 'white',
+    fontSize: TYPOGRAPHY.xl,
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.text,
     marginBottom: 6,
     letterSpacing: -0.3,
   },
   providerName: {
-    fontSize: 17,
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontWeight: '500',
+    fontSize: TYPOGRAPHY.lg,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.regular,
   },
   bookingDetails: {
     gap: 20,
@@ -1342,22 +1318,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detailText: {
-    fontSize: 17,
-    color: 'white',
+    fontSize: TYPOGRAPHY.lg,
+    color: COLORS.text,
     marginLeft: 16,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.medium,
     letterSpacing: 0.2,
   },
   priceRow: {
     marginTop: 12,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+    borderTopColor: COLORS.border,
   },
   priceText: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFD700',
+    fontSize: TYPOGRAPHY['2xl'],
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.primary,
     marginLeft: 16,
     letterSpacing: 0.2,
   },
@@ -1367,103 +1343,100 @@ const styles = StyleSheet.create({
   },
   backButton: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
     padding: 18,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 6,
+    borderColor: COLORS.border,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   backButtonText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: 'white',
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: TYPOGRAPHY.semibold,
+    color: COLORS.textSecondary,
     letterSpacing: 0.3,
-    opacity: 0.9,
   },
   confirmButton: {
     flex: 2,
-    backgroundColor: 'rgba(255, 215, 0, 0.9)',
-    borderRadius: 20,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
     padding: 18,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FFD700',
-    shadowColor: 'rgba(255, 215, 0, 0.3)',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowColor: COLORS.primaryAlpha,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   confirmButtonDisabled: {
     opacity: 0.6,
   },
   confirmButtonText: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: 'white',
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.surface,
     letterSpacing: 0.3,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: COLORS.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   successCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 32,
-    padding: 40,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 32,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
-    shadowColor: 'rgba(0, 0, 0, 0.25)',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 1,
-    shadowRadius: 40,
-    elevation: 20,
+    borderColor: COLORS.border,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 12,
     maxWidth: '90%',
     minWidth: 300,
   },
   successIcon: {
     marginBottom: 24,
-    shadowColor: 'rgba(39, 174, 96, 0.3)',
+    shadowColor: COLORS.successAlpha,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
   },
   successTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#333',
+    fontSize: TYPOGRAPHY['3xl'],
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.text,
     marginBottom: 16,
     letterSpacing: -0.5,
     textAlign: 'center',
   },
   successMessage: {
-    fontSize: 17,
-    color: '#666',
+    fontSize: TYPOGRAPHY.lg,
+    color: COLORS.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 26,
-    fontWeight: '500',
+    fontWeight: TYPOGRAPHY.regular,
   },
   successDetails: {
     gap: 12,
     alignItems: 'center',
   },
   successDetailText: {
-    fontSize: 17,
-    color: '#333',
+    fontSize: TYPOGRAPHY.lg,
+    color: COLORS.text,
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.medium,
     letterSpacing: 0.2,
   },
   // Payment Step Styles
@@ -1519,10 +1492,10 @@ const styles = StyleSheet.create({
   },
   paymentMethodsContainer: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: COLORS.surface,
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1530,19 +1503,19 @@ const styles = StyleSheet.create({
   },
   priceBreakdownContainer: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: COLORS.surface,
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.text,
     marginBottom: 12,
   },
   paymentMethodsList: {
@@ -1558,36 +1531,36 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   priceLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: TYPOGRAPHY.sm,
+    color: COLORS.textSecondary,
   },
   priceValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.medium,
+    color: COLORS.text,
   },
   totalPriceRow: {
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: COLORS.border,
     paddingTop: 8,
     marginTop: 4,
   },
   totalPriceLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.text,
   },
   totalPriceValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FF6B6B',
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.primary,
   },
   compactNotice: {
-    backgroundColor: 'white',
+    backgroundColor: COLORS.surface,
     borderRadius: 12,
     padding: 12,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -1599,10 +1572,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   noticeText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: TYPOGRAPHY.xs,
+    color: COLORS.textSecondary,
     marginLeft: 8,
-    fontWeight: '500',
+    fontWeight: TYPOGRAPHY.medium,
   },
   compactBackButton: {
     flex: 0,
@@ -1625,38 +1598,41 @@ const styles = StyleSheet.create({
   },
   // Enhanced Payment Step Styles
   enhancedPaymentHeader: {
+    backgroundColor: COLORS.surface,
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 6,
   },
   enhancedServiceName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: TYPOGRAPHY.xl,
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.text,
     marginBottom: 4,
   },
   enhancedProviderName: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '500',
+    fontSize: TYPOGRAPHY.base,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.medium,
   },
   totalDisplayEnhanced: {
     alignItems: 'flex-end',
   },
   totalLabelEnhanced: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sm,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.medium,
   },
   totalAmountEnhanced: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: TYPOGRAPHY['3xl'],
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.primary,
   },
   appointmentRowEnhanced: {
     flexDirection: 'row',
@@ -1664,7 +1640,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.2)',
+    borderTopColor: COLORS.border,
   },
   appointmentDetailEnhanced: {
     flexDirection: 'row',
@@ -1672,8 +1648,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   appointmentTextEnhanced: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
+    fontSize: TYPOGRAPHY.sm,
+    color: COLORS.text,
     marginLeft: 6,
     fontWeight: '500',
   },
@@ -1878,14 +1854,16 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   payButtonGradient: {
+    backgroundColor: COLORS.primary,
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 12,
   },
   enhancedPayButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: TYPOGRAPHY.bold,
+    color: COLORS.surface,
     marginLeft: 8,
   },
 });

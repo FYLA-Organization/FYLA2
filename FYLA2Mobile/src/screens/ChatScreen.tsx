@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { ChatMessage, FileUploadResponse } from '../types';
 import { useChat } from '../contexts/ChatContext';
@@ -38,6 +38,12 @@ const ChatScreen: React.FC = () => {
   const { userId, user } = route.params as ChatScreenRouteParams;
   const { user: currentUser } = useAuth();
   const { messages, sendMessage, loadMessages, markAsRead, isConnected } = useChat();
+  
+  // Safety check for user
+  if (!user || !userId) {
+    navigation.goBack();
+    return null;
+  }
   
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
@@ -341,7 +347,7 @@ const ChatScreen: React.FC = () => {
           {/* Document Attachment */}
           {hasAttachment && item.messageType === 'file' && (
             <TouchableOpacity style={styles.documentContainer}>
-              <Icon name="document" size={24} color="#667eea" />
+              <Ionicons name="document" size={24} color="#667eea" />
               <View style={styles.documentInfo}>
                 <Text style={styles.documentName} numberOfLines={1}>
                   {item.attachmentName || 'Document'}
@@ -367,13 +373,13 @@ const ChatScreen: React.FC = () => {
             {isOwnMessage && (
               <View style={styles.messageStatus}>
                 {item.status === 'Sent' && (
-                  <Icon name="checkmark" size={14} color="#999" style={styles.readIcon} />
+                  <Ionicons name="checkmark" size={14} color="#999" style={styles.readIcon} />
                 )}
                 {item.status === 'Delivered' && (
-                  <Icon name="checkmark-done" size={14} color="#999" style={styles.readIcon} />
+                  <Ionicons name="checkmark-done" size={14} color="#999" style={styles.readIcon} />
                 )}
                 {item.status === 'Read' && (
-                  <Icon name="checkmark-done" size={14} color="#4CAF50" style={styles.readIcon} />
+                  <Ionicons name="checkmark-done" size={14} color="#4CAF50" style={styles.readIcon} />
                 )}
               </View>
             )}
@@ -386,7 +392,7 @@ const ChatScreen: React.FC = () => {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Text style={styles.emptyStateText}>
-        Start your conversation with {user.firstName}
+        Start your conversation with {user?.firstName || 'this user'}
       </Text>
     </View>
   );
@@ -396,22 +402,22 @@ const ChatScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         
         <View style={styles.headerUserInfo}>
-          {user.profilePictureUrl ? (
+          {user?.profilePictureUrl ? (
             <Image source={{ uri: user.profilePictureUrl }} style={styles.headerAvatar} />
           ) : (
             <View style={[styles.headerAvatar, styles.defaultHeaderAvatar]}>
               <Text style={styles.headerAvatarText}>
-                {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
               </Text>
             </View>
           )}
           <View style={styles.headerUserDetails}>
             <Text style={styles.headerUserName}>
-              {user.firstName} {user.lastName}
+              {user?.firstName} {user?.lastName}
             </Text>
             <Text style={styles.connectionStatus}>
               {isConnected ? 'Online' : 'Connecting...'}
@@ -444,7 +450,7 @@ const ChatScreen: React.FC = () => {
         {otherUserTyping && (
           <View style={styles.typingIndicator}>
             <Text style={styles.typingText}>
-              {user.firstName} is typing...
+              {user?.firstName || 'User'} is typing...
             </Text>
           </View>
         )}
@@ -456,7 +462,7 @@ const ChatScreen: React.FC = () => {
             onPress={showAttachmentOptions}
             disabled={!isConnected}
           >
-            <Icon 
+            <Ionicons 
               name="attach" 
               size={20} 
               color={isConnected ? '#667eea' : '#ccc'} 
@@ -476,7 +482,7 @@ const ChatScreen: React.FC = () => {
             onPress={handleSendMessage}
             disabled={!inputText.trim() || sending || !isConnected}
           >
-            <Icon 
+            <Ionicons 
               name={sending ? 'hourglass' : 'send'} 
               size={20} 
               color={(!inputText.trim() || sending || !isConnected) ? '#ccc' : '#fff'} 
@@ -607,7 +613,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 4,
     borderTopWidth: 1,
     borderTopColor: '#eee',
     backgroundColor: '#fff',
