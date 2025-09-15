@@ -124,23 +124,26 @@ namespace FYLA2_Backend.Services
       var pointsWithProvider = 0;
       if (!string.IsNullOrEmpty(providerId))
       {
-        pointsWithProvider = await _context.LoyaltyTransactions
+        var loyaltyTransactions = await _context.LoyaltyTransactions
             .Where(lt => lt.UserId == clientId && lt.ProviderId == providerId &&
                         (lt.ExpiresAt == null || lt.ExpiresAt > DateTime.UtcNow))
-            .SumAsync(lt => lt.TransactionType == LoyaltyTransactionType.Earned ? lt.Points : -lt.Points);
+            .ToListAsync();
+        
+        pointsWithProvider = loyaltyTransactions
+            .Sum(lt => lt.TransactionType == LoyaltyTransactionType.Earned ? lt.Points : -lt.Points);
       }
 
       // Get booking stats
-      var bookingStats = await _context.Bookings
+      var bookings = await _context.Bookings
           .Where(b => b.ClientId == clientId &&
                      (providerId == null || b.ProviderId == providerId))
-          .GroupBy(b => 1)
-          .Select(g => new
-          {
-            TotalBookings = g.Count(),
-            TotalSpent = g.Sum(b => (decimal)b.TotalPrice)
-          })
-          .FirstOrDefaultAsync();
+          .ToListAsync();
+
+      var bookingStats = bookings.Count > 0 ? new
+      {
+        TotalBookings = bookings.Count,
+        TotalSpent = bookings.Sum(b => b.TotalPrice)
+      } : null;
 
       // Determine membership tier based on total spent
       var membershipTier = DetermineMembershipTier(bookingStats?.TotalSpent ?? 0);

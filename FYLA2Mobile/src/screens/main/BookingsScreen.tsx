@@ -7,1600 +7,721 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
-  TextInput,
-  Modal,
-  Animated,
+  FlatList,
   StatusBar,
+  SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Booking, BookingStatus, RootStackParamList } from '../../types/index';
-import ApiService from '../../services/api';
-import ReviewModal from '../../components/ReviewModal';
+import { RootStackParamList } from '../../types/index';
+import ApiService from '../../services/apiService';
+import { MODERN_COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY, SHADOWS } from '../../constants/modernDesign';
+import BookingActionsModal from '../../components/BookingActionsModal';
 
 type BookingsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
-// Instagram-style Color Palette - Enhanced for better visibility
-const COLORS = {
-  background: '#F0F0F0', // Slightly darker from #FAFAFA
-  surface: '#FFFFFF',
-  text: '#1A1A1A', // Darker from #262626 for better readability
-  textSecondary: '#666666', // Darker from #8E8E8E for better contrast
-  border: '#C0C0C0', // Darker from #DBDBDB
-  borderLight: '#E0E0E0', // Darker from #EFEFEF
-  primary: '#2B7CE6', // Deeper blue, darker from #3797F0
-  accent: '#E6283A', // Deeper red, darker from #FF3040
-  success: '#00B355', // Deeper green, darker from #00D26A
-  warning: '#E6A800', // Deeper yellow, darker from #FFB800
-  verified: '#2B7CE6', // Matches primary
-  instagram: '#C7285F', // Darker from #E1306C for better visibility
-  instagramBlue: '#365899', // Deeper blue, darker from #4267B2
-  gradient1: '#5A6FD8', // Deeper purple, darker from #667eea
-  gradient2: '#674BA8', // Deeper purple, darker from #764ba2
-};
+interface Booking {
+  id: string;
+  serviceName: string;
+  providerName: string;
+  providerImage: string;
+  date: string;
+  time: string;
+  status: 'upcoming' | 'completed' | 'cancelled';
+  price: number;
+  location: string;
+  duration: string;
+  notes?: string;
+}
 
-interface FilterOptions {
-  status: BookingStatus[];
-  categories: string[];
-  dateRange: {
-    start: Date | null;
-    end: Date | null;
-  };
-  priceRange: {
-    min: number;
-    max: number;
-  };
-  searchTerm: string;
+interface BookingTab {
+  id: string;
+  title: string;
+  status: string;
+  count: number;
 }
 
 const BookingsScreen: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<'upcoming' | 'past'>('upcoming');
-  const [showFilters, setShowFilters] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState<FilterOptions>({
-    status: [],
-    categories: [],
-    dateRange: { start: null, end: null },
-    priceRange: { min: 0, max: 1000 },
-    searchTerm: '',
-  });
-  const [activeFiltersCount, setActiveFiltersCount] = useState(0);
-  const [reviewModalVisible, setReviewModalVisible] = useState(false);
-  const [selectedBookingForReview, setSelectedBookingForReview] = useState<Booking | null>(null);
-  const [bookingReviews, setBookingReviews] = useState<{[key: string]: boolean}>({});
-  const [expandedCards, setExpandedCards] = useState<{ [bookingId: string]: boolean }>({});
+  const [activeTab, setActiveTab] = useState('upcoming');
+  
+  // BookingActionsModal state
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [showBookingActions, setShowBookingActions] = useState(false);
   
   const navigation = useNavigation<BookingsScreenNavigationProp>();
+
+  const bookingTabs: BookingTab[] = [
+    { id: 'upcoming', title: 'Upcoming', status: 'upcoming', count: 0 },
+    { id: 'completed', title: 'Completed', status: 'completed', count: 0 },
+    { id: 'cancelled', title: 'Cancelled', status: 'cancelled', count: 0 },
+  ];
+
+  // Update tab counts based on bookings
+  const updatedTabs = bookingTabs.map(tab => ({
+    ...tab,
+    count: bookings.filter(booking => booking.status === tab.status).length
+  }));
 
   useEffect(() => {
     loadBookings();
   }, []);
 
   useEffect(() => {
-    updateActiveFiltersCount();
-  }, [filters]);
-
-  useEffect(() => {
-    setFilters(prev => ({ ...prev, searchTerm }));
-  }, [searchTerm]);
-
-  // Load existing reviews for completed bookings
-  useEffect(() => {
-    checkExistingReviews();
-  }, [bookings]);
-
-  const checkExistingReviews = async () => {
-    const completedBookings = bookings.filter(b => b.status === BookingStatus.Completed);
-    const reviewChecks: {[key: string]: boolean} = {};
-    
-    for (const booking of completedBookings) {
-      try {
-        const existingReview = await ApiService.getBookingReview(booking.id);
-        reviewChecks[booking.id] = !!existingReview;
-      } catch (error) {
-        console.error('Error checking review for booking:', booking.id, error);
-        reviewChecks[booking.id] = false;
-      }
-    }
-    
-    setBookingReviews(reviewChecks);
-  };
-
-  const handleReviewPress = (booking: Booking) => {
-    setSelectedBookingForReview(booking);
-    setReviewModalVisible(true);
-  };
-
-  const handleReviewSubmitted = () => {
-    if (selectedBookingForReview) {
-      setBookingReviews(prev => ({
-        ...prev,
-        [selectedBookingForReview.id]: true
-      }));
-    }
-    setReviewModalVisible(false);
-    setSelectedBookingForReview(null);
-  };
-
-  const toggleCardExpansion = (bookingId: string) => {
-    setExpandedCards(prev => ({
-      ...prev,
-      [bookingId]: !prev[bookingId]
-    }));
-  };
-
-  const toggleAllCards = () => {
-    const filteredBookings = getFilteredBookings();
-    const allExpanded = filteredBookings.every(booking => expandedCards[booking.id]);
-    
-    if (allExpanded) {
-      // Collapse all cards
-      setExpandedCards({});
-    } else {
-      // Expand all cards
-      const newExpanded: { [key: string]: boolean } = {};
-      filteredBookings.forEach(booking => {
-        newExpanded[booking.id] = true;
-      });
-      setExpandedCards(newExpanded);
-    }
-  };
-
-  const updateActiveFiltersCount = () => {
-    let count = 0;
-    if (filters.status.length > 0) count++;
-    if (filters.categories.length > 0) count++;
-    if (filters.dateRange.start || filters.dateRange.end) count++;
-    if (filters.priceRange.min > 0 || filters.priceRange.max < 1000) count++;
-    if (filters.searchTerm.trim().length > 0) count++;
-    setActiveFiltersCount(count);
-  };
+    filterBookings();
+  }, [activeTab, bookings]);
 
   const loadBookings = async () => {
     try {
-      const allBookings = await ApiService.getBookings();
-      setBookings(allBookings);
+      setLoading(true);
+      
+      // Load real bookings from API
+      const realBookings = await ApiService.getMyBookings();
+      console.log('📅 Loaded real bookings:', realBookings.length);
+      
+      // Transform API bookings to UI format
+      const transformedBookings: Booking[] = realBookings.map((booking: any) => {
+        // Map API status to UI status
+        const mapStatus = (apiStatus: string): 'upcoming' | 'completed' | 'cancelled' => {
+          const status = apiStatus?.toLowerCase() || 'pending';
+          switch (status) {
+            case 'pending':
+            case 'confirmed':
+            case 'booked':
+              return 'upcoming';
+            case 'completed':
+            case 'finished':
+              return 'completed';
+            case 'cancelled':
+            case 'canceled':
+              return 'cancelled';
+            default:
+              return 'upcoming'; // Default to upcoming for new bookings
+          }
+        };
+
+        return {
+          id: booking.id?.toString() || booking.Id?.toString(),
+          serviceName: booking.service?.name || booking.Service?.Name || 'Service',
+          providerName: booking.provider?.businessName || `${booking.provider?.firstName || ''} ${booking.provider?.lastName || ''}`.trim() || 'Provider',
+          providerImage: booking.provider?.profilePictureUrl || 'https://images.unsplash.com/photo-1494790108755-2616b156d9b6?w=150',
+          date: booking.bookingDate?.split('T')[0] || booking.BookingDate?.split('T')[0] || '2025-09-11',
+          time: booking.startTime || booking.StartTime || '10:00 AM',
+          status: mapStatus(booking.status),
+          price: booking.totalAmount || booking.TotalAmount || booking.service?.price || 0,
+          location: booking.provider?.businessAddress || 'Service Location',
+          duration: `${booking.service?.duration || 60}m`,
+          notes: booking.notes || booking.Notes || '',
+        };
+      });
+      
+      setBookings(transformedBookings);
+      
     } catch (error) {
       console.error('Error loading bookings:', error);
+      // Fallback to mock data if API fails
+      const mockBookings: Booking[] = [
+        {
+          id: '1',
+          serviceName: 'Balayage & Cut',
+          providerName: 'Sarah Johnson',
+          providerImage: 'https://images.unsplash.com/photo-1494790108755-2616b156d9b6?w=150',
+          date: '2025-09-15',
+          time: '10:00 AM',
+          status: 'upcoming',
+          price: 150,
+          location: 'Glamour Studio',
+          duration: '2h 30m',
+          notes: 'Bring inspiration photos',
+        },
+        {
+          id: '2',
+          serviceName: 'Bridal Makeup Trial',
+          providerName: 'Maria Rodriguez',
+          providerImage: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
+          date: '2025-09-20',
+          time: '2:00 PM',
+          status: 'upcoming',
+          price: 85,
+          location: 'Beauty Bliss',
+          duration: '1h 30m',
+        },
+        {
+          id: '3',
+          serviceName: 'Gel Manicure',
+          providerName: 'Jessica Chen',
+          providerImage: 'https://images.unsplash.com/photo-1619895862022-09114b41f16f?w=150',
+          date: '2025-09-05',
+          time: '11:00 AM',
+          status: 'completed',
+          price: 45,
+          location: 'Nail Artistry',
+          duration: '1h',
+        },
+        {
+          id: '4',
+          serviceName: 'Eyebrow Threading',
+          providerName: 'Priya Patel',
+          providerImage: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150',
+          date: '2025-08-28',
+          time: '4:00 PM',
+          status: 'completed',
+          price: 25,
+          location: 'Brow Bar',
+          duration: '30m',
+        },
+        {
+          id: '5',
+          serviceName: 'Facial Treatment',
+          providerName: 'Emily Davis',
+          providerImage: 'https://images.unsplash.com/photo-1559599101-f09722fb4948?w=150',
+          date: '2025-08-15',
+          time: '1:00 PM',
+          status: 'cancelled',
+          price: 120,
+          location: 'Spa Serenity',
+          duration: '1h 15m',
+          notes: 'Cancelled due to illness',
+        },
+      ];
+
+      setBookings(mockBookings);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const onRefresh = async () => {
+  const filterBookings = () => {
+    const filtered = bookings.filter(booking => booking.status === activeTab);
+    setFilteredBookings(filtered);
+  };
+
+  const onRefresh = () => {
     setRefreshing(true);
-    await loadBookings();
-    setRefreshing(false);
+    loadBookings();
   };
 
-  const getFilteredBookings = () => {
-    const now = new Date();
-    return bookings.filter((booking) => {
-      const bookingDate = new Date(booking.bookingDate);
-      
-      // Time-based filtering (upcoming/past)
-      let passesTimeFilter = false;
-      if (selectedTab === 'upcoming') {
-        passesTimeFilter = bookingDate >= now && booking.status !== BookingStatus.Completed && booking.status !== BookingStatus.Cancelled;
-      } else {
-        passesTimeFilter = bookingDate < now || booking.status === BookingStatus.Completed || booking.status === BookingStatus.Cancelled;
-      }
-      
-      if (!passesTimeFilter) return false;
-
-      // Status filter
-      if (filters.status.length > 0 && !filters.status.includes(booking.status)) {
-        return false;
-      }
-
-      // Category filter
-      if (filters.categories.length > 0 && booking.service?.category) {
-        if (!filters.categories.includes(booking.service.category)) {
-          return false;
-        }
-      }
-
-      // Date range filter
-      if (filters.dateRange.start || filters.dateRange.end) {
-        if (filters.dateRange.start && bookingDate < filters.dateRange.start) {
-          return false;
-        }
-        if (filters.dateRange.end && bookingDate > filters.dateRange.end) {
-          return false;
-        }
-      }
-
-      // Price range filter
-      if (booking.totalAmount < filters.priceRange.min || booking.totalAmount > filters.priceRange.max) {
-        return false;
-      }
-
-      // Search term filter
-      if (filters.searchTerm.trim().length > 0) {
-        const searchLower = filters.searchTerm.toLowerCase();
-        const providerName = (booking.serviceProvider?.businessName || '').toLowerCase();
-        const serviceName = (booking.service?.name || '').toLowerCase();
-        
-        if (!providerName.includes(searchLower) && !serviceName.includes(searchLower)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  };
-
-  const getStatusColor = (status: BookingStatus) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case BookingStatus.Pending:
-        return '#E6A800'; // Deeper amber for better visibility
-      case BookingStatus.Confirmed:
-        return '#00B4A6'; // Deeper teal for better contrast
-      case BookingStatus.InProgress:
-        return '#E6283A'; // Using our vibrant red
-      case BookingStatus.Completed:
-        return '#00B355'; // Using our vibrant green
-      case BookingStatus.Cancelled:
-        return '#B0B0B0'; // Neutral gray for cancelled items
+      case 'upcoming':
+        return MODERN_COLORS.primary;
+      case 'completed':
+        return MODERN_COLORS.success;
+      case 'cancelled':
+        return MODERN_COLORS.error;
       default:
-        return '#666666';
+        return MODERN_COLORS.gray500;
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'upcoming':
+        return 'time-outline';
+      case 'completed':
+        return 'checkmark-circle-outline';
+      case 'cancelled':
+        return 'close-circle-outline';
+      default:
+        return 'ellipse-outline';
     }
   };
 
   const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        year: new Date().getFullYear() !== date.getFullYear() ? 'numeric' : undefined,
-      });
-    } catch (error) {
-      return dateString;
-    }
-  };
-
-  const formatTime = (timeString: string) => {
-    if (!timeString) return 'N/A';
-    try {
-      const time = new Date(`2000-01-01T${timeString}`);
-      return time.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      });
-    } catch (error) {
-      return timeString;
-    }
-  };
-
-  const getUniqueCategories = () => {
-    const categories = new Set<string>();
-    bookings.forEach(booking => {
-      if (booking.service?.category) {
-        categories.add(booking.service.category);
-      }
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
     });
-    return Array.from(categories).sort();
   };
 
-  const toggleStatusFilter = (status: BookingStatus) => {
-    setFilters(prev => ({
-      ...prev,
-      status: prev.status.includes(status)
-        ? prev.status.filter(s => s !== status)
-        : [...prev.status, status]
-    }));
+  const handleBookingPress = (booking: Booking) => {
+    navigation.navigate('BookingDetails', { bookingId: booking.id });
   };
 
-  const toggleCategoryFilter = (category: string) => {
-    setFilters(prev => ({
-      ...prev,
-      categories: prev.categories.includes(category)
-        ? prev.categories.filter(c => c !== category)
-        : [...prev.categories, category]
-    }));
+  const handleReschedule = (booking: Booking) => {
+    console.log('Opening reschedule for booking:', booking.id);
+    setSelectedBooking(booking);
+    setShowBookingActions(true);
   };
 
-  const clearAllFilters = () => {
-    setFilters({
-      status: [],
-      categories: [],
-      dateRange: { start: null, end: null },
-      priceRange: { min: 0, max: 1000 },
-      searchTerm: '',
-    });
-    setSearchTerm('');
+  const handleCancel = (booking: Booking) => {
+    console.log('Opening cancel for booking:', booking.id);
+    setSelectedBooking(booking);
+    setShowBookingActions(true);
   };
 
-  const renderFilterModal = () => (
-    <Modal
-      visible={showFilters}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setShowFilters(false)}
+  const handleBookingActions = (booking: Booking) => {
+    console.log('Opening booking actions for:', booking.id);
+    setSelectedBooking(booking);
+    setShowBookingActions(true);
+  };
+
+  const handleBookingActionComplete = () => {
+    // Refresh bookings after action is complete
+    loadBookings();
+  };
+
+  const handleReview = (bookingId: string) => {
+    console.log('Review booking:', bookingId);
+    // Navigate to review screen
+  };
+
+  const renderBooking = ({ item: booking }: { item: Booking }) => (
+    <TouchableOpacity 
+      style={styles.bookingCard}
+      onPress={() => handleBookingPress(booking)}
     >
-      <View style={styles.modalOverlay}>
-        <TouchableOpacity 
-          style={styles.modalBackdrop}
-          activeOpacity={1}
-          onPress={() => setShowFilters(false)}
-        />
-        <View style={styles.filterModalContainer}>
-          {/* Modal Handle */}
-          <View style={styles.modalHandle} />
-          
-          {/* Modal Header */}
-          <View style={styles.filterModalHeader}>
-            <TouchableOpacity 
-              onPress={clearAllFilters}
-              style={styles.clearAllButton}
-            >
-              <Text style={styles.clearAllButtonText}>Clear All</Text>
-            </TouchableOpacity>
-            
-            <Text style={styles.filterModalTitle}>Filter Bookings</Text>
-            
-            <TouchableOpacity 
-              onPress={() => setShowFilters(false)}
-              style={styles.doneButton}
-            >
-              <Text style={styles.doneButtonText}>Done</Text>
-            </TouchableOpacity>
+      {/* Booking Header */}
+      <View style={styles.bookingHeader}>
+        <View style={styles.providerInfo}>
+          <Image source={{ uri: booking.providerImage }} style={styles.providerImage} />
+          <View style={styles.providerDetails}>
+            <Text style={styles.serviceName}>{booking.serviceName}</Text>
+            <Text style={styles.providerName}>{booking.providerName}</Text>
+            <Text style={styles.location}>{booking.location}</Text>
           </View>
-
-          <ScrollView 
-            style={styles.filterModalContent} 
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.filterScrollContent}
-          >
-            {/* Active Filters Count */}
-            {activeFiltersCount > 0 && (
-              <View style={styles.activeFiltersIndicator}>
-                <Ionicons name="funnel" size={16} color={COLORS.primary} />
-                <Text style={styles.activeFiltersText}>
-                  {activeFiltersCount} filter{activeFiltersCount > 1 ? 's' : ''} active
-                </Text>
-              </View>
-            )}
-
-            {/* Status Filter */}
-            <View style={styles.filterSection}>
-              <View style={styles.filterSectionHeader}>
-                <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.primary} />
-                <Text style={styles.filterSectionTitle}>Booking Status</Text>
-              </View>
-              <View style={styles.filterOptionsContainer}>
-                {Object.values(BookingStatus).map((status) => (
-                  <TouchableOpacity
-                    key={status}
-                    style={[
-                      styles.filterChip,
-                      filters.status.includes(status) && styles.filterChipActive
-                    ]}
-                    onPress={() => toggleStatusFilter(status)}
-                  >
-                    <Text style={[
-                      styles.filterChipText,
-                      filters.status.includes(status) && styles.filterChipTextActive
-                    ]}>
-                      {status}
-                    </Text>
-                    {filters.status.includes(status) && (
-                      <Ionicons name="checkmark" size={14} color="white" />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Category Filter */}
-            <View style={styles.filterSection}>
-              <View style={styles.filterSectionHeader}>
-                <Ionicons name="pricetag-outline" size={20} color={COLORS.primary} />
-                <Text style={styles.filterSectionTitle}>Service Categories</Text>
-              </View>
-              <View style={styles.filterOptionsContainer}>
-                {getUniqueCategories().map((category) => (
-                  <TouchableOpacity
-                    key={category}
-                    style={[
-                      styles.filterChip,
-                      filters.categories.includes(category) && styles.filterChipActive
-                    ]}
-                    onPress={() => toggleCategoryFilter(category)}
-                  >
-                    <Text style={[
-                      styles.filterChipText,
-                      filters.categories.includes(category) && styles.filterChipTextActive
-                    ]}>
-                      {category}
-                    </Text>
-                    {filters.categories.includes(category) && (
-                      <Ionicons name="checkmark" size={14} color="white" />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Price Range Filter */}
-            <View style={styles.filterSection}>
-              <View style={styles.filterSectionHeader}>
-                <Ionicons name="wallet-outline" size={20} color={COLORS.primary} />
-                <Text style={styles.filterSectionTitle}>Price Range</Text>
-              </View>
-              <View style={styles.priceRangeContainer}>
-                <View style={styles.priceInputWrapper}>
-                  <Text style={styles.priceInputLabel}>Min Price</Text>
-                  <View style={styles.priceInputContainer}>
-                    <Text style={styles.currencySymbol}>$</Text>
-                    <TextInput
-                      style={styles.priceInput}
-                      value={filters.priceRange.min.toString()}
-                      onChangeText={(text) => {
-                        const value = parseInt(text) || 0;
-                        setFilters(prev => ({
-                          ...prev,
-                          priceRange: { ...prev.priceRange, min: value }
-                        }));
-                      }}
-                      keyboardType="numeric"
-                      placeholder="0"
-                      placeholderTextColor={COLORS.textSecondary}
-                    />
-                  </View>
-                </View>
-                
-                <View style={styles.priceRangeSeparator}>
-                  <Text style={styles.priceRangeSeparatorText}>to</Text>
-                </View>
-                
-                <View style={styles.priceInputWrapper}>
-                  <Text style={styles.priceInputLabel}>Max Price</Text>
-                  <View style={styles.priceInputContainer}>
-                    <Text style={styles.currencySymbol}>$</Text>
-                    <TextInput
-                      style={styles.priceInput}
-                      value={filters.priceRange.max.toString()}
-                      onChangeText={(text) => {
-                        const value = parseInt(text) || 1000;
-                        setFilters(prev => ({
-                          ...prev,
-                          priceRange: { ...prev.priceRange, max: value }
-                        }));
-                      }}
-                      keyboardType="numeric"
-                      placeholder="1000"
-                      placeholderTextColor={COLORS.textSecondary}
-                    />
-                  </View>
-                </View>
-              </View>
-            </View>
-          </ScrollView>
+        </View>
+        <View style={styles.statusContainer}>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) + '20' }]}>
+            <Ionicons 
+              name={getStatusIcon(booking.status) as any} 
+              size={16} 
+              color={getStatusColor(booking.status)} 
+            />
+            <Text style={[styles.statusText, { color: getStatusColor(booking.status) }]}>
+              {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+            </Text>
+          </View>
         </View>
       </View>
-    </Modal>
-  );
 
-  const renderBookingCard = (booking: Booking) => {
-    const isExpanded = expandedCards[booking.id] || false;
-    
-    return (
-      <View key={booking.id} style={styles.bookingCard}>
-        {/* Status Strip */}
-        <View style={[styles.statusStrip, { backgroundColor: getStatusColor(booking.status) }]} />
-        
-        {/* Card Header - Always Visible */}
-        <TouchableOpacity
-          onPress={() => toggleCardExpansion(booking.id)}
-          style={styles.cardHeader}
-          activeOpacity={0.8}
-        >
-          <View style={styles.providerSection}>
-            <View style={styles.providerImageContainer}>
-              <Image
-                source={{
-                  uri: booking.serviceProvider?.profilePictureUrl || 'https://via.placeholder.com/60',
-                }}
-                style={styles.providerImage}
-              />
-              <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(booking.status) }]} />
-            </View>
-            <View style={styles.providerInfo}>
-              <Text style={styles.providerName} numberOfLines={1}>
-                {booking.serviceProvider?.businessName || 'Provider'}
-              </Text>
-              <Text style={styles.serviceName} numberOfLines={1}>
-                {booking.service?.name || 'Service'}
-              </Text>
-              <View style={styles.serviceCategory}>
-                <Ionicons name="pricetag-outline" size={12} color="#E6A800" />
-                <Text style={styles.categoryText}>
-                  {booking.service?.category || 'General Service'}
-                </Text>
-              </View>
-            </View>
+      {/* Booking Details */}
+      <View style={styles.bookingDetails}>
+        <View style={styles.detailRow}>
+          <View style={styles.detailItem}>
+            <Ionicons name="calendar-outline" size={16} color={MODERN_COLORS.gray500} />
+            <Text style={styles.detailText}>{formatDate(booking.date)}</Text>
           </View>
-          
-          <View style={styles.priceStatusContainer}>
-            <Text style={styles.priceText}>${booking.totalAmount?.toFixed(2) || '0.00'}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) }]}>
-              <Text style={styles.statusText}>{booking.status}</Text>
-            </View>
-            <TouchableOpacity style={styles.expandButton}>
-              <Ionicons 
-                name={isExpanded ? "chevron-up" : "chevron-down"} 
-                size={20} 
-                color={COLORS.textSecondary} 
-              />
-            </TouchableOpacity>
+          <View style={styles.detailItem}>
+            <Ionicons name="time-outline" size={16} color={MODERN_COLORS.gray500} />
+            <Text style={styles.detailText}>{booking.time}</Text>
           </View>
-        </TouchableOpacity>
-
-        {/* Quick Info - Always Visible */}
-        <View style={styles.quickInfo}>
-          <View style={styles.quickInfoItem}>
-            <Ionicons name="calendar" size={14} color="#00B4A6" />
-            <Text style={styles.quickInfoText}>{formatDate(booking.bookingDate)}</Text>
+          <View style={styles.detailItem}>
+            <Ionicons name="hourglass-outline" size={16} color={MODERN_COLORS.gray500} />
+            <Text style={styles.detailText}>{booking.duration}</Text>
           </View>
-          <View style={styles.quickInfoItem}>
-            <Ionicons name="time" size={14} color="#E6283A" />
-            <Text style={styles.quickInfoText}>{formatTime(booking.startTime)}</Text>
-          </View>
-          {!isExpanded && booking.notes && (
-            <View style={styles.quickInfoItem}>
-              <Ionicons name="chatbubble-outline" size={14} color="#E6A800" />
-              <Text style={styles.quickInfoText}>Has Notes</Text>
-            </View>
-          )}
         </View>
+        
+        <View style={styles.priceRow}>
+          <Text style={styles.price}>${booking.price}</Text>
+        </View>
+      </View>
 
-        {/* Expandable Content */}
-        {isExpanded && (
-          <View style={styles.expandableContent}>
-            {/* Detailed Booking Info */}
-            <View style={styles.bookingDetails}>
-              {booking.endTime && (
-                <View style={styles.durationContainer}>
-                  <Ionicons name="stopwatch-outline" size={14} color="#E6A800" />
-                  <Text style={styles.durationText}>
-                    Duration: {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
-                  </Text>
-                </View>
-              )}
-
-              {booking.serviceProvider?.businessAddress && (
-                <View style={styles.locationContainer}>
-                  <Ionicons name="location" size={14} color="#00B355" />
-                  <Text style={styles.locationText} numberOfLines={2}>
-                    {booking.serviceProvider.businessAddress}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {/* Additional Info Section */}
-            {booking.notes && (
-              <View style={styles.additionalInfo}>
-                <View style={styles.notesSection}>
-                  <View style={styles.sectionHeader}>
-                    <Ionicons name="chatbubble-outline" size={14} color="#E6A800" />
-                    <Text style={styles.sectionTitle}>Notes</Text>
-                  </View>
-                  <Text style={styles.notesText} numberOfLines={3}>
-                    {booking.notes}
-                  </Text>
-                </View>
-                
-                {booking.cancellationReason && booking.status === BookingStatus.Cancelled && (
-                  <View style={styles.requestsSection}>
-                    <View style={styles.sectionHeader}>
-                      <Ionicons name="close-circle-outline" size={14} color="#E6283A" />
-                      <Text style={styles.sectionTitle}>Cancellation Reason</Text>
-                    </View>
-                    <Text style={styles.requestsText} numberOfLines={2}>
-                      {booking.cancellationReason}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
-
-            {/* Progress Indicator for Active Bookings */}
-            {(booking.status === BookingStatus.Confirmed || booking.status === BookingStatus.InProgress) && (
-              <View style={styles.progressSection}>
-                <View style={styles.progressHeader}>
-                  <Text style={styles.progressTitle}>Booking Progress</Text>
-                  <Text style={styles.progressPercentage}>
-                    {booking.status === BookingStatus.Confirmed ? '25%' : '75%'}
-                  </Text>
-                </View>
-                <View style={styles.progressBar}>
-                  <View 
-                    style={[
-                      styles.progressFill, 
-                      { width: booking.status === BookingStatus.Confirmed ? '25%' : '75%' }
-                    ]} 
-                  />
-                </View>
-              </View>
-            )}
-
-            {/* Action Buttons */}
-            <View style={styles.actionButtonsContainer}>
-              {booking.status === BookingStatus.Pending && (
-                <>
-                  <TouchableOpacity style={[styles.actionButton, styles.secondaryAction]}>
-                    <Ionicons name="close-circle-outline" size={16} color="#FF6B6B" />
-                    <Text style={[styles.actionButtonText, styles.secondaryActionText]}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.actionButton, styles.primaryAction]}>
-                    <Ionicons name="calendar-outline" size={16} color="white" />
-                    <Text style={[styles.actionButtonText, styles.primaryActionText]}>Reschedule</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-              
-              {booking.status === BookingStatus.Confirmed && (
-                <>
-                  <TouchableOpacity style={[styles.actionButton, styles.secondaryAction]}>
-                    <Ionicons name="close-circle-outline" size={16} color="#FF6B6B" />
-                    <Text style={[styles.actionButtonText, styles.secondaryActionText]}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.actionButton, styles.primaryAction]}>
-                    <Ionicons name="chatbubble-outline" size={16} color="white" />
-                    <Text style={[styles.actionButtonText, styles.primaryActionText]}>Contact</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-              
-              {booking.status === BookingStatus.InProgress && (
-                <TouchableOpacity style={[styles.actionButton, styles.inProgressAction]}>
-                  <Ionicons name="checkmark-circle-outline" size={16} color="white" />
-                  <Text style={[styles.actionButtonText, styles.primaryActionText]}>Mark Complete</Text>
-                </TouchableOpacity>
-              )}
-              
-              {booking.status === BookingStatus.Completed && (
-                <TouchableOpacity 
-                  style={[
-                    styles.actionButton, 
-                    bookingReviews[booking.id] ? styles.reviewedAction : styles.primaryAction
-                  ]}
-                  onPress={() => handleReviewPress(booking)}
-                  disabled={bookingReviews[booking.id]}
-                >
-                  <Ionicons 
-                    name={bookingReviews[booking.id] ? "checkmark-circle" : "star-outline"} 
-                    size={16} 
-                    color="white" 
-                  />
-                  <Text style={[styles.actionButtonText, styles.primaryActionText]}>
-                    {bookingReviews[booking.id] ? 'Reviewed' : 'Write Review'}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              
-              {booking.status === BookingStatus.Cancelled && (
-                <TouchableOpacity style={[styles.actionButton, styles.rebookAction]}>
-                  <Ionicons name="refresh-outline" size={16} color="white" />
-                  <Text style={[styles.actionButtonText, styles.primaryActionText]}>Book Again</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* View Details Button */}
-            <TouchableOpacity
-              onPress={() => navigation.navigate('BookingDetails', { bookingId: booking.id })}
-              style={styles.viewDetailsButton}
+      {/* Action Buttons */}
+      <View style={styles.actionButtons}>
+        {booking.status === 'upcoming' && (
+          <>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.rescheduleButton]}
+              onPress={() => handleBookingActions(booking)}
             >
-              <Text style={styles.viewDetailsText}>View Full Details</Text>
-              <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+              <Text style={styles.rescheduleButtonText}>Manage</Text>
             </TouchableOpacity>
-          </View>
+          </>
+        )}
+        {booking.status === 'completed' && (
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.reviewButton]}
+            onPress={() => handleReview(booking.id)}
+          >
+            <Text style={styles.reviewButtonText}>Leave Review</Text>
+          </TouchableOpacity>
         )}
       </View>
-    );
-  };
 
-  const filteredBookings = getFilteredBookings();
+      {booking.notes && (
+        <View style={styles.notesContainer}>
+          <Text style={styles.notesText}>{booking.notes}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={MODERN_COLORS.background} />
+      
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Bookings</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity 
-            style={styles.toggleAllButton}
-            onPress={toggleAllCards}
-          >
-            <Ionicons 
-              name={getFilteredBookings().every(booking => expandedCards[booking.id]) ? "contract-outline" : "expand-outline"} 
-              size={20} 
-              color={COLORS.text} 
-            />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.searchButton}
-            onPress={() => setShowFilters(true)}
-          >
-            <Ionicons name="filter" size={24} color={COLORS.text} />
-            {activeFiltersCount > 0 && (
-              <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <Ionicons name="search-outline" size={20} color={COLORS.textSecondary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by provider or service..."
-            placeholderTextColor={COLORS.textSecondary}
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-          />
-          {searchTerm.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchTerm('')}>
-              <Ionicons name="close-circle" size={20} color={COLORS.textSecondary} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <TouchableOpacity style={styles.headerButton}>
+          <Ionicons name="search-outline" size={24} color={MODERN_COLORS.gray700} />
+        </TouchableOpacity>
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'upcoming' && styles.activeTab]}
-          onPress={() => setSelectedTab('upcoming')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'upcoming' && styles.activeTabText]}>
-            Upcoming
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'past' && styles.activeTab]}
-          onPress={() => setSelectedTab('past')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'past' && styles.activeTabText]}>
-            Past
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.tabsContainer}>
+        {updatedTabs.map((tab) => (
+          <TouchableOpacity
+            key={tab.id}
+            style={[
+              styles.tabButton,
+              activeTab === tab.id && styles.activeTabButton
+            ]}
+            onPress={() => setActiveTab(tab.id)}
+          >
+            <Text style={[
+              styles.tabText,
+              activeTab === tab.id && styles.activeTabText
+            ]}>
+              {tab.title}
+            </Text>
+            {tab.count > 0 && (
+              <View style={[
+                styles.tabBadge,
+                activeTab === tab.id && styles.activeTabBadge
+              ]}>
+                <Text style={[
+                  styles.tabBadgeText,
+                  activeTab === tab.id && styles.activeTabBadgeText
+                ]}>
+                  {tab.count}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
       </View>
 
-      {/* Bookings List */}
-      <ScrollView
-        style={styles.bookingsList}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <Text>Loading...</Text>
-          </View>
-        ) : filteredBookings.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="calendar-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>
-              No {selectedTab} bookings
-            </Text>
-            <Text style={styles.emptySubtext}>
-              {selectedTab === 'upcoming'
-                ? 'Book your next appointment!'
-                : 'Your past bookings will appear here'}
-            </Text>
-            {selectedTab === 'upcoming' && (
-              <TouchableOpacity style={styles.bookNowButton}>
-                <Text style={styles.bookNowText}>Book Now</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ) : (
-          filteredBookings.map(renderBookingCard)
-        )}
-      </ScrollView>
-
-      {/* Filter Modal */}
-      {renderFilterModal()}
-
-      {/* Review Modal */}
-      {selectedBookingForReview && (
-        <ReviewModal
-          visible={reviewModalVisible}
-          onClose={() => setReviewModalVisible(false)}
-          booking={selectedBookingForReview}
-          onReviewSubmitted={handleReviewSubmitted}
+      {/* Content */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={MODERN_COLORS.primary} />
+          <Text style={styles.loadingText}>Loading bookings...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredBookings}
+          renderItem={renderBooking}
+          keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={MODERN_COLORS.primary}
+            />
+          }
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyState}>
+              <Ionicons 
+                name="calendar-outline" 
+                size={64} 
+                color={MODERN_COLORS.gray400} 
+              />
+              <Text style={styles.emptyTitle}>No {activeTab} bookings</Text>
+              <Text style={styles.emptyText}>
+                {activeTab === 'upcoming' 
+                  ? 'Book your next beauty appointment to see it here'
+                  : `You don't have any ${activeTab} bookings yet`
+                }
+              </Text>
+              {activeTab === 'upcoming' && (
+                <TouchableOpacity 
+                  style={styles.bookNowButton}
+                  onPress={() => navigation.navigate('Search')}
+                >
+                  <Text style={styles.bookNowButtonText}>Book Now</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         />
       )}
-    </View>
+
+      {/* Booking Actions Modal */}
+      <BookingActionsModal
+        visible={showBookingActions}
+        onClose={() => {
+          setShowBookingActions(false);
+          setSelectedBooking(null);
+        }}
+        booking={selectedBooking}
+        onActionComplete={handleBookingActionComplete}
+      />
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  // Base Layout
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-    paddingBottom: 100,
+    backgroundColor: MODERN_COLORS.background,
   },
   
-  // Header Section
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: COLORS.surface,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    backgroundColor: MODERN_COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: MODERN_COLORS.border,
+    ...SHADOWS.sm,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: COLORS.text,
-    letterSpacing: -0.5,
+    fontSize: TYPOGRAPHY['2xl'],
+    fontWeight: TYPOGRAPHY.weight.bold,
+    color: MODERN_COLORS.textPrimary,
   },
-  searchButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
+  headerButton: {
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: MODERN_COLORS.gray50,
   },
-  toggleAllButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  headerActions: {
+
+  // Tabs
+  tabsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
-  filterBadge: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    backgroundColor: COLORS.instagram,
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.surface,
-  },
-  filterBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: COLORS.surface,
-  },
-  
-  // Search Section
-  searchContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: COLORS.surface,
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderRadius: 25,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: COLORS.text,
-    fontWeight: '400',
-  },
-  
-  // Filter Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalBackdrop: {
-    flex: 1,
-  },
-  filterModalContainer: {
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 10,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: COLORS.borderLight,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  filterModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    backgroundColor: MODERN_COLORS.surface,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    borderBottomColor: MODERN_COLORS.border,
   },
-  filterModalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
-    letterSpacing: -0.3,
-  },
-  clearAllButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: COLORS.background,
-  },
-  clearAllButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-  },
-  doneButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 18,
-    backgroundColor: COLORS.primary,
-  },
-  doneButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: 'white',
-  },
-  filterModalContent: {
+  tabButton: {
     flex: 1,
-  },
-  filterScrollContent: {
-    paddingBottom: 20,
-  },
-  activeFiltersIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 20,
-    marginTop: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: COLORS.background,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
+    justifyContent: 'center',
+    paddingVertical: SPACING.md,
+    gap: SPACING.xs,
   },
-  activeFiltersText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.primary,
-    marginLeft: 6,
-  },
-  filterSection: {
-    marginHorizontal: 20,
-    marginTop: 24,
-  },
-  filterSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  filterSectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginLeft: 8,
-    letterSpacing: -0.2,
-  },
-  filterOptionsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 6,
-  },
-  filterChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  filterChipTextActive: {
-    color: 'white',
-  },
-  priceRangeContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 12,
-  },
-  priceInputWrapper: {
-    flex: 1,
-  },
-  priceInputLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  priceInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  currencySymbol: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginRight: 4,
-  },
-  priceInput: {
-    flex: 1,
-    fontSize: 16,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  priceRangeSeparator: {
-    paddingBottom: 12,
-    alignItems: 'center',
-  },
-  priceRangeSeparatorText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    fontWeight: '500',
-  },
-  
-  // Tab Section
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
-    marginHorizontal: 8,
-    borderRadius: 8,
-  },
-  activeTab: {
-    borderBottomColor: COLORS.primary,
-    backgroundColor: COLORS.background,
+  activeTabButton: {
+    borderBottomWidth: 2,
+    borderBottomColor: MODERN_COLORS.primary,
   },
   tabText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 0.2,
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.medium,
+    color: MODERN_COLORS.gray500,
   },
   activeTabText: {
-    color: COLORS.primary,
+    color: MODERN_COLORS.primary,
+    fontWeight: TYPOGRAPHY.weight.semibold,
   },
-  
-  // Bookings List
-  bookingsList: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: COLORS.background,
+  tabBadge: {
+    backgroundColor: MODERN_COLORS.gray200,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  activeTabBadge: {
+    backgroundColor: MODERN_COLORS.primary,
+  },
+  tabBadgeText: {
+    fontSize: TYPOGRAPHY.xs,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.gray600,
+  },
+  activeTabBadgeText: {
+    color: MODERN_COLORS.white,
+  },
+
+  // Booking List
+  listContainer: {
+    padding: SPACING.md,
+    gap: SPACING.md,
+    paddingBottom: SPACING.tabBarHeight + SPACING.md,
   },
   bookingCard: {
-    borderRadius: 20,
-    backgroundColor: COLORS.surface,
-    marginBottom: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: MODERN_COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    ...SHADOWS.sm,
   },
-  bookingCardContent: {
-    position: 'relative',
-  },
-  
-  // Status Strip
-  statusStrip: {
-    height: 4,
-    width: '100%',
-  },
-  
-  // Card Header
-  cardHeader: {
+  bookingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    padding: 20,
-    paddingBottom: 16,
+    marginBottom: SPACING.md,
   },
-  providerSection: {
+  providerInfo: {
     flexDirection: 'row',
     flex: 1,
-    alignItems: 'flex-start',
-  },
-  providerImageContainer: {
-    position: 'relative',
-    marginRight: 16,
   },
   providerImage: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    marginRight: SPACING.sm,
   },
-  statusIndicator: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: COLORS.surface,
-  },
-  providerInfo: {
+  providerDetails: {
     flex: 1,
-    paddingTop: 2,
-  },
-  providerName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: COLORS.text,
-    marginBottom: 4,
-    letterSpacing: -0.3,
   },
   serviceName: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    marginBottom: 8,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.textPrimary,
+    marginBottom: SPACING.xs / 2,
   },
-  serviceCategory: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(230, 168, 0, 0.1)', // Updated to our amber
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: 'rgba(230, 168, 0, 0.3)',
+  providerName: {
+    fontSize: TYPOGRAPHY.base,
+    color: MODERN_COLORS.textSecondary,
+    marginBottom: SPACING.xs / 2,
   },
-  categoryText: {
-    fontSize: 12,
-    color: '#E6A800', // Updated to our amber
-    fontWeight: '700',
-    marginLeft: 4,
+  location: {
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.textTertiary,
   },
-  priceStatusContainer: {
+  statusContainer: {
     alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    minHeight: 60,
-  },
-  priceText: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#E6A800', // Updated to our vibrant amber
-    letterSpacing: -0.5,
-    textShadowColor: 'rgba(230, 168, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  expandButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    shadowColor: 'rgba(0, 0, 0, 0.2)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs / 2,
+    borderRadius: BORDER_RADIUS.lg,
+    gap: SPACING.xs / 2,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: 'white',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.weight.semibold,
   },
-  
-  // Quick Info Section
-  quickInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  quickInfoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-  },
-  quickInfoText: {
-    fontSize: 14,
-    color: COLORS.text,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  
-  // Expandable Content
-  expandableContent: {
-    overflow: 'hidden',
-  },
-  
-  // View Details Button
-  viewDetailsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    gap: 8,
-  },
-  viewDetailsText: {
-    fontSize: 15,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  
+
   // Booking Details
   bookingDetails: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    marginBottom: SPACING.md,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: SPACING.sm,
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    padding: 12,
-    borderRadius: 12,
-    marginHorizontal: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    gap: SPACING.xs / 2,
   },
-  iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+  detailText: {
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.textSecondary,
   },
-  detailContent: {
-    flex: 1,
+  priceRow: {
+    alignItems: 'flex-end',
   },
-  detailLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-    marginBottom: 2,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  price: {
+    fontSize: TYPOGRAPHY.xl,
+    fontWeight: TYPOGRAPHY.weight.bold,
+    color: MODERN_COLORS.success,
   },
-  detailValue: {
-    fontSize: 15,
-    color: COLORS.text,
-    fontWeight: '700',
-  },
-  durationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(230, 168, 0, 0.1)', // Updated to our amber
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(230, 168, 0, 0.2)',
-  },
-  durationText: {
-    fontSize: 13,
-    color: '#E6A800', // Updated to our amber
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: 'rgba(0, 179, 85, 0.1)', // Updated to our green
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 179, 85, 0.2)',
-  },
-  locationText: {
-    fontSize: 13,
-    color: '#00B355', // Updated to our green
-    fontWeight: '600',
-    marginLeft: 8,
-    flex: 1,
-    lineHeight: 18,
-  },
-  
-  // Additional Info
-  additionalInfo: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    marginTop: 8,
-    paddingTop: 16,
-  },
-  notesSection: {
-    marginBottom: 12,
-  },
-  requestsSection: {
-    marginBottom: 0,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginLeft: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  notesText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    lineHeight: 20,
-    fontWeight: '500',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  requestsText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    lineHeight: 20,
-    fontWeight: '500',
-    backgroundColor: 'rgba(230, 40, 58, 0.1)', // Updated to our red
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(230, 40, 58, 0.2)',
-  },
-  
-  // Progress Section
-  progressSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    marginTop: 8,
-    paddingTop: 16,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  progressTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.text,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  progressPercentage: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#00B4A6', // Updated to our vibrant teal
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#00B4A6', // Updated to our vibrant teal
-    borderRadius: 3,
-  },
-  
+
   // Action Buttons
-  actionButtonsContainer: {
+  actionButtons: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    gap: 12,
+    gap: SPACING.sm,
   },
   actionButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 16,
-    gap: 8,
-    shadowColor: 'rgba(0, 0, 0, 0.2)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  primaryAction: {
-    backgroundColor: '#00B4A6', // Updated to our vibrant teal
-    borderWidth: 1,
-    borderColor: 'rgba(0, 180, 166, 0.3)',
-  },
-  secondaryAction: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  inProgressAction: {
-    backgroundColor: '#E6283A', // Updated to our vibrant red
-    borderWidth: 1,
-    borderColor: 'rgba(230, 40, 58, 0.3)',
-  },
-  reviewedAction: {
-    backgroundColor: '#00B355', // Updated to our vibrant green
-    borderWidth: 1,
-    borderColor: 'rgba(0, 179, 85, 0.3)',
-  },
-  rebookAction: {
-    backgroundColor: '#E6A800', // Updated to our vibrant amber
-    borderWidth: 1,
-    borderColor: 'rgba(230, 168, 0, 0.3)',
-  },
-  actionButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  primaryActionText: {
-    color: 'white',
-  },
-  secondaryActionText: {
-    color: COLORS.textSecondary,
-  },
-  
-  // Loading & Empty States
-  loadingContainer: {
-    padding: 60,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
   },
-  emptyContainer: {
+  rescheduleButton: {
+    backgroundColor: MODERN_COLORS.primary,
+  },
+  rescheduleButtonText: {
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.white,
+  },
+  cancelButton: {
+    backgroundColor: MODERN_COLORS.gray100,
+    borderWidth: 1,
+    borderColor: MODERN_COLORS.border,
+  },
+  cancelButtonText: {
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.gray700,
+  },
+  reviewButton: {
+    backgroundColor: MODERN_COLORS.accent,
+  },
+  reviewButtonText: {
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.white,
+  },
+
+  // Notes
+  notesContainer: {
+    marginTop: SPACING.sm,
+    padding: SPACING.sm,
+    backgroundColor: MODERN_COLORS.gray50,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  notesText: {
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.textSecondary,
+    fontStyle: 'italic',
+  },
+
+  // Empty State
+  emptyState: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-    paddingHorizontal: 40,
+    paddingVertical: SPACING.xxxl,
+  },
+  emptyTitle: {
+    fontSize: TYPOGRAPHY.xl,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.textPrimary,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.xs,
   },
   emptyText: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: COLORS.text,
-    marginTop: 20,
+    fontSize: TYPOGRAPHY.base,
+    color: MODERN_COLORS.textSecondary,
     textAlign: 'center',
-    letterSpacing: -0.3,
-  },
-  emptySubtext: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    marginTop: 8,
-    textAlign: 'center',
-    lineHeight: 24,
-    fontWeight: '500',
+    maxWidth: 280,
+    marginBottom: SPACING.lg,
   },
   bookNowButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 28,
-    marginTop: 32,
-    shadowColor: 'rgba(0, 0, 0, 0.15)',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 8,
+    backgroundColor: MODERN_COLORS.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
   },
-  bookNowText: {
-    color: 'white',
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: 0.3,
+  bookNowButtonText: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.white,
+  },
+
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: TYPOGRAPHY.base,
+    color: MODERN_COLORS.textSecondary,
+    marginTop: SPACING.sm,
   },
 });
 

@@ -50,6 +50,8 @@ export const ModernSubscriptionScreen: React.FC = () => {
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [showManageModal, setShowManageModal] = useState(false);
 
   useEffect(() => {
     loadSubscriptionData();
@@ -92,14 +94,14 @@ export const ModernSubscriptionScreen: React.FC = () => {
       setUpgrading(tier.tier);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      const response = await fetch('/api/payment/create-subscription', {
+      const response = await fetch('/api/payment/change-subscription', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${await getAuthToken()}`,
         },
         body: JSON.stringify({
-          tier: tier.tier,
+          newTier: parseInt(tier.tier),
           billingInterval: billingInterval,
           successUrl: 'fyla://subscription/success',
           cancelUrl: 'fyla://subscription/cancel',
@@ -112,27 +114,84 @@ export const ModernSubscriptionScreen: React.FC = () => {
         // Open Stripe checkout (you'll need to implement this based on your setup)
         // For React Native, you might use @stripe/stripe-react-native
         console.log('Redirect to:', data.sessionUrl);
+        Alert.alert('Subscription Change', 'Redirecting to payment...');
       }
     } catch (error) {
-      console.error('Failed to upgrade subscription:', error);
-      Alert.alert('Error', 'Failed to start upgrade process');
+      console.error('Failed to change subscription:', error);
+      Alert.alert('Error', 'Failed to start subscription change process');
     } finally {
       setUpgrading(null);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    Alert.alert(
+      'Cancel Subscription',
+      'Are you sure you want to cancel your subscription? You will lose access to premium features immediately.',
+      [
+        {
+          text: 'Keep Subscription',
+          style: 'cancel',
+        },
+        {
+          text: 'Cancel Subscription',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setCancelling(true);
+              
+              const response = await fetch('/api/payment/cancel-subscription', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${await getAuthToken()}`,
+                },
+              });
+
+              const data = await response.json();
+              
+              if (response.ok) {
+                Alert.alert('Subscription Cancelled', 'Your subscription has been cancelled successfully.');
+                loadSubscriptionData(); // Refresh the data
+              } else {
+                Alert.alert('Error', data.error || 'Failed to cancel subscription');
+              }
+            } catch (error) {
+              console.error('Failed to cancel subscription:', error);
+              Alert.alert('Error', 'Failed to cancel subscription');
+            } finally {
+              setCancelling(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const getSubscriptionStatus = () => {
+    if (!userSubscription) return 'No active subscription';
+    if (!userSubscription.isActive) return 'Subscription inactive';
+    return `Current plan: ${getTierDisplayName(userSubscription.tier)}`;
+  };
+
+  const getTierDisplayName = (tier: string) => {
+    switch (tier) {
+      case '0': return 'Free';
+      case '1': return 'Pro';
+      case '2': return 'Business';
+      default: return 'Unknown';
     }
   };
 
   const getTierColor = (tier: string) => {
     switch (tier.toLowerCase()) {
       case 'free':
-        return modernTheme.colors.subscription.free;
-      case 'basic':
-        return modernTheme.colors.subscription.basic;
-      case 'premium':
-        return modernTheme.colors.subscription.premium;
-      case 'enterprise':
-        return modernTheme.colors.subscription.enterprise;
+        return modernTheme.subscription.free.color;
+      case 'pro':
+        return modernTheme.subscription.pro.color;
+      case 'business':
+        return modernTheme.subscription.business.color;
       default:
-        return modernTheme.colors.neutral;
+        return modernTheme.colors.neutral[500];
     }
   };
 
@@ -167,7 +226,7 @@ export const ModernSubscriptionScreen: React.FC = () => {
   );
 
   const renderSubscriptionCard = (tier: SubscriptionTier) => {
-    const tierColors = getTierColor(tier.tier);
+    const tierColor = getTierColor(tier.tier);
     const currentPrice = billingInterval === 'month' ? tier.monthlyPrice : tier.annualPrice || tier.monthlyPrice;
     const isCurrentTier = userSubscription?.tier === tier.tier;
     const discount = getDiscountPercentage(tier.monthlyPrice, tier.annualPrice);
@@ -176,19 +235,19 @@ export const ModernSubscriptionScreen: React.FC = () => {
       <ModernCard
         key={tier.tier}
         variant={tier.isPopular ? 'gradient' : 'elevated'}
-        style={[
+        style={StyleSheet.flatten([
           styles.subscriptionCard,
-          tier.isPopular && styles.popularCard,
-        ]}
+          tier.isPopular ? styles.popularCard : undefined,
+        ])}
       >
         {tier.isPopular && (
-          <View style={[styles.popularBadge, { backgroundColor: tierColors.color }]}>
+          <View style={[styles.popularBadge, { backgroundColor: tierColor }]}>
             <Text style={styles.popularBadgeText}>Most Popular</Text>
           </View>
         )}
 
         <View style={styles.cardHeader}>
-          <Text style={[styles.tierName, { color: tierColors.color }]}>
+          <Text style={[styles.tierName, { color: tierColor }]}>
             {tier.name}
           </Text>
           <Text style={styles.tierDescription}>{tier.description}</Text>
@@ -298,6 +357,41 @@ export const ModernSubscriptionScreen: React.FC = () => {
           </Text>
         </View>
 
+        {/* Current Subscription Status */}
+        {userSubscription && (
+          <ModernCard variant="elevated" style={styles.currentSubscriptionCard}>
+            <View style={styles.currentSubscriptionHeader}>
+              <View style={styles.currentSubscriptionInfo}>
+                <Text style={styles.currentSubscriptionLabel}>Current Plan</Text>
+                <Text style={[styles.currentSubscriptionTier, { color: getTierColor(userSubscription.tier) }]}>
+                  {userSubscription.tier.charAt(0).toUpperCase() + userSubscription.tier.slice(1)} Plan
+                </Text>
+                {userSubscription.renewalDate && (
+                  <Text style={styles.billingInfo}>
+                    Renews: {new Date(userSubscription.renewalDate).toLocaleDateString()}
+                  </Text>
+                )}
+              </View>
+              {userSubscription.tier !== 'basic' && (
+                <ModernButton
+                  title="Cancel Plan"
+                  variant="outline"
+                  size="sm"
+                  onPress={() => Alert.alert(
+                    'Cancel Subscription',
+                    'Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your billing period.',
+                    [
+                      { text: 'Keep Subscription', style: 'cancel' },
+                      { text: 'Cancel', style: 'destructive', onPress: handleCancelSubscription }
+                    ]
+                  )}
+                  style={styles.cancelButton}
+                />
+              )}
+            </View>
+          </ModernCard>
+        )}
+
         {renderBillingToggle()}
 
         <View style={styles.cardsContainer}>
@@ -387,6 +481,39 @@ const styles = StyleSheet.create({
   },
   cardsContainer: {
     gap: modernTheme.spacing.lg,
+  },
+  currentSubscriptionCard: {
+    marginBottom: modernTheme.spacing.lg,
+    backgroundColor: modernTheme.colors.surface.primary,
+    borderWidth: 1,
+    borderColor: modernTheme.colors.primary.light,
+  },
+  currentSubscriptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  currentSubscriptionInfo: {
+    flex: 1,
+  },
+  currentSubscriptionLabel: {
+    fontSize: modernTheme.typography.fontSize.sm,
+    fontFamily: modernTheme.typography.fontFamily.medium,
+    color: modernTheme.colors.text.secondary,
+    marginBottom: modernTheme.spacing.xs,
+  },
+  currentSubscriptionTier: {
+    fontSize: modernTheme.typography.fontSize.lg,
+    fontFamily: modernTheme.typography.fontFamily.bold,
+    marginBottom: modernTheme.spacing.xs,
+  },
+  billingInfo: {
+    fontSize: modernTheme.typography.fontSize.sm,
+    fontFamily: modernTheme.typography.fontFamily.regular,
+    color: modernTheme.colors.text.tertiary,
+  },
+  cancelButton: {
+    marginLeft: modernTheme.spacing.md,
   },
   subscriptionCard: {
     position: 'relative',

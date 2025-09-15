@@ -12,6 +12,67 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ApiService from '../../services/api';
+import FeatureGatingService from '../../services/featureGatingService';
+import { useNavigation } from '@react-navigation/native';
+
+// Subscription Status Component
+const SubscriptionStatusBanner = () => {
+  const [subscription, setSubscription] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const navigation = useNavigation<any>();
+
+  useEffect(() => {
+    loadSubscription();
+  }, []);
+
+  const loadSubscription = async () => {
+    try {
+      const sub = await FeatureGatingService.getSubscriptionInfo();
+      setSubscription(sub);
+    } catch (error) {
+      console.error('Error loading subscription:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading || !subscription) return null;
+
+  const tierColors = {
+    0: { bg: '#F3F4F6', text: '#6B7280', accent: '#9CA3AF' }, // Starter
+    1: { bg: '#EEF2FF', text: '#6366F1', accent: '#4F46E5' }, // Professional  
+    2: { bg: '#ECFDF5', text: '#10B981', accent: '#059669' }, // Business
+  };
+
+  const colors = tierColors[subscription.tier as keyof typeof tierColors] || tierColors[0];
+  const tierName = subscription.tier === 0 ? 'Starter' : subscription.tier === 1 ? 'Professional' : 'Business';
+  const servicesUsed = 0; // TODO: Get actual count
+  const maxServices = subscription.limits.maxServices;
+
+  return (
+    <View style={[subscriptionBannerStyles.banner, { backgroundColor: colors.bg }]}>
+      <View style={subscriptionBannerStyles.info}>
+        <View style={subscriptionBannerStyles.header}>
+          <Text style={[subscriptionBannerStyles.tier, { color: colors.text }]}>
+            {tierName} Plan
+          </Text>
+          {subscription.tier === 0 && (
+            <TouchableOpacity 
+              style={[subscriptionBannerStyles.upgradeButton, { backgroundColor: colors.accent }]}
+              onPress={() => navigation.navigate('SubscriptionPlans')}
+            >
+              <Text style={subscriptionBannerStyles.upgradeButtonText}>Upgrade</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <Text style={[subscriptionBannerStyles.limits, { color: colors.text }]}>
+          Services: {servicesUsed}/{maxServices === -1 ? '∞' : maxServices} • 
+          Photos: {subscription.limits.maxPhotosPerService === -1 ? '∞' : subscription.limits.maxPhotosPerService} per service
+        </Text>
+      </View>
+    </View>
+  );
+};
 
 interface Service {
   id: string;
@@ -50,6 +111,7 @@ const categories = [
 ];
 
 const ServiceManagementScreen: React.FC = () => {
+  const navigation = useNavigation();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -73,7 +135,7 @@ const ServiceManagementScreen: React.FC = () => {
   const loadServices = async () => {
     try {
       setLoading(true);
-      const response = await ApiService.getMyServices();
+      const response = await ApiService.getServices();
       setServices(response.data || []);
     } catch (error) {
       console.error('Error loading services:', error);
@@ -101,7 +163,25 @@ const ServiceManagementScreen: React.FC = () => {
     setEditingService(null);
   };
 
-  const openAddModal = () => {
+  const openAddModal = async () => {
+    // Check if user can create more services
+    const canCreate = await FeatureGatingService.canCreateService();
+    
+    if (!canCreate.allowed) {
+      Alert.alert(
+        'Service Limit Reached',
+        canCreate.message + '\n\nWould you like to upgrade your plan?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Upgrade', 
+            onPress: () => navigation.navigate('SubscriptionPlans')
+          }
+        ]
+      );
+      return;
+    }
+    
     resetForm();
     setModalVisible(true);
   };
@@ -199,7 +279,7 @@ const ServiceManagementScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await ApiService.deleteService(service.id);
+              await ApiService.deleteService(parseInt(service.id));
               Alert.alert('Success', 'Service deleted successfully');
               await loadServices();
             } catch (error) {
@@ -286,6 +366,8 @@ const ServiceManagementScreen: React.FC = () => {
           <Ionicons name="add" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      <SubscriptionStatusBanner />
 
       <ScrollView
         style={styles.scrollView}
@@ -737,6 +819,44 @@ const styles = StyleSheet.create({
   categoryOptionText: {
     fontSize: 16,
     color: '#333',
+  },
+});
+
+// Subscription Banner Styles
+const subscriptionBannerStyles = StyleSheet.create({
+  banner: {
+    margin: 16,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  info: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  tier: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  upgradeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  upgradeButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  limits: {
+    fontSize: 14,
+    opacity: 0.8,
   },
 });
 

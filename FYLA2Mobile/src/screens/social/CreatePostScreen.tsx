@@ -14,19 +14,21 @@ import {
   Dimensions,
   Image,
   StatusBar,
-  Animated,
-  PanResponder,
+  SafeAreaView,
+  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import apiService from '../../services/api';
 import { RootStackParamList } from '../../types';
-import { useAuth } from '../../context/AuthContext';
+import { MODERN_COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY, SHADOWS } from '../../constants/modernDesign';
+import FeatureGatingService from '../../services/featureGatingService';
+import SubscriptionBanner from '../../components/subscription/SubscriptionBanner';
+
+const { width } = Dimensions.get('window');
 
 type CreatePostNavigationProp = StackNavigationProp<RootStackParamList, 'CreatePost'>;
 
@@ -48,149 +50,56 @@ interface ImageAsset {
   type?: string;
 }
 
-// Instagram/Snapchat-style Color Palette
-const COLORS = {
-  background: '#000000',
-  surface: '#1C1C1E',
-  surfaceLight: '#2C2C2E',
-  text: '#FFFFFF',
-  textSecondary: '#8E8E93',
-  border: '#38383A',
-  primary: '#007AFF',
-  accent: '#FF3B30',
-  success: '#30D158',
-  warning: '#FF9F0A',
-  instagram: '#E4405F',
-  snapchat: '#FFFC00',
-  overlay: 'rgba(0, 0, 0, 0.8)',
-};
-
-const { width, height } = Dimensions.get('window');
-
-const BEAUTY_CATEGORIES = [
-  { id: 'hair', name: 'Hair', icon: 'cut-outline', color: '#FF6B6B' },
-  { id: 'nails', name: 'Nails', icon: 'hand-left-outline', color: '#4ECDC4' },
-  { id: 'skincare', name: 'Skincare', icon: 'water-outline', color: '#45B7D1' },
-  { id: 'makeup', name: 'Makeup', icon: 'brush-outline', color: '#F7931E' },
-  { id: 'massage', name: 'Massage', icon: 'flower-outline', color: '#96CEB4' },
-  { id: 'lashes', name: 'Lashes', icon: 'eye-outline', color: '#DDA0DD' },
-  { id: 'piercing', name: 'Piercing', icon: 'diamond-outline', color: '#FFB6C1' },
-];
-
-const PRICE_RANGES = [
-  { id: '$', range: '$0 - $50', color: '#30D158' },
-  { id: '$$', range: '$50 - $100', color: '#FF9F0A' },
-  { id: '$$$', range: '$100 - $200', color: '#FF6B6B' },
-  { id: '$$$$', range: '$200+', color: '#AF52DE' },
-];
-
-const TRENDING_TAGS = [
-  '#transformation', '#beforeandafter', '#newlook', '#haircolor',
-  '#nailart', '#skincare', '#makeup', '#beauty', '#salon', '#selfcare'
-];
-
 const CreatePostScreen: React.FC = () => {
-  const navigation = useNavigation<CreatePostNavigationProp>();
-  const { user } = useAuth();
-  
-  const [step, setStep] = useState<'camera' | 'edit' | 'post'>('camera');
   const [postData, setPostData] = useState<PostData>({
     content: '',
     images: [],
-    location: '',
     tags: [],
     isBusinessPost: false,
-    serviceCategory: '',
-    priceRange: '',
     allowBooking: false,
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [location, setLocation] = useState<string>('');
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [tagInput, setTagInput] = useState('');
   
-  const [posting, setPosting] = useState(false);
-  const [currentTag, setCurrentTag] = useState('');
-  const [showBusinessOptions, setShowBusinessOptions] = useState(false);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-  
-  // Animations
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const opacityAnim = useRef(new Animated.Value(1)).current;
+  const navigation = useNavigation<CreatePostNavigationProp>();
+
+  const serviceCategories = [
+    'Hair Styling', 'Makeup', 'Nail Care', 'Skincare', 
+    'Massage', 'Eyebrows', 'Eyelashes', 'Fitness', 'Other'
+  ];
+
+  const priceRanges = [
+    '$0 - $25', '$25 - $50', '$50 - $100', 
+    '$100 - $200', '$200 - $500', '$500+'
+  ];
 
   useEffect(() => {
-    StatusBar.setBarStyle('light-content');
     requestPermissions();
-    
-    return () => {
-      StatusBar.setBarStyle('dark-content');
-    };
   }, []);
 
   const requestPermissions = async () => {
-    try {
-      await ImagePicker.requestCameraPermissionsAsync();
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-      await Location.requestForegroundPermissionsAsync();
-    } catch (error) {
-      console.error('Permission request error:', error);
-    }
-  };
-
-  const animateStep = (toStep: typeof step) => {
-    Animated.sequence([
-      Animated.timing(opacityAnim, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+    const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
     
-    setStep(toStep);
-  };
-
-  const takePicture = async () => {
-    try {
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 5],
-        quality: 0.9,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        setPostData(prev => ({
-          ...prev,
-          images: [...prev.images, {
-            uri: asset.uri,
-            width: asset.width,
-            height: asset.height,
-            type: asset.type,
-          }]
-        }));
-        animateStep('edit');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to take picture');
+    if (mediaStatus !== 'granted' || cameraStatus !== 'granted') {
+      Alert.alert('Permission needed', 'Camera and photo library access is required to add images.');
     }
   };
 
-  const selectFromGallery = async () => {
+  const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [4, 5],
-        quality: 0.9,
+        aspect: [4, 3],
+        quality: 0.8,
         allowsMultipleSelection: true,
-        selectionLimit: 10,
       });
 
-      if (!result.canceled && result.assets.length > 0) {
+      if (!result.canceled && result.assets) {
         const newImages = result.assets.map(asset => ({
           uri: asset.uri,
           width: asset.width,
@@ -200,46 +109,40 @@ const CreatePostScreen: React.FC = () => {
         
         setPostData(prev => ({
           ...prev,
-          images: [...prev.images, ...newImages].slice(0, 10)
+          images: [...prev.images, ...newImages].slice(0, 10) // Max 10 images
         }));
-        animateStep('edit');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to select images');
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
-  const getCurrentLocation = async () => {
+  const takePhoto = async () => {
     try {
-      const location = await Location.getCurrentPositionAsync({});
-      const reverseGeocode = await Location.reverseGeocodeAsync({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
       });
-      
-      if (reverseGeocode.length > 0) {
-        const address = reverseGeocode[0];
-        const locationString = `${address.city}, ${address.region}`;
-        setPostData(prev => ({ ...prev, location: locationString }));
+
+      if (!result.canceled && result.assets?.[0]) {
+        const newImage = {
+          uri: result.assets[0].uri,
+          width: result.assets[0].width,
+          height: result.assets[0].height,
+          type: result.assets[0].type,
+        };
+        
+        setPostData(prev => ({
+          ...prev,
+          images: [...prev.images, newImage]
+        }));
       }
     } catch (error) {
-      console.error('Location error:', error);
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
-  };
-
-  const addTag = (tag: string) => {
-    const cleanTag = tag.startsWith('#') ? tag : `#${tag}`;
-    if (!postData.tags.includes(cleanTag) && postData.tags.length < 10) {
-      setPostData(prev => ({ ...prev, tags: [...prev.tags, cleanTag] }));
-      setCurrentTag('');
-    }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    setPostData(prev => ({ 
-      ...prev, 
-      tags: prev.tags.filter(tag => tag !== tagToRemove) 
-    }));
   };
 
   const removeImage = (index: number) => {
@@ -247,418 +150,288 @@ const CreatePostScreen: React.FC = () => {
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
     }));
-    
-    if (postData.images.length === 1) {
-      animateStep('camera');
-    } else if (selectedImageIndex >= postData.images.length - 1) {
-      setSelectedImageIndex(Math.max(0, selectedImageIndex - 1));
+  };
+
+  const getCurrentLocation = async () => {
+    try {
+      setIsLoading(true);
+      const location = await Location.getCurrentPositionAsync({});
+      const address = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+      
+      if (address[0]) {
+        const locationString = `${address[0].city}, ${address[0].region}`;
+        setLocation(locationString);
+        setPostData(prev => ({ ...prev, location: locationString }));
+      }
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert('Error', 'Failed to get current location.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSubmit = async () => {
+  const addTag = () => {
+    if (tagInput.trim() && !postData.tags.includes(tagInput.trim())) {
+      setPostData(prev => ({
+        ...prev,
+        tags: [...prev.tags, tagInput.trim()]
+      }));
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setPostData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }));
+  };
+
+  const handlePost = async () => {
     if (!postData.content.trim() && postData.images.length === 0) {
-      Alert.alert('Content Required', 'Please add some content or images to your post');
+      Alert.alert('Error', 'Please add some content or images to your post.');
       return;
     }
 
-    setPosting(true);
     try {
-      let uploadedImageUrls: string[] = [];
+      setIsLoading(true);
       
-      if (postData.images.length > 0) {
-        const imageObjects = postData.images.map((image, index) => ({
-          uri: image.uri,
-          name: `post_image_${Date.now()}_${index}.jpg`,
-          type: 'image/jpeg'
-        }));
-        
-        uploadedImageUrls = await apiService.uploadMultipleImages(imageObjects);
-      }
-
-      const postPayload = {
-        content: postData.content,
-        images: uploadedImageUrls,
-        location: postData.location || undefined,
-        tags: postData.tags,
-        isBusinessPost: postData.isBusinessPost,
-        serviceCategory: postData.serviceCategory || undefined,
-        priceRange: postData.priceRange || undefined,
-        allowBooking: postData.allowBooking,
-      };
-
-      await apiService.createSocialPost(postPayload);
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      Alert.alert(
-        'Posted! 🎉', 
-        'Your post has been shared successfully!',
-        [
-          {
-            text: 'View Post',
-            onPress: () => navigation.navigate('Home')
-          }
-        ]
-      );
+      Alert.alert('Success', 'Your post has been published!', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
     } catch (error) {
       console.error('Error creating post:', error);
       Alert.alert('Error', 'Failed to create post. Please try again.');
     } finally {
-      setPosting(false);
+      setIsLoading(false);
     }
   };
 
-  // Camera/Gallery Selection Screen
-  const renderCameraScreen = () => (
-    <View style={styles.cameraContainer}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-      
-      {/* Header */}
-      <View style={styles.cameraHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="close" size={28} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.cameraHeaderTitle}>Create Post</Text>
-        <View style={{ width: 28 }} />
-      </View>
+  const showImageOptions = () => {
+    Alert.alert(
+      'Add Photo',
+      'Choose an option',
+      [
+        { text: 'Camera', onPress: takePhoto },
+        { text: 'Photo Library', onPress: pickImage },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
 
-      {/* Camera/Gallery Options */}
-      <View style={styles.cameraOptions}>
-        {/* Take Picture */}
-        <TouchableOpacity style={styles.cameraOptionLarge} onPress={takePicture}>
-          <LinearGradient
-            colors={['#FF6B6B', '#4ECDC4']}
-            style={styles.cameraOptionGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Ionicons name="camera" size={32} color={COLORS.text} />
-          </LinearGradient>
-          <Text style={styles.cameraOptionText}>Take Photo</Text>
-          <Text style={styles.cameraOptionSubtext}>Capture a moment</Text>
-        </TouchableOpacity>
-
-        {/* Select from Gallery */}
-        <TouchableOpacity style={styles.cameraOptionLarge} onPress={selectFromGallery}>
-          <LinearGradient
-            colors={['#667eea', '#764ba2']}
-            style={styles.cameraOptionGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Ionicons name="images" size={32} color={COLORS.text} />
-          </LinearGradient>
-          <Text style={styles.cameraOptionText}>Gallery</Text>
-          <Text style={styles.cameraOptionSubtext}>Choose from photos</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Quick Tips */}
-      <View style={styles.tipsContainer}>
-        <Text style={styles.tipsTitle}>📸 Pro Tips</Text>
-        <Text style={styles.tipsText}>• Good lighting makes all the difference</Text>
-        <Text style={styles.tipsText}>• Show before & after transformations</Text>
-        <Text style={styles.tipsText}>• Multiple angles tell the full story</Text>
-      </View>
-    </View>
-  );
-
-  // Image Editor Screen
-  const renderEditScreen = () => (
-    <View style={styles.editContainer}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-      
-      {/* Header */}
-      <View style={styles.editHeader}>
-        <TouchableOpacity onPress={() => animateStep('camera')}>
-          <Ionicons name="chevron-back" size={28} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.editHeaderTitle}>Edit</Text>
-        <TouchableOpacity onPress={() => animateStep('post')}>
-          <Text style={styles.nextButton}>Next</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Image Preview */}
-      <View style={styles.imagePreviewContainer}>
-        {postData.images.length > 0 && (
-          <View style={styles.imageWrapper}>
-            <Image 
-              source={{ uri: postData.images[selectedImageIndex]?.uri }} 
-              style={styles.previewImage}
-              resizeMode="cover"
-            />
-            
-            {/* Image Controls */}
-            <View style={styles.imageControls}>
-              <TouchableOpacity 
-                style={styles.removeImageButton}
-                onPress={() => removeImage(selectedImageIndex)}
-              >
-                <Ionicons name="trash" size={20} color={COLORS.accent} />
-              </TouchableOpacity>
-              
-              {postData.images.length > 1 && (
-                <View style={styles.imageCounter}>
-                  <Text style={styles.imageCounterText}>
-                    {selectedImageIndex + 1}/{postData.images.length}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* Image Thumbnails */}
-        {postData.images.length > 1 && (
-          <ScrollView 
-            horizontal 
-            style={styles.thumbnailScroll}
-            showsHorizontalScrollIndicator={false}
-          >
-            {postData.images.map((image, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.thumbnail,
-                  selectedImageIndex === index && styles.activeThumbnail
-                ]}
-                onPress={() => setSelectedImageIndex(index)}
-              >
-                <Image source={{ uri: image.uri }} style={styles.thumbnailImage} />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
-      </View>
-
-      {/* Add More Images */}
-      <TouchableOpacity style={styles.addMoreButton} onPress={selectFromGallery}>
-        <Ionicons name="add-circle-outline" size={24} color={COLORS.primary} />
-        <Text style={styles.addMoreText}>Add More Photos</Text>
+  const renderImage = ({ item, index }: { item: ImageAsset, index: number }) => (
+    <View style={styles.imageContainer}>
+      <Image source={{ uri: item.uri }} style={styles.postImage} />
+      <TouchableOpacity 
+        style={styles.removeImageButton}
+        onPress={() => removeImage(index)}
+      >
+        <Ionicons name="close-circle" size={24} color={MODERN_COLORS.error} />
       </TouchableOpacity>
     </View>
   );
 
-  // Post Creation Screen
-  const renderPostScreen = () => (
-    <KeyboardAvoidingView 
-      style={styles.postContainer}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={MODERN_COLORS.background} />
       
       {/* Header */}
-      <View style={styles.postHeader}>
-        <TouchableOpacity onPress={() => animateStep('edit')}>
-          <Ionicons name="chevron-back" size={28} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.postHeaderTitle}>Share</Text>
+      <View style={styles.header}>
         <TouchableOpacity 
-          onPress={handleSubmit}
-          disabled={posting || (!postData.content.trim() && postData.images.length === 0)}
-          style={[
-            styles.shareButton,
-            (!postData.content.trim() && postData.images.length === 0) && styles.disabledShareButton
-          ]}
+          style={styles.headerButton}
+          onPress={() => navigation.goBack()}
         >
-          {posting ? (
-            <ActivityIndicator size="small" color={COLORS.text} />
+          <Ionicons name="close" size={24} color={MODERN_COLORS.gray700} />
+        </TouchableOpacity>
+        
+        <Text style={styles.headerTitle}>Create Post</Text>
+        
+        <TouchableOpacity 
+          style={[styles.postButton, (!postData.content.trim() && postData.images.length === 0) && styles.postButtonDisabled]}
+          onPress={handlePost}
+          disabled={isLoading || (!postData.content.trim() && postData.images.length === 0)}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color={MODERN_COLORS.white} />
           ) : (
-            <Text style={[
-              styles.shareButtonText,
-              (!postData.content.trim() && postData.images.length === 0) && styles.disabledShareButtonText
-            ]}>
-              Share
-            </Text>
+            <Text style={styles.postButtonText}>Post</Text>
           )}
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.postContent} showsVerticalScrollIndicator={false}>
-        {/* User Info */}
-        <View style={styles.userSection}>
-          <Image
-            source={{ uri: user?.profilePictureUrl || 'https://via.placeholder.com/40' }}
-            style={styles.userAvatar}
-          />
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user?.firstName} {user?.lastName}</Text>
-            <Text style={styles.userHandle}>@{user?.firstName?.toLowerCase()}</Text>
-          </View>
-        </View>
-
-        {/* Content Input */}
-        <View style={styles.contentSection}>
-          <TextInput
-            style={styles.contentInput}
-            placeholder="What's happening in your beauty world? ✨"
-            placeholderTextColor={COLORS.textSecondary}
-            multiline
-            value={postData.content}
-            onChangeText={(text) => setPostData(prev => ({ ...prev, content: text }))}
-            maxLength={2000}
-            textAlignVertical="top"
-          />
-          <Text style={styles.characterCount}>
-            {postData.content.length}/2000
-          </Text>
-        </View>
-
-        {/* Tags Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            <Ionicons name="pricetag" size={16} color={COLORS.primary} /> Tags
-          </Text>
+      <KeyboardAvoidingView 
+        style={styles.content}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           
-          {/* Current Tags */}
-          {postData.tags.length > 0 && (
-            <View style={styles.tagsContainer}>
-              {postData.tags.map((tag, index) => (
-                <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                  <TouchableOpacity onPress={() => removeTag(tag)}>
-                    <Ionicons name="close" size={16} color={COLORS.primary} />
-                  </TouchableOpacity>
-                </View>
-              ))}
+          {/* Text Input */}
+          <View style={styles.textSection}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="What's on your mind?"
+              placeholderTextColor={MODERN_COLORS.gray400}
+              value={postData.content}
+              onChangeText={(text) => setPostData(prev => ({ ...prev, content: text }))}
+              multiline
+              maxLength={2000}
+              autoFocus
+            />
+            <Text style={styles.characterCount}>
+              {postData.content.length}/2000
+            </Text>
+          </View>
+
+          {/* Images */}
+          {postData.images.length > 0 && (
+            <View style={styles.imagesSection}>
+              <FlatList
+                data={postData.images}
+                renderItem={renderImage}
+                keyExtractor={(_, index) => index.toString()}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.imagesList}
+              />
             </View>
           )}
 
-          {/* Tag Input */}
-          <View style={styles.tagInputContainer}>
-            <TextInput
-              style={styles.tagInput}
-              placeholder="Add tags..."
-              placeholderTextColor={COLORS.textSecondary}
-              value={currentTag}
-              onChangeText={setCurrentTag}
-              onSubmitEditing={() => {
-                if (currentTag.trim()) {
-                  addTag(currentTag.trim());
-                }
-              }}
-            />
-            {currentTag.trim() && (
-              <TouchableOpacity 
-                onPress={() => addTag(currentTag.trim())}
-                style={styles.addTagButton}
-              >
-                <Ionicons name="add" size={20} color={COLORS.primary} />
+          {/* Add Media Button */}
+          <TouchableOpacity style={styles.addMediaButton} onPress={showImageOptions}>
+            <Ionicons name="camera-outline" size={20} color={MODERN_COLORS.primary} />
+            <Text style={styles.addMediaText}>Add Photos</Text>
+          </TouchableOpacity>
+
+          {/* Location */}
+          <View style={styles.optionSection}>
+            <View style={styles.optionHeader}>
+              <Ionicons name="location-outline" size={20} color={MODERN_COLORS.gray600} />
+              <Text style={styles.optionTitle}>Location</Text>
+            </View>
+            {location ? (
+              <View style={styles.locationContainer}>
+                <Text style={styles.locationText}>{location}</Text>
+                <TouchableOpacity onPress={() => {
+                  setLocation('');
+                  setPostData(prev => ({ ...prev, location: undefined }));
+                }}>
+                  <Ionicons name="close-circle" size={20} color={MODERN_COLORS.gray400} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.addLocationButton} onPress={getCurrentLocation}>
+                <Text style={styles.addLocationText}>Add location</Text>
               </TouchableOpacity>
             )}
           </View>
 
-          {/* Trending Tags */}
-          <Text style={styles.trendingTitle}>Trending</Text>
-          <View style={styles.trendingTags}>
-            {TRENDING_TAGS.map((tag, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.trendingTag,
-                  postData.tags.includes(tag) && styles.selectedTrendingTag
-                ]}
-                onPress={() => addTag(tag)}
-                disabled={postData.tags.includes(tag)}
-              >
-                <Text style={[
-                  styles.trendingTagText,
-                  postData.tags.includes(tag) && styles.selectedTrendingTagText
-                ]}>
-                  {tag}
-                </Text>
+          {/* Tags */}
+          <View style={styles.optionSection}>
+            <View style={styles.optionHeader}>
+              <Ionicons name="pricetag-outline" size={20} color={MODERN_COLORS.gray600} />
+              <Text style={styles.optionTitle}>Tags</Text>
+            </View>
+            
+            {postData.tags.length > 0 && (
+              <View style={styles.tagsContainer}>
+                {postData.tags.map((tag, index) => (
+                  <View key={index} style={styles.tag}>
+                    <Text style={styles.tagText}>#{tag}</Text>
+                    <TouchableOpacity onPress={() => removeTag(tag)}>
+                      <Ionicons name="close" size={16} color={MODERN_COLORS.primary} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+            
+            <View style={styles.tagInputContainer}>
+              <TextInput
+                style={styles.tagInput}
+                placeholder="Add tag..."
+                placeholderTextColor={MODERN_COLORS.gray400}
+                value={tagInput}
+                onChangeText={setTagInput}
+                onSubmitEditing={addTag}
+                returnKeyType="done"
+              />
+              <TouchableOpacity style={styles.addTagButton} onPress={addTag}>
+                <Ionicons name="add" size={20} color={MODERN_COLORS.primary} />
               </TouchableOpacity>
-            ))}
+            </View>
           </View>
-        </View>
 
-        {/* Location Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            <Ionicons name="location" size={16} color={COLORS.primary} /> Location
-          </Text>
-          <View style={styles.locationContainer}>
-            <TextInput
-              style={styles.locationInput}
-              placeholder="Add location..."
-              placeholderTextColor={COLORS.textSecondary}
-              value={postData.location}
-              onChangeText={(text) => setPostData(prev => ({ ...prev, location: text }))}
-            />
-            <TouchableOpacity onPress={getCurrentLocation} style={styles.locationButton}>
-              <Ionicons name="locate" size={20} color={COLORS.primary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Service Provider Business Post Options */}
-        {user?.isServiceProvider && (
-          <View style={styles.businessSection}>
-            <TouchableOpacity 
-              style={styles.businessToggle}
-              onPress={() => {
-                setPostData(prev => ({ ...prev, isBusinessPost: !prev.isBusinessPost }));
-                setShowBusinessOptions(!showBusinessOptions);
-              }}
-            >
-              <View style={styles.businessToggleContent}>
-                <LinearGradient
-                  colors={postData.isBusinessPost ? [COLORS.primary, COLORS.accent] : [COLORS.surfaceLight, COLORS.surfaceLight]}
-                  style={styles.businessIcon}
-                >
-                  <Ionicons name="briefcase" size={20} color={COLORS.text} />
-                </LinearGradient>
-                <View style={styles.businessInfo}>
-                  <Text style={styles.businessTitle}>Business Post</Text>
-                  <Text style={styles.businessSubtitle}>
-                    Showcase a service & enable booking
+          {/* Business Post Toggle */}
+          <View style={styles.toggleSection}>
+            <View style={styles.toggleHeader}>
+              <View style={styles.toggleInfo}>
+                <Ionicons name="briefcase-outline" size={20} color={MODERN_COLORS.gray600} />
+                <View style={styles.toggleTextContainer}>
+                  <Text style={styles.toggleTitle}>Business Post</Text>
+                  <Text style={styles.toggleDescription}>
+                    Mark this as a professional service showcase
                   </Text>
                 </View>
               </View>
               <Switch
                 value={postData.isBusinessPost}
-                onValueChange={(value) => setPostData(prev => ({ ...prev, isBusinessPost: value }))}
-                trackColor={{ false: COLORS.border, true: COLORS.primary }}
-                thumbColor={COLORS.text}
+                onValueChange={async (value) => {
+                  if (value) {
+                    // Check if user can create business posts
+                    const canUseCustomBranding = await FeatureGatingService.canUseCustomBranding();
+                    if (!canUseCustomBranding.allowed) {
+                      Alert.alert(
+                        'Business Posts Unavailable',
+                        canUseCustomBranding.message + '\n\nWould you like to upgrade?',
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          { 
+                            text: 'Upgrade', 
+                            onPress: () => navigation.navigate('SubscriptionPlans')
+                          }
+                        ]
+                      );
+                      return;
+                    }
+                  }
+                  setPostData(prev => ({ ...prev, isBusinessPost: value }));
+                }}
+                trackColor={{ false: MODERN_COLORS.gray200, true: MODERN_COLORS.primary + '50' }}
+                thumbColor={postData.isBusinessPost ? MODERN_COLORS.primary : MODERN_COLORS.gray400}
               />
-            </TouchableOpacity>
+            </View>
 
-            {/* Business Options */}
             {postData.isBusinessPost && (
-              <Animated.View style={[styles.businessOptions, { opacity: opacityAnim }]}>
+              <View style={styles.businessOptions}>
                 {/* Service Category */}
                 <View style={styles.businessOption}>
-                  <Text style={styles.businessOptionTitle}>Service Category</Text>
+                  <Text style={styles.businessOptionLabel}>Service Category</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={styles.categoryGrid}>
-                      {BEAUTY_CATEGORIES.map((category) => (
+                    <View style={styles.categoryContainer}>
+                      {serviceCategories.map((category) => (
                         <TouchableOpacity
-                          key={category.id}
+                          key={category}
                           style={[
-                            styles.categoryButton,
-                            postData.serviceCategory === category.name && styles.selectedCategory
+                            styles.categoryChip,
+                            postData.serviceCategory === category && styles.categoryChipSelected
                           ]}
                           onPress={() => setPostData(prev => ({ 
                             ...prev, 
-                            serviceCategory: category.name 
+                            serviceCategory: prev.serviceCategory === category ? undefined : category 
                           }))}
                         >
-                          <LinearGradient
-                            colors={postData.serviceCategory === category.name 
-                              ? [category.color, category.color + '80'] 
-                              : [COLORS.surfaceLight, COLORS.surfaceLight]}
-                            style={styles.categoryIconContainer}
-                          >
-                            <Ionicons 
-                              name={category.icon as any} 
-                              size={16} 
-                              color={COLORS.text} 
-                            />
-                          </LinearGradient>
                           <Text style={[
-                            styles.categoryText,
-                            postData.serviceCategory === category.name && styles.selectedCategoryText
+                            styles.categoryChipText,
+                            postData.serviceCategory === category && styles.categoryChipTextSelected
                           ]}>
-                            {category.name}
+                            {category}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -668,634 +441,350 @@ const CreatePostScreen: React.FC = () => {
 
                 {/* Price Range */}
                 <View style={styles.businessOption}>
-                  <Text style={styles.businessOptionTitle}>Price Range</Text>
-                  <View style={styles.priceGrid}>
-                    {PRICE_RANGES.map((price) => (
-                      <TouchableOpacity
-                        key={price.id}
-                        style={[
-                          styles.priceButton,
-                          postData.priceRange === price.range && styles.selectedPrice
-                        ]}
-                        onPress={() => setPostData(prev => ({ 
-                          ...prev, 
-                          priceRange: price.range 
-                        }))}
-                      >
-                        <LinearGradient
-                          colors={postData.priceRange === price.range 
-                            ? [price.color, price.color + '80'] 
-                            : [COLORS.surfaceLight, COLORS.surfaceLight]}
-                          style={styles.priceGradient}
+                  <Text style={styles.businessOptionLabel}>Price Range</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={styles.categoryContainer}>
+                      {priceRanges.map((range) => (
+                        <TouchableOpacity
+                          key={range}
+                          style={[
+                            styles.categoryChip,
+                            postData.priceRange === range && styles.categoryChipSelected
+                          ]}
+                          onPress={() => setPostData(prev => ({ 
+                            ...prev, 
+                            priceRange: prev.priceRange === range ? undefined : range 
+                          }))}
                         >
-                          <Text style={styles.priceSymbol}>{price.id}</Text>
                           <Text style={[
-                            styles.priceText,
-                            postData.priceRange === price.range && styles.selectedPriceText
+                            styles.categoryChipText,
+                            postData.priceRange === range && styles.categoryChipTextSelected
                           ]}>
-                            {price.range}
+                            {range}
                           </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
                 </View>
 
-                {/* Allow Booking */}
-                <View style={styles.bookingOption}>
-                  <View style={styles.bookingContent}>
-                    <LinearGradient
-                      colors={postData.allowBooking ? [COLORS.success, COLORS.success + '80'] : [COLORS.surfaceLight, COLORS.surfaceLight]}
-                      style={styles.bookingIcon}
-                    >
-                      <Ionicons name="calendar" size={20} color={COLORS.text} />
-                    </LinearGradient>
-                    <View style={styles.bookingInfo}>
-                      <Text style={styles.bookingTitle}>Enable Booking</Text>
-                      <Text style={styles.bookingSubtitle}>
-                        Let clients book directly from this post
-                      </Text>
-                    </View>
+                {/* Allow Booking Toggle */}
+                <View style={styles.subToggleSection}>
+                  <View style={styles.subToggleInfo}>
+                    <Text style={styles.subToggleTitle}>Allow Direct Booking</Text>
+                    <Text style={styles.subToggleDescription}>
+                      Let clients book this service directly from your post
+                    </Text>
                   </View>
                   <Switch
                     value={postData.allowBooking}
                     onValueChange={(value) => setPostData(prev => ({ ...prev, allowBooking: value }))}
-                    trackColor={{ false: COLORS.border, true: COLORS.success }}
-                    thumbColor={COLORS.text}
+                    trackColor={{ false: MODERN_COLORS.gray200, true: MODERN_COLORS.primary + '50' }}
+                    thumbColor={postData.allowBooking ? MODERN_COLORS.primary : MODERN_COLORS.gray400}
                   />
                 </View>
-              </Animated.View>
+              </View>
             )}
           </View>
-        )}
 
-        <View style={{ height: 100 }} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View style={styles.bottomSpacing} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
-
-  return (
-    <Animated.View style={[styles.container, { opacity: opacityAnim }]}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-      
-      {step === 'camera' && renderCameraScreen()}
-      {step === 'edit' && renderEditScreen()}
-      {step === 'post' && renderPostScreen()}
-    </Animated.View>
-  );
-
-        };
+};
 
 const styles = StyleSheet.create({
-  // Base Container
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: MODERN_COLORS.background,
   },
-
-  // Camera Screen Styles
-  cameraContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  cameraHeader: {
+  
+  // Header
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  cameraHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
-    letterSpacing: -0.3,
-  },
-  cameraOptions: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-    gap: 30,
-  },
-  cameraOptionLarge: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  cameraOptionGradient: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  cameraOptionText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 4,
-    letterSpacing: -0.5,
-  },
-  cameraOptionSubtext: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-  tipsContainer: {
-    backgroundColor: COLORS.surface,
-    margin: 20,
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  tipsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 12,
-  },
-  tipsText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginBottom: 6,
-    lineHeight: 20,
-  },
-
-  // Edit Screen Styles
-  editContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  editHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  editHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
-    letterSpacing: -0.3,
-  },
-  nextButton: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  imagePreviewContainer: {
-    flex: 1,
-    marginHorizontal: 20,
-  },
-  imageWrapper: {
-    position: 'relative',
-    flex: 1,
-    borderRadius: 20,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  previewImage: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: COLORS.surface,
-  },
-  imageControls: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    gap: 12,
-  },
-  removeImageButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imageCounter: {
-    backgroundColor: COLORS.overlay,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  imageCounterText: {
-    color: COLORS.text,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  thumbnailScroll: {
-    maxHeight: 80,
-  },
-  thumbnail: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    marginRight: 12,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  activeThumbnail: {
-    borderColor: COLORS.primary,
-  },
-  thumbnailImage: {
-    width: '100%',
-    height: '100%',
-  },
-  addMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    marginHorizontal: 20,
-    marginBottom: 30,
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 8,
-  },
-  addMoreText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-
-  // Post Screen Styles
-  postContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  postHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  postHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
-    letterSpacing: -0.3,
-  },
-  shareButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  disabledShareButton: {
-    backgroundColor: COLORS.border,
-  },
-  shareButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  disabledShareButtonText: {
-    color: COLORS.textSecondary,
-  },
-  postContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-
-  // User Section
-  userSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 16,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    backgroundColor: MODERN_COLORS.surface,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: MODERN_COLORS.border,
+    ...SHADOWS.sm,
   },
-  userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
+  headerButton: {
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
   },
-  userInfo: {
-    flex: 1,
+  headerTitle: {
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.textPrimary,
   },
-  userName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 2,
+  postButton: {
+    backgroundColor: MODERN_COLORS.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    minWidth: 60,
+    alignItems: 'center',
   },
-  userHandle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
+  postButtonDisabled: {
+    backgroundColor: MODERN_COLORS.gray300,
+  },
+  postButtonText: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.white,
   },
 
-  // Content Section
-  contentSection: {
-    marginBottom: 24,
+  // Content
+  content: {
+    flex: 1,
   },
-  contentInput: {
-    fontSize: 16,
-    color: COLORS.text,
-    lineHeight: 24,
+  scrollContainer: {
+    flex: 1,
+  },
+
+  // Text Section
+  textSection: {
+    padding: SPACING.md,
+    backgroundColor: MODERN_COLORS.surface,
+    marginBottom: SPACING.xs,
+  },
+  textInput: {
+    fontSize: TYPOGRAPHY.lg,
+    color: MODERN_COLORS.textPrimary,
     minHeight: 120,
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     textAlignVertical: 'top',
+    lineHeight: 24,
   },
   characterCount: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.gray400,
     textAlign: 'right',
-    marginTop: 8,
+    marginTop: SPACING.sm,
   },
 
-  // Section Styles
-  section: {
-    marginBottom: 24,
+  // Images
+  imagesSection: {
+    backgroundColor: MODERN_COLORS.surface,
+    paddingVertical: SPACING.md,
+    marginBottom: SPACING.xs,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
+  imagesList: {
+    paddingHorizontal: SPACING.md,
+  },
+  imageContainer: {
+    position: 'relative',
+    marginRight: SPACING.sm,
+  },
+  postImage: {
+    width: 150,
+    height: 150,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: MODERN_COLORS.surface,
+    borderRadius: 12,
+    ...SHADOWS.sm,
   },
 
-  // Tags
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 12,
-    gap: 8,
-  },
-  tag: {
+  // Add Media
+  addMediaButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.primary + '20',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 6,
-  },
-  tagText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  tagInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 16,
-  },
-  tagInput: {
-    flex: 1,
-    fontSize: 16,
-    color: COLORS.text,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  addTagButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.primary + '20',
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
+    backgroundColor: MODERN_COLORS.surface,
+    paddingVertical: SPACING.md,
+    marginBottom: SPACING.xs,
+    gap: SPACING.sm,
   },
-  trendingTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-    marginBottom: 8,
+  addMediaText: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.medium,
+    color: MODERN_COLORS.primary,
   },
-  trendingTags: {
+
+  // Options
+  optionSection: {
+    backgroundColor: MODERN_COLORS.surface,
+    padding: SPACING.md,
+    marginBottom: SPACING.xs,
+  },
+  optionHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
   },
-  trendingTag: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  selectedTrendingTag: {
-    backgroundColor: COLORS.primary + '20',
-    borderColor: COLORS.primary,
-  },
-  trendingTagText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    fontWeight: '500',
-  },
-  selectedTrendingTagText: {
-    color: COLORS.primary,
-    fontWeight: '600',
+  optionTitle: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.textPrimary,
   },
 
   // Location
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    justifyContent: 'space-between',
+    backgroundColor: MODERN_COLORS.gray50,
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
   },
-  locationInput: {
-    flex: 1,
-    fontSize: 16,
-    color: COLORS.text,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  locationText: {
+    fontSize: TYPOGRAPHY.base,
+    color: MODERN_COLORS.textSecondary,
   },
-  locationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.primary + '20',
-    justifyContent: 'center',
+  addLocationButton: {
+    backgroundColor: MODERN_COLORS.gray50,
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
-    marginRight: 8,
+  },
+  addLocationText: {
+    fontSize: TYPOGRAPHY.base,
+    color: MODERN_COLORS.primary,
   },
 
-  // Business Section
-  businessSection: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 24,
+  // Tags
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
   },
-  businessToggle: {
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: MODERN_COLORS.primary + '20',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.lg,
+    gap: SPACING.xs,
+  },
+  tagText: {
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.weight.medium,
+    color: MODERN_COLORS.primary,
+  },
+  tagInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: MODERN_COLORS.gray50,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.sm,
+  },
+  tagInput: {
+    flex: 1,
+    fontSize: TYPOGRAPHY.base,
+    color: MODERN_COLORS.textPrimary,
+    paddingVertical: SPACING.sm,
+  },
+  addTagButton: {
+    padding: SPACING.xs,
+  },
+
+  // Toggles
+  toggleSection: {
+    backgroundColor: MODERN_COLORS.surface,
+    padding: SPACING.md,
+    marginBottom: SPACING.xs,
+  },
+  toggleHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: SPACING.sm,
   },
-  businessToggleContent: {
+  toggleInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    gap: SPACING.sm,
   },
-  businessIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  businessInfo: {
+  toggleTextContainer: {
     flex: 1,
   },
-  businessTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 2,
+  toggleTitle: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.textPrimary,
   },
-  businessSubtitle: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
+  toggleDescription: {
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.textSecondary,
+    marginTop: 2,
   },
+
+  // Business Options
   businessOptions: {
-    marginTop: 20,
-    gap: 20,
+    marginTop: SPACING.md,
+    gap: SPACING.md,
   },
   businessOption: {
-    gap: 12,
+    gap: SPACING.sm,
   },
-  businessOptionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
+  businessOptionLabel: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.medium,
+    color: MODERN_COLORS.textPrimary,
   },
-
-  // Categories
-  categoryGrid: {
+  categoryContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: SPACING.sm,
   },
-  categoryButton: {
-    alignItems: 'center',
-    gap: 8,
-    minWidth: 80,
+  categoryChip: {
+    backgroundColor: MODERN_COLORS.gray100,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: MODERN_COLORS.border,
   },
-  categoryIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+  categoryChipSelected: {
+    backgroundColor: MODERN_COLORS.primary,
+    borderColor: MODERN_COLORS.primary,
   },
-  selectedCategory: {
-    transform: [{ scale: 1.1 }],
+  categoryChipText: {
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.weight.medium,
+    color: MODERN_COLORS.textSecondary,
   },
-  categoryText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-  selectedCategoryText: {
-    color: COLORS.text,
-    fontWeight: '700',
+  categoryChipTextSelected: {
+    color: MODERN_COLORS.white,
   },
 
-  // Price Range
-  priceGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  priceButton: {
-    flex: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  priceGradient: {
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-  },
-  selectedPrice: {
-    transform: [{ scale: 1.05 }],
-  },
-  priceSymbol: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  priceText: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-  selectedPriceText: {
-    color: COLORS.text,
-    fontWeight: '700',
-  },
-
-  // Booking Option
-  bookingOption: {
+  // Sub Toggle
+  subToggleSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: MODERN_COLORS.gray50,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
   },
-  bookingContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  subToggleInfo: {
     flex: 1,
   },
-  bookingIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+  subToggleTitle: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.medium,
+    color: MODERN_COLORS.textPrimary,
   },
-  bookingInfo: {
-    flex: 1,
+  subToggleDescription: {
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.textSecondary,
+    marginTop: 2,
   },
-  bookingTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 2,
-  },
-  bookingSubtitle: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
+
+  // Bottom Spacing
+  bottomSpacing: {
+    height: SPACING.xl,
   },
 });
 

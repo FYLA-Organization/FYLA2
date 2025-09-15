@@ -122,17 +122,126 @@ namespace FYLA2_Backend.Controllers
             }
         }
 
+        [HttpGet("posts/user/{userId}")]
+        [AllowAnonymous] // Allow access for viewing user profiles
+        public async Task<ActionResult<object>> GetUserPosts(
+            string userId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var currentUserId = GetUserId();
+                _logger.LogInformation($"Getting posts for user {userId}, page {page}, pageSize {pageSize}");
+
+                // Get paginated posts for specific user
+                var query = _context.Posts
+                    .Include(p => p.User)
+                    .Where(p => p.UserId == userId)
+                    .OrderByDescending(p => p.CreatedAt);
+
+                var totalCount = await query.CountAsync();
+                var posts = await query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                var postIds = posts.Select(p => p.Id).ToList();
+
+                // Get current user's likes
+                var userLikes = new List<int>();
+                if (!string.IsNullOrEmpty(currentUserId))
+                {
+                    userLikes = await _context.PostLikes
+                        .Where(pl => postIds.Contains(pl.PostId) && pl.UserId == currentUserId)
+                        .Select(pl => pl.PostId)
+                        .ToListAsync();
+                }
+
+                // Get comment counts for each post
+                var commentCounts = await _context.Comments
+                    .Where(c => postIds.Contains(c.PostId))
+                    .GroupBy(c => c.PostId)
+                    .Select(g => new { PostId = g.Key, Count = g.Count() })
+                    .ToListAsync();
+
+                // Transform to frontend format
+                var transformedPosts = posts.Select(p => new
+                {
+                    id = p.Id.ToString(),
+                    userId = p.UserId,
+                    content = p.Content,
+                    user = new
+                    {
+                        id = p.User.Id,
+                        firstName = p.User.FirstName,
+                        lastName = p.User.LastName,
+                        profilePictureUrl = p.User.ProfilePictureUrl,
+                        isServiceProvider = p.User.IsServiceProvider
+                    },
+                    images = new[] { p.ImageUrl }.Where(url => !string.IsNullOrEmpty(url)).ToArray(),
+                    createdAt = p.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    likes = _context.PostLikes.Count(pl => pl.PostId == p.Id),
+                    comments = commentCounts.FirstOrDefault(cc => cc.PostId == p.Id)?.Count ?? 0,
+                    shares = 0,
+                    isLiked = userLikes.Contains(p.Id),
+                    isBookmarked = false
+                }).ToList();
+
+                var hasMore = (page * pageSize) < totalCount;
+
+                var response = new
+                {
+                    data = transformedPosts,
+                    pagination = new
+                    {
+                        page,
+                        pageSize,
+                        totalCount,
+                        totalPages = (int)Math.Ceiling((double)totalCount / pageSize),
+                        hasMore
+                    }
+                };
+
+                _logger.LogInformation($"Returning {transformedPosts.Count} user posts, hasMore: {hasMore}");
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user posts for user {UserId}", userId);
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+
         [HttpPost("posts")]
-        public ActionResult<object> CreateSocialPost([FromBody] CreateSocialPostRequest request)
+        public async Task<ActionResult<object>> CreateSocialPost([FromBody] CreateSocialPostRequest request)
         {
             try
             {
                 var userId = GetUserId();
                 _logger.LogInformation($"Creating social post for user {userId}");
 
-                var post = new
+                // Create a new Post entity
+                var post = new Post
                 {
-                    id = Guid.NewGuid().ToString(),
+                    UserId = userId,
+                    Content = request.Content,
+                    ImageUrl = request.Images?.FirstOrDefault(), // For now, just take the first image
+                    IsBusinessPost = request.IsBusinessPost,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                // Save to database
+                _context.Posts.Add(post);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Post created with ID {post.Id} for user {userId}");
+
+                // Return the response in the expected format
+                var response = new
+                {
+                    id = post.Id.ToString(),
                     userId = userId,
                     content = request.Content,
                     images = request.Images ?? new List<string>(),
@@ -142,7 +251,7 @@ namespace FYLA2_Backend.Controllers
                     serviceCategory = request.ServiceCategory,
                     priceRange = request.PriceRange,
                     allowBooking = request.AllowBooking,
-                    createdAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    createdAt = post.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
                     likes = 0,
                     comments = 0,
                     shares = 0,
@@ -150,7 +259,7 @@ namespace FYLA2_Backend.Controllers
                     isBookmarked = false
                 };
 
-                return Ok(post);
+                return Ok(response);
             }
             catch (Exception ex)
             {

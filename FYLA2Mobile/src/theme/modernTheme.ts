@@ -206,19 +206,13 @@ export const modernTheme = {
       background: '#f1f5f9',
       border: '#cbd5e1',
     },
-    basic: {
+    pro: {
       color: '#0ea5e9',
       background: '#e0f2fe',
       border: '#0ea5e9',
       gradient: ['#0ea5e9', '#38bdf8'],
     },
-    premium: {
-      color: '#a855f7',
-      background: '#faf5ff',
-      border: '#a855f7',
-      gradient: ['#a855f7', '#c084fc'],
-    },
-    enterprise: {
+    business: {
       color: '#eab308',
       background: '#fefce8',
       border: '#eab308',

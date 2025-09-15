@@ -10,6 +10,8 @@ export interface User {
   dateOfBirth?: string;
   bio?: string;
   createdAt: string;
+  subscriptionTier?: string; // Added subscription tier from backend
+  onboardingCompleted?: boolean; // Added for onboarding flow
   // Enhanced Profile Fields
   preferences?: UserPreferences;
   location?: UserLocation;
@@ -81,6 +83,16 @@ export interface AuthResponse {
 }
 
 // Service Provider Types
+export interface PortfolioItem {
+  id: number;
+  providerId: string;
+  imageUrl: string;
+  caption?: string;
+  category?: string;
+  displayOrder: number;
+  createdAt: string;
+}
+
 export interface ServiceProvider {
   id: string;
   userId: string;
@@ -94,6 +106,7 @@ export interface ServiceProvider {
   isVerified: boolean;
   profilePictureUrl?: string;
   portfolioImages?: string[];
+  portfolio?: PortfolioItem[];
   specialties?: string[];
   yearsOfExperience?: number;
   priceRange?: string;
@@ -178,6 +191,16 @@ export interface LoyaltyPointsEarned {
 export interface BookingCreationResponse {
   booking: Booking;
   loyaltyPoints?: LoyaltyPointsEarned;
+  success?: boolean;
+  message?: string;
+  isDirectFetch?: boolean;
+}
+
+export interface AvailableDay {
+  date: Date;
+  dayOfWeek: string;
+  isAvailable: boolean;
+  workingHours?: string;
 }
 
 export interface ClientLoyaltyStatus {
@@ -370,15 +393,38 @@ export type RootStackParamList = {
   Profile: undefined;
   ServiceDetails: { serviceId: number };
   ProviderProfile: { providerId: string };
+  ProviderPromotions: { 
+    providerId: string; 
+    providerName: string; 
+    providerImage?: string; 
+  };
   BookingDetails: { bookingId: string };
   BookingFlow: { 
     service: Service; 
-    provider: ServiceProvider; 
+    provider: ServiceProvider;
+    selectedDate?: string;
+    selectedTimeSlot?: string;
+    selectedEndTime?: string;
+    price?: number;
+    duration?: number;
   };
   BookingCalendar: {
     serviceId: string;
     providerId: string;
     rescheduleBookingId?: string;
+  };
+  ModernBookingCalendar: {
+    service: Service;
+    provider: ServiceProvider;
+  };
+  ModernBookingFlow: {
+    service: Service;
+    provider: ServiceProvider;
+    selectedDate?: string;
+    selectedTimeSlot?: string;
+    selectedEndTime?: string;
+    price?: number;
+    duration?: number;
   };
   Chat: {
     userId: string;
@@ -407,13 +453,18 @@ export type RootStackParamList = {
   Schedule: undefined;
   EnhancedSchedule: undefined;
   EnhancedScheduleManagement: undefined;
+  ModernProviderSchedule: undefined;
   EnhancedAppointments: undefined;
   Clients: undefined;
   Reviews: undefined;
   // Enhanced Provider Business Management
   ClientManagement: undefined;
   CouponsLoyalty: undefined;
+  EnhancedCouponsLoyalty: undefined;
   ServiceManagement: undefined;
+  EnhancedServiceManagement: undefined;
+  ProviderStorefront: undefined;
+  ProviderAvailability: undefined;
   // Social Media Screens
   SocialFeed: undefined;
   InstagramSearch: undefined;
@@ -425,6 +476,18 @@ export type RootStackParamList = {
   EnhancedProviderProfile: { providerId: string };
   CreateReview: { providerId: string };
   SocialSearch: undefined;
+  // Subscription
+  SubscriptionPlans: undefined;
+  // Advanced Subscription Features
+  CustomBranding: undefined;
+  MarketingTools: undefined;
+  PrioritySupport: undefined;
+  MultiLocation: undefined;
+  ChairRental: undefined;
+  SeatRental: undefined;
+  // Onboarding Screens
+  ClientOnboarding: undefined;
+  ProviderOnboarding: undefined;
 };
 
 export type AuthStackParamList = {
@@ -454,6 +517,7 @@ export type ProviderTabParamList = {
   ClientManagement: undefined;
   CouponsLoyalty: undefined;
   Schedule: undefined;
+  Search: undefined;
 };
 
 // Legacy - keeping for backward compatibility

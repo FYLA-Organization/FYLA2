@@ -17,6 +17,46 @@ namespace FYLA2_Backend.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.0");
 
+            modelBuilder.Entity("FYLA2_Backend.Models.AutomationExecution", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AutomationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExecutedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ScheduledFor")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TriggerEvent")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AutomationId");
+
+                    b.HasIndex("ClientId");
+
+                    b.ToTable("AutomationExecutions");
+                });
+
             modelBuilder.Entity("FYLA2_Backend.Models.Booking", b =>
                 {
                     b.Property<int>("Id")
@@ -57,6 +97,9 @@ namespace FYLA2_Backend.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("SeatRentalBookingId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("ServiceId")
                         .HasColumnType("INTEGER");
 
@@ -79,9 +122,476 @@ namespace FYLA2_Backend.Migrations
 
                     b.HasIndex("ProviderId");
 
+                    b.HasIndex("SeatRentalBookingId");
+
                     b.HasIndex("ServiceId");
 
                     b.ToTable("Bookings");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.BookingAction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("BookingId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("FeeAmount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("NewBookingDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("NewEndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("NewStartTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProviderNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("RefundAmount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("RequestedByUserId");
+
+                    b.ToTable("BookingActions");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.BrandProfile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AccentColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BusinessName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FacebookPage")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FontFamily")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InstagramHandle")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LogoUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PrimaryColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SecondaryColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ServiceProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Tagline")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TwitterHandle")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WebsiteUrl")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceProviderId");
+
+                    b.ToTable("BrandProfiles");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.BrandedEmailTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BrandProfileId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HtmlContent")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TemplateType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TextContent")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BrandProfileId");
+
+                    b.ToTable("BrandedEmailTemplates");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.BusinessLocation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BusinessHours")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Website")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ZipCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("BusinessLocations");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.CampaignResult", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ActionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CampaignId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("RevenueGenerated")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CampaignId");
+
+                    b.HasIndex("ClientId");
+
+                    b.ToTable("CampaignResults");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.CancellationPolicy", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AllowSameDayCancellation")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AllowSameDayReschedule")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("FreeReschedulesAllowed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MinimumRescheduleHours")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("OneDayBeforeFeePercentage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("OneWeekBeforeFeePercentage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PolicyDescription")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RefundProcessingFee")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("RescheduleFeePercentage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SameDayFeePercentage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SpecialCircumstances")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ThreeDaysBeforeFeePercentage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TwoDaysBeforeFeePercentage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId");
+
+                    b.ToTable("CancellationPolicies");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ChairRental", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Amenities")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ChairNumber")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("DepositAmount")
+                        .HasColumnType("decimal(10, 2)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LocationId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LocationId1")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("MonthlyRent")
+                        .HasColumnType("decimal(10, 2)");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RentalEndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RentalStartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RenterId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LocationId1");
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("RenterId");
+
+                    b.ToTable("ChairRentals");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ChairRentalPayment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(10, 2)");
+
+                    b.Property<int>("ChairRentalId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PaidDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PaymentType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StripePaymentIntentId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChairRentalId");
+
+                    b.ToTable("ChairRentalPayments");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.Comment", b =>
@@ -143,6 +653,295 @@ namespace FYLA2_Backend.Migrations
                     b.ToTable("CommentLikes");
                 });
 
+            modelBuilder.Entity("FYLA2_Backend.Models.CustomBranding", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AccentColor")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BannerUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BusinessName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomDomain")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LogoUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PrimaryColor")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SecondaryColor")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SocialMediaLinks")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Tagline")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("CustomBrandings");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.CustomerSegment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Criteria")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CustomerCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ServiceProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceProviderId");
+
+                    b.ToTable("CustomerSegments");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.EnhancedMarketingCampaign", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Budget")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Revenue")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("ServiceProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SpentAmount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetAudience")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TotalClicked")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalConverted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalOpened")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalSent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceProviderId");
+
+                    b.ToTable("EnhancedMarketingCampaigns");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.LoyaltyMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CurrentPoints")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("JoinedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastActivity")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastActivityDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LoyaltyProgramId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalEarned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalPointsEarned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalPointsRedeemed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalRedeemed")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("LoyaltyProgramId");
+
+                    b.ToTable("LoyaltyMembers");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.LoyaltyProgram", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("EarnRate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("MinimumEarn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("MinimumRedeem")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MinimumRedemption")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PointsPerDollar")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("RedemptionValue")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RewardType")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ServiceProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceProviderId");
+
+                    b.ToTable("LoyaltyPrograms");
+                });
+
             modelBuilder.Entity("FYLA2_Backend.Models.LoyaltyTransaction", b =>
                 {
                     b.Property<int>("Id")
@@ -151,6 +950,10 @@ namespace FYLA2_Backend.Migrations
 
                     b.Property<int?>("BookingId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
@@ -161,6 +964,12 @@ namespace FYLA2_Backend.Migrations
 
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("LoyaltyMemberId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("LoyaltyProgramId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("Points")
                         .HasColumnType("INTEGER");
@@ -180,11 +989,126 @@ namespace FYLA2_Backend.Migrations
 
                     b.HasIndex("BookingId");
 
+                    b.HasIndex("LoyaltyMemberId");
+
+                    b.HasIndex("LoyaltyProgramId");
+
                     b.HasIndex("ProviderId");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("LoyaltyTransactions");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.MarketingAutomation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DelayMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ServiceProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TimesTriggered")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TriggerType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceProviderId");
+
+                    b.ToTable("MarketingAutomations");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.MarketingCampaign", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BookingsGenerated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Content")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EmailsClicked")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("EmailsOpened")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("EmailsSent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ScheduledDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("SentDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Subject")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetAudience")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("MarketingCampaigns");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.Message", b =>
@@ -607,6 +1531,109 @@ namespace FYLA2_Backend.Migrations
                     b.ToTable("PostLikes");
                 });
 
+            modelBuilder.Entity("FYLA2_Backend.Models.Promotion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApplicableServiceIds")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CurrentUses")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MaxUses")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("MinimumSpend")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("PromoCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ServiceProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Value")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceProviderId");
+
+                    b.ToTable("Promotions");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.PromotionUsage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BookingId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("PromotionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UsedDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("PromotionId");
+
+                    b.ToTable("PromotionUsages");
+                });
+
             modelBuilder.Entity("FYLA2_Backend.Models.ProviderBlockedTime", b =>
                 {
                     b.Property<int>("Id")
@@ -640,17 +1667,179 @@ namespace FYLA2_Backend.Migrations
                     b.ToTable("ProviderBlockedTimes");
                 });
 
-            modelBuilder.Entity("FYLA2_Backend.Models.ProviderSchedule", b =>
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderBreak", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<TimeSpan?>("BreakEndTime")
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(7)
                         .HasColumnType("TEXT");
 
-                    b.Property<TimeSpan?>("BreakStartTime")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ScheduleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScheduleId");
+
+                    b.ToTable("ProviderBreaks");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderBusinessHours", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<TimeSpan?>("CloseTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<TimeSpan?>("OpenTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId", "DayOfWeek")
+                        .IsUnique();
+
+                    b.ToTable("ProviderBusinessHours");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderPortfolio", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Caption")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId");
+
+                    b.ToTable("ProviderPortfolios");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderPromotion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApplicableServiceIds")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CurrentUses")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DiscountType")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("MaxUses")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ValidFrom")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ValidUntil")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId");
+
+                    b.ToTable("ProviderPromotions");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
@@ -682,6 +1871,35 @@ namespace FYLA2_Backend.Migrations
                     b.HasIndex("ProviderId");
 
                     b.ToTable("ProviderSchedules");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderSpecialty", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsVerified")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("ProviderSpecialties");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.PushToken", b =>
@@ -717,6 +1935,123 @@ namespace FYLA2_Backend.Migrations
                         .IsUnique();
 
                     b.ToTable("PushTokens");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.Referral", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CompletionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RefereeId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("RefereeReward")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("ReferralCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReferralDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ReferralProgramId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ReferrerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ReferrerReward")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("RewardDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RefereeId");
+
+                    b.HasIndex("ReferralProgramId");
+
+                    b.HasIndex("ReferrerId");
+
+                    b.ToTable("Referrals");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ReferralProgram", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MaxReferrals")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RefereeRewardType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("RefereeRewardValue")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("ReferrerRewardType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ReferrerRewardValue")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("ServiceProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TotalReferrals")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("TotalRewardsPaid")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ValidityDays")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceProviderId");
+
+                    b.ToTable("ReferralPrograms");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.Review", b =>
@@ -760,6 +2095,160 @@ namespace FYLA2_Backend.Migrations
                     b.HasIndex("ServiceId");
 
                     b.ToTable("Reviews");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.SeatRental", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Amenities")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AvailableHours")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CommissionRate")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("DailyRate")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("MonthlyRate")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Photos")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequiresApproval")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("WeeklyRate")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("ZipCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.ToTable("SeatRentals");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.SeatRentalBooking", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("CommissionAmount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RenterId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SeatRentalId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RenterId");
+
+                    b.HasIndex("SeatRentalId");
+
+                    b.ToTable("SeatRentalBookings");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.SegmentMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("AddedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SegmentId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("SegmentId");
+
+                    b.ToTable("SegmentMembers");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.Service", b =>
@@ -815,6 +2304,50 @@ namespace FYLA2_Backend.Migrations
                     b.HasIndex("ServiceProviderId");
 
                     b.ToTable("Services");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ServiceAddOn", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DurationMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ServiceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceId");
+
+                    b.ToTable("ServiceAddOns");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.ServiceProvider", b =>
@@ -883,6 +2416,9 @@ namespace FYLA2_Backend.Migrations
                     b.Property<bool>("CanAcceptOnlinePayments")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("CanManageMultipleLocations")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("CanUseAdvancedAnalytics")
                         .HasColumnType("INTEGER");
 
@@ -905,6 +2441,9 @@ namespace FYLA2_Backend.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("MaxServices")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MaxTeamMembers")
                         .HasColumnType("INTEGER");
 
                     b.Property<decimal>("MonthlyPrice")
@@ -977,6 +2516,90 @@ namespace FYLA2_Backend.Migrations
                     b.ToTable("SubscriptionFeature");
                 });
 
+            modelBuilder.Entity("FYLA2_Backend.Models.SupportTicket", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AssignedToAgent")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("FirstResponseDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ResolvedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SupportTickets");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.SupportTicketMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AttachmentUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsFromAgent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SenderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SupportTicketId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("SupportTicketId");
+
+                    b.ToTable("SupportTicketMessages");
+                });
+
             modelBuilder.Entity("FYLA2_Backend.Models.User", b =>
                 {
                     b.Property<string>("Id")
@@ -1036,6 +2659,9 @@ namespace FYLA2_Backend.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("OnboardingCompleted")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("PasswordHash")
                         .HasColumnType("TEXT");
 
@@ -1049,6 +2675,10 @@ namespace FYLA2_Backend.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SecurityStamp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubscriptionTier")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("TwoFactorEnabled")
@@ -1231,6 +2861,25 @@ namespace FYLA2_Backend.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("FYLA2_Backend.Models.AutomationExecution", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.MarketingAutomation", "Automation")
+                        .WithMany("Executions")
+                        .HasForeignKey("AutomationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.User", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Automation");
+
+                    b.Navigation("Client");
+                });
+
             modelBuilder.Entity("FYLA2_Backend.Models.Booking", b =>
                 {
                     b.HasOne("FYLA2_Backend.Models.User", "Client")
@@ -1245,6 +2894,10 @@ namespace FYLA2_Backend.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("FYLA2_Backend.Models.SeatRentalBooking", null)
+                        .WithMany("ClientBookings")
+                        .HasForeignKey("SeatRentalBookingId");
+
                     b.HasOne("FYLA2_Backend.Models.Service", "Service")
                         .WithMany("Bookings")
                         .HasForeignKey("ServiceId")
@@ -1256,6 +2909,122 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("Provider");
 
                     b.Navigation("Service");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.BookingAction", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.User", "RequestedByUser")
+                        .WithMany()
+                        .HasForeignKey("RequestedByUserId");
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("RequestedByUser");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.BrandProfile", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "ServiceProvider")
+                        .WithMany()
+                        .HasForeignKey("ServiceProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ServiceProvider");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.BrandedEmailTemplate", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.BrandProfile", "BrandProfile")
+                        .WithMany("EmailTemplates")
+                        .HasForeignKey("BrandProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BrandProfile");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.BusinessLocation", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.CampaignResult", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.EnhancedMarketingCampaign", "Campaign")
+                        .WithMany("Results")
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.User", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Campaign");
+
+                    b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.CancellationPolicy", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ChairRental", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.BusinessLocation", "Location")
+                        .WithMany("ChairRentals")
+                        .HasForeignKey("LocationId1")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.User", "Renter")
+                        .WithMany()
+                        .HasForeignKey("RenterId");
+
+                    b.Navigation("Location");
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("Renter");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ChairRentalPayment", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.ChairRental", "ChairRental")
+                        .WithMany("Payments")
+                        .HasForeignKey("ChairRentalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChairRental");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.Comment", b =>
@@ -1296,12 +3065,83 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FYLA2_Backend.Models.CustomBranding", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.CustomerSegment", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "ServiceProvider")
+                        .WithMany()
+                        .HasForeignKey("ServiceProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ServiceProvider");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.EnhancedMarketingCampaign", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "ServiceProvider")
+                        .WithMany()
+                        .HasForeignKey("ServiceProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ServiceProvider");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.LoyaltyMember", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.LoyaltyProgram", "LoyaltyProgram")
+                        .WithMany("Members")
+                        .HasForeignKey("LoyaltyProgramId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Client");
+
+                    b.Navigation("LoyaltyProgram");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.LoyaltyProgram", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "ServiceProvider")
+                        .WithMany()
+                        .HasForeignKey("ServiceProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ServiceProvider");
+                });
+
             modelBuilder.Entity("FYLA2_Backend.Models.LoyaltyTransaction", b =>
                 {
                     b.HasOne("FYLA2_Backend.Models.Booking", "Booking")
                         .WithMany()
                         .HasForeignKey("BookingId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("FYLA2_Backend.Models.LoyaltyMember", "LoyaltyMember")
+                        .WithMany("Transactions")
+                        .HasForeignKey("LoyaltyMemberId");
+
+                    b.HasOne("FYLA2_Backend.Models.LoyaltyProgram", null)
+                        .WithMany("Transactions")
+                        .HasForeignKey("LoyaltyProgramId");
 
                     b.HasOne("FYLA2_Backend.Models.User", "Provider")
                         .WithMany("LoyaltyTransactionsAsProvider")
@@ -1317,7 +3157,31 @@ namespace FYLA2_Backend.Migrations
 
                     b.Navigation("Booking");
 
+                    b.Navigation("LoyaltyMember");
+
                     b.Navigation("Provider");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.MarketingAutomation", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "ServiceProvider")
+                        .WithMany()
+                        .HasForeignKey("ServiceProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ServiceProvider");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.MarketingCampaign", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -1486,7 +3350,89 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FYLA2_Backend.Models.Promotion", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "ServiceProvider")
+                        .WithMany()
+                        .HasForeignKey("ServiceProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ServiceProvider");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.PromotionUsage", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.User", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.Promotion", "Promotion")
+                        .WithMany("Usages")
+                        .HasForeignKey("PromotionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("Client");
+
+                    b.Navigation("Promotion");
+                });
+
             modelBuilder.Entity("FYLA2_Backend.Models.ProviderBlockedTime", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderBreak", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.ProviderSchedule", "Schedule")
+                        .WithMany("Breaks")
+                        .HasForeignKey("ScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Schedule");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderBusinessHours", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderPortfolio", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "Provider")
+                        .WithMany("Portfolio")
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderPromotion", b =>
                 {
                     b.HasOne("FYLA2_Backend.Models.User", "Provider")
                         .WithMany()
@@ -1508,6 +3454,17 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("Provider");
                 });
 
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderSpecialty", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
+                });
+
             modelBuilder.Entity("FYLA2_Backend.Models.PushToken", b =>
                 {
                     b.HasOne("FYLA2_Backend.Models.User", "User")
@@ -1517,6 +3474,44 @@ namespace FYLA2_Backend.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.Referral", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "Referee")
+                        .WithMany()
+                        .HasForeignKey("RefereeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.ReferralProgram", "ReferralProgram")
+                        .WithMany("Referrals")
+                        .HasForeignKey("ReferralProgramId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.User", "Referrer")
+                        .WithMany()
+                        .HasForeignKey("ReferrerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Referee");
+
+                    b.Navigation("ReferralProgram");
+
+                    b.Navigation("Referrer");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ReferralProgram", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "ServiceProvider")
+                        .WithMany()
+                        .HasForeignKey("ServiceProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ServiceProvider");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.Review", b =>
@@ -1550,6 +3545,55 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("Service");
                 });
 
+            modelBuilder.Entity("FYLA2_Backend.Models.SeatRental", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.SeatRentalBooking", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "Renter")
+                        .WithMany()
+                        .HasForeignKey("RenterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.SeatRental", "SeatRental")
+                        .WithMany("Bookings")
+                        .HasForeignKey("SeatRentalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Renter");
+
+                    b.Navigation("SeatRental");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.SegmentMember", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.CustomerSegment", "Segment")
+                        .WithMany("Members")
+                        .HasForeignKey("SegmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Client");
+
+                    b.Navigation("Segment");
+                });
+
             modelBuilder.Entity("FYLA2_Backend.Models.Service", b =>
                 {
                     b.HasOne("FYLA2_Backend.Models.User", "Provider")
@@ -1563,6 +3607,17 @@ namespace FYLA2_Backend.Migrations
                         .HasForeignKey("ServiceProviderId");
 
                     b.Navigation("Provider");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ServiceAddOn", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.Service", "Service")
+                        .WithMany()
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Service");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.ServiceProvider", b =>
@@ -1602,6 +3657,36 @@ namespace FYLA2_Backend.Migrations
                         .IsRequired();
 
                     b.Navigation("Subscription");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.SupportTicket", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.SupportTicketMessage", b =>
+                {
+                    b.HasOne("FYLA2_Backend.Models.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FYLA2_Backend.Models.SupportTicket", "SupportTicket")
+                        .WithMany("Messages")
+                        .HasForeignKey("SupportTicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Sender");
+
+                    b.Navigation("SupportTicket");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.UserFollow", b =>
@@ -1681,9 +3766,51 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("Reviews");
                 });
 
+            modelBuilder.Entity("FYLA2_Backend.Models.BrandProfile", b =>
+                {
+                    b.Navigation("EmailTemplates");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.BusinessLocation", b =>
+                {
+                    b.Navigation("ChairRentals");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ChairRental", b =>
+                {
+                    b.Navigation("Payments");
+                });
+
             modelBuilder.Entity("FYLA2_Backend.Models.Comment", b =>
                 {
                     b.Navigation("Likes");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.CustomerSegment", b =>
+                {
+                    b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.EnhancedMarketingCampaign", b =>
+                {
+                    b.Navigation("Results");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.LoyaltyMember", b =>
+                {
+                    b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.LoyaltyProgram", b =>
+                {
+                    b.Navigation("Members");
+
+                    b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.MarketingAutomation", b =>
+                {
+                    b.Navigation("Executions");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.PaymentTransaction", b =>
@@ -1698,6 +3825,31 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("Comments");
 
                     b.Navigation("Likes");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.Promotion", b =>
+                {
+                    b.Navigation("Usages");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ProviderSchedule", b =>
+                {
+                    b.Navigation("Breaks");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.ReferralProgram", b =>
+                {
+                    b.Navigation("Referrals");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.SeatRental", b =>
+                {
+                    b.Navigation("Bookings");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.SeatRentalBooking", b =>
+                {
+                    b.Navigation("ClientBookings");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.Service", b =>
@@ -1717,6 +3869,11 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("Features");
 
                     b.Navigation("PaymentRecords");
+                });
+
+            modelBuilder.Entity("FYLA2_Backend.Models.SupportTicket", b =>
+                {
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("FYLA2_Backend.Models.User", b =>
@@ -1742,6 +3899,8 @@ namespace FYLA2_Backend.Migrations
                     b.Navigation("MessagesSent");
 
                     b.Navigation("PaymentSettings");
+
+                    b.Navigation("Portfolio");
 
                     b.Navigation("PostBookmarks");
 

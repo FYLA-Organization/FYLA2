@@ -247,6 +247,12 @@ namespace FYLA2_Backend.Controllers
       if (model.DateOfBirth.HasValue)
         user.DateOfBirth = model.DateOfBirth.Value;
 
+      if (model.OnboardingCompleted.HasValue)
+        user.OnboardingCompleted = model.OnboardingCompleted.Value;
+
+      if (!string.IsNullOrEmpty(model.SubscriptionTier))
+        user.SubscriptionTier = model.SubscriptionTier;
+
       user.UpdatedAt = DateTime.UtcNow;
 
       var result = await _userManager.UpdateAsync(user);
@@ -269,6 +275,8 @@ namespace FYLA2_Backend.Controllers
         ProfilePictureUrl = user.ProfilePictureUrl,
         DateOfBirth = user.DateOfBirth,
         IsServiceProvider = user.IsServiceProvider,
+        OnboardingCompleted = user.OnboardingCompleted,
+        SubscriptionTier = user.SubscriptionTier,
         CreatedAt = user.CreatedAt
       };
 

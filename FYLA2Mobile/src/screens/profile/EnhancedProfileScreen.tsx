@@ -11,6 +11,9 @@ import {
   Switch,
   Modal,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -19,6 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { RootStackParamList, User, UserPreferences, UserLocation } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { MODERN_COLORS } from '../../constants/modernDesign';
 
 type EnhancedProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -159,6 +163,64 @@ const EnhancedProfileScreen: React.FC = () => {
       setIsSaving(false);
     }
   };
+
+  const renderEditableField = (
+    label: string,
+    value: string,
+    onChangeText: (text: string) => void,
+    placeholder?: string,
+    multiline?: boolean,
+    keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric'
+  ) => (
+    <View style={styles.fieldContainer}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TextInput
+        style={[
+          styles.fieldInput, 
+          multiline && styles.multilineInput,
+          !isEditing && styles.disabledInput
+        ]}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={MODERN_COLORS.gray400}
+        multiline={multiline}
+        numberOfLines={multiline ? 4 : 1}
+        keyboardType={keyboardType}
+        editable={isEditing}
+      />
+    </View>
+  );
+
+  const renderStaticField = (label: string, value: string) => (
+    <View style={styles.fieldContainer}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={styles.fieldValue}>{value || 'Not provided'}</Text>
+    </View>
+  );
+
+  const renderPreferenceToggle = (
+    label: string,
+    value: boolean,
+    onToggle: (value: boolean) => void,
+    description?: string
+  ) => (
+    <View style={styles.preferenceItem}>
+      <View style={styles.preferenceInfo}>
+        <Text style={styles.preferenceLabel}>{label}</Text>
+        {description && (
+          <Text style={styles.preferenceDescription}>{description}</Text>
+        )}
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onToggle}
+        trackColor={{ false: MODERN_COLORS.gray300, true: MODERN_COLORS.primary + '40' }}
+        thumbColor={value ? MODERN_COLORS.primary : MODERN_COLORS.gray500}
+        disabled={!isEditing}
+      />
+    </View>
+  );
 
   const serviceCategories = [
     'Hair & Beauty', 'Wellness & Spa', 'Fitness', 'Health', 
@@ -426,85 +488,102 @@ const EnhancedProfileScreen: React.FC = () => {
   );
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <LinearGradient colors={['#FF6B6B', '#FFE66D']} style={styles.header}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Enhanced Profile</Text>
-          {isEditing && (
-            <TouchableOpacity 
-              style={styles.saveButton}
-              onPress={handleSave}
-              disabled={isSaving}
-            >
-              <Text style={styles.saveButtonText}>
-                {isSaving ? 'Saving...' : 'Save'}
-              </Text>
-            </TouchableOpacity>
-          )}
-          {!isEditing && <View style={styles.placeholder} />}
-        </View>
-      </LinearGradient>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {renderProfileSection()}
-        {renderPreferencesSection()}
-        {renderLocationSection()}
-      </ScrollView>
-
-      {/* Image Picker Modal */}
-      <Modal
-        visible={showImagePicker}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowImagePicker(false)}
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView 
+        style={styles.container} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.imagePickerModal}>
-            <Text style={styles.modalTitle}>Select Profile Picture</Text>
-            
-            <TouchableOpacity
-              style={styles.modalOption}
-              onPress={() => handleImagePicker('camera')}
-            >
-              <Ionicons name="camera" size={24} color="#333" />
-              <Text style={styles.modalOptionText}>Take Photo</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.modalOption}
-              onPress={() => handleImagePicker('library')}
-            >
-              <Ionicons name="images" size={24} color="#333" />
-              <Text style={styles.modalOptionText}>Choose from Library</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.modalOption, styles.cancelOption]}
-              onPress={() => setShowImagePicker(false)}
-            >
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </View>
-  );
+        {/* Header */}
+        <LinearGradient 
+          colors={[MODERN_COLORS.primary, MODERN_COLORS.primaryLight]} 
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Image,
+  TextInput,
+  Switch,
+  Modal,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  Animated,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
+import { RootStackParamList, User, UserPreferences, UserLocation } from '../../types';
+import { useAuth } from '../../context/AuthContext';
+import { MODERN_COLORS } from '../../constants/modernDesign';
+
+type EnhancedProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+
+const { width } = Dimensions.get('window');
+
+const EnhancedProfileScreen: React.FC = () => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Profile form data
+  const [profileData, setProfileData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: '',
+    bio: '',
+    dateOfBirth: '',
+  });
+
+  // Preferences
+  const [preferences, setPreferences] = useState<UserPreferences>({
+    budgetRange: { min: 50, max: 500 },
+    serviceCategories: [],
+    preferredDistance: 25,
+    preferredTimeSlots: [],
+    notifications: {
+      bookingReminders: true,
+      promotionalOffers: false,
+      newProviderAlerts: true,
+      priceDropAlerts: false,
+    },
+    accessibility: {
+      wheelchairAccessible: false,
+      hearingImpaired: false,
+      visuallyImpaired: false,
+    },
+  });
+
+  // Location
+  const [location, setLocation] = useState<UserLocation>({
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+  });
+
+  const navigation = useNavigation<EnhancedProfileScreenNavigationProp>();
+  const { user, updateUser } = useAuth();
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: MODERN_COLORS.gray50,
   },
   header: {
-    paddingTop: 50,
+    paddingTop: Platform.OS === 'ios' ? 10 : 50,
     paddingBottom: 20,
     paddingHorizontal: 20,
   },
@@ -515,39 +594,49 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: 22,
+    fontWeight: '700',
+    color: MODERN_COLORS.white,
+    letterSpacing: 0.3,
   },
   saveButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: MODERN_COLORS.white,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    shadowColor: MODERN_COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   saveButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: MODERN_COLORS.primary,
+    fontWeight: '600',
+    fontSize: 16,
   },
   placeholder: {
     width: 80,
   },
   content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   section: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: MODERN_COLORS.white,
+    borderRadius: 16,
+    padding: 24,
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: MODERN_COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -556,44 +645,64 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 20,
+    fontWeight: '700',
+    color: MODERN_COLORS.gray900,
+    letterSpacing: 0.2,
   },
   editButton: {
     padding: 8,
+    borderRadius: 20,
+    backgroundColor: MODERN_COLORS.primary + '15',
   },
   profileImageContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   profileImageWrapper: {
     position: 'relative',
     marginBottom: 12,
   },
   profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 4,
+    borderColor: MODERN_COLORS.white,
+    shadowColor: MODERN_COLORS.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   placeholderImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#f0f0f0',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: MODERN_COLORS.gray100,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: MODERN_COLORS.gray200,
+    borderStyle: 'dashed',
   },
   cameraIcon: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#FF6B6B',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
+    bottom: 4,
+    right: 4,
+    backgroundColor: MODERN_COLORS.primary,
+    borderRadius: 16,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: MODERN_COLORS.white,
+    shadowColor: MODERN_COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   profileName: {
     fontSize: 20,
@@ -606,35 +715,47 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   fieldsContainer: {
-    gap: 16,
+    gap: 20,
   },
   fieldContainer: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   fieldLabel: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: MODERN_COLORS.gray800,
     marginBottom: 8,
+    letterSpacing: 0.1,
   },
   fieldInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+    borderWidth: 2,
+    borderColor: MODERN_COLORS.gray200,
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
-    color: '#333',
+    color: MODERN_COLORS.gray900,
+    backgroundColor: MODERN_COLORS.white,
+    fontWeight: '500',
+  },
+  disabledInput: {
+    backgroundColor: MODERN_COLORS.gray50,
+    borderColor: MODERN_COLORS.gray100,
+    color: MODERN_COLORS.gray600,
   },
   multilineInput: {
-    height: 80,
+    height: 100,
     textAlignVertical: 'top',
+    paddingTop: 16,
   },
   fieldValue: {
     fontSize: 16,
-    color: '#333',
-    padding: 12,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
+    color: MODERN_COLORS.gray700,
+    padding: 16,
+    backgroundColor: MODERN_COLORS.gray50,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: MODERN_COLORS.gray200,
+    fontWeight: '500',
   },
   row: {
     flexDirection: 'row',
@@ -647,6 +768,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 12,
+  },
+  preferenceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  preferenceInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  preferenceLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  preferenceDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
   },
   budgetContainer: {
     flexDirection: 'row',
@@ -718,46 +861,59 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   imagePickerModal: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: MODERN_COLORS.white,
+    borderRadius: 20,
+    padding: 24,
     width: '100%',
-    maxWidth: 300,
+    maxWidth: 320,
+    shadowColor: MODERN_COLORS.black,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 20,
+    fontWeight: '700',
+    color: MODERN_COLORS.gray900,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+    letterSpacing: 0.2,
   },
   modalOption: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 12,
-    gap: 12,
+    paddingHorizontal: 16,
+    gap: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: MODERN_COLORS.gray50,
   },
   modalOptionText: {
     fontSize: 16,
-    color: '#333',
+    color: MODERN_COLORS.gray900,
+    fontWeight: '500',
+    letterSpacing: 0.1,
   },
   cancelOption: {
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    backgroundColor: MODERN_COLORS.gray100,
+    borderTopWidth: 0,
     marginTop: 8,
     justifyContent: 'center',
   },
   cancelText: {
     fontSize: 16,
-    color: '#FF6B6B',
+    color: MODERN_COLORS.accent,
     fontWeight: '600',
+    textAlign: 'center',
+    letterSpacing: 0.1,
   },
 });
 

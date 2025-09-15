@@ -25,9 +25,52 @@ namespace FYLA2_Backend.Data
         public DbSet<PaymentSettings> PaymentSettings { get; set; }
         public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
         public DbSet<ProviderSchedule> ProviderSchedules { get; set; }
+        public DbSet<ProviderBreak> ProviderBreaks { get; set; }
         public DbSet<ProviderBlockedTime> ProviderBlockedTimes { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<LoyaltyTransaction> LoyaltyTransactions { get; set; }
+        
+        // Provider Extensions
+        public DbSet<ProviderPortfolio> ProviderPortfolios { get; set; }
+        public DbSet<ProviderBusinessHours> ProviderBusinessHours { get; set; }
+        public DbSet<ServiceAddOn> ServiceAddOns { get; set; }
+        public DbSet<ProviderSpecialty> ProviderSpecialties { get; set; }
+        public DbSet<ProviderPromotion> ProviderPromotions { get; set; }
+        
+        // Cancellation & Rescheduling
+        public DbSet<CancellationPolicy> CancellationPolicies { get; set; }
+        public DbSet<BookingAction> BookingActions { get; set; }
+        
+        // Advanced Business Features
+        public DbSet<ChairRental> ChairRentals { get; set; }
+        public DbSet<ChairRentalPayment> ChairRentalPayments { get; set; }
+        public DbSet<BusinessLocation> BusinessLocations { get; set; }
+        public DbSet<CustomBranding> CustomBrandings { get; set; }
+        public DbSet<MarketingCampaign> MarketingCampaigns { get; set; }
+        public DbSet<SupportTicket> SupportTickets { get; set; }
+        public DbSet<SupportTicketMessage> SupportTicketMessages { get; set; }
+        
+        // Enhanced Marketing System
+        public DbSet<EnhancedMarketingCampaign> EnhancedMarketingCampaigns { get; set; }
+        public DbSet<CampaignResult> CampaignResults { get; set; }
+        public DbSet<CustomerSegment> CustomerSegments { get; set; }
+        public DbSet<SegmentMember> SegmentMembers { get; set; }
+        public DbSet<MarketingAutomation> MarketingAutomations { get; set; }
+        public DbSet<AutomationExecution> AutomationExecutions { get; set; }
+        public DbSet<LoyaltyProgram> LoyaltyPrograms { get; set; }
+        public DbSet<LoyaltyMember> LoyaltyMembers { get; set; }
+        public DbSet<ReferralProgram> ReferralPrograms { get; set; }
+        public DbSet<Referral> Referrals { get; set; }
+        public DbSet<Promotion> Promotions { get; set; }
+        public DbSet<PromotionUsage> PromotionUsages { get; set; }
+        
+        // Enhanced Branding System
+        public DbSet<BrandProfile> BrandProfiles { get; set; }
+        public DbSet<BrandedEmailTemplate> BrandedEmailTemplates { get; set; }
+        
+        // Enhanced Seat Rental System
+        public DbSet<SeatRental> SeatRentals { get; set; }
+        public DbSet<SeatRentalBooking> SeatRentalBookings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -228,6 +271,63 @@ namespace FYLA2_Backend.Data
 
             modelBuilder.Entity<PaymentRecord>()
                 .Property(pr => pr.Amount)
+                .HasPrecision(10, 2);
+
+            // Provider Extensions Relationships
+            
+            // ProviderPortfolio relationships
+            modelBuilder.Entity<ProviderPortfolio>()
+                .HasOne(pp => pp.Provider)
+                .WithMany(u => u.Portfolio)
+                .HasForeignKey(pp => pp.ProviderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ProviderBusinessHours relationships
+            modelBuilder.Entity<ProviderBusinessHours>()
+                .HasOne(pbh => pbh.Provider)
+                .WithMany()
+                .HasForeignKey(pbh => pbh.ProviderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Unique constraint for provider-day combination
+            modelBuilder.Entity<ProviderBusinessHours>()
+                .HasIndex(pbh => new { pbh.ProviderId, pbh.DayOfWeek })
+                .IsUnique();
+
+            // ServiceAddOn relationships
+            modelBuilder.Entity<ServiceAddOn>()
+                .HasOne(sao => sao.Service)
+                .WithMany()
+                .HasForeignKey(sao => sao.ServiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ServiceAddOn decimal precision
+            modelBuilder.Entity<ServiceAddOn>()
+                .Property(sao => sao.Price)
+                .HasPrecision(10, 2);
+
+            // ProviderSpecialty relationships
+            modelBuilder.Entity<ProviderSpecialty>()
+                .HasOne(ps => ps.Provider)
+                .WithMany()
+                .HasForeignKey(ps => ps.ProviderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Unique constraint for provider-specialty combination
+            modelBuilder.Entity<ProviderSpecialty>()
+                .HasIndex(ps => new { ps.ProviderId, ps.Name })
+                .IsUnique();
+
+            // ProviderPromotion relationships
+            modelBuilder.Entity<ProviderPromotion>()
+                .HasOne(pp => pp.Provider)
+                .WithMany()
+                .HasForeignKey(pp => pp.ProviderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ProviderPromotion decimal precision
+            modelBuilder.Entity<ProviderPromotion>()
+                .Property(pp => pp.DiscountValue)
                 .HasPrecision(10, 2);
         }
     }

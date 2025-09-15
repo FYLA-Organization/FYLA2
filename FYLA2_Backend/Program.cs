@@ -78,6 +78,19 @@ builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 // Add Loyalty Service
 builder.Services.AddScoped<ILoyaltyService, LoyaltyService>();
 
+// Add File Upload Service
+builder.Services.Configure<FileUploadOptions>(options =>
+{
+    options.UploadPath = Path.Combine(builder.Environment.WebRootPath, "uploads");
+    options.BaseUrl = builder.Configuration["BaseUrl"] ?? "https://localhost:7002";
+    options.MaxFileSize = 5 * 1024 * 1024; // 5MB
+    options.AllowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+});
+builder.Services.AddScoped<IFileUploadService, FileUploadService>();
+
+// Add Stripe Setup Service
+builder.Services.AddScoped<IStripeSetupService, StripeSetupService>();
+
 // Add CORS
 builder.Services.AddCors(options =>
 {

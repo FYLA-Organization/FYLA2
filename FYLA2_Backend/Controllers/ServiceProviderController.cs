@@ -38,6 +38,7 @@ namespace FYLA2_Backend.Controllers
       var providersQuery = _context.Users
           .Include(u => u.Services)
           .Include(u => u.ReviewsReceived)
+          .Include(u => u.ServiceProvider)
           .Where(u => u.IsServiceProvider)
           .AsQueryable();
 
@@ -89,14 +90,15 @@ namespace FYLA2_Backend.Controllers
       var providers = providerData.Select(u => new
       {
         id = u.Id,
-        businessName = $"{u.FirstName} {u.LastName}",
-        businessDescription = u.Bio ?? "Professional Services",
+        businessName = u.ServiceProvider?.BusinessName ?? $"{u.FirstName} {u.LastName}",
+        businessDescription = u.ServiceProvider?.BusinessDescription ?? u.Bio ?? "Professional Services",
+        businessAddress = u.ServiceProvider?.BusinessAddress,
         profilePictureUrl = u.ProfilePictureUrl,
         averageRating = u.ReviewsReceived.Any() ? u.ReviewsReceived.Average(r => r.Rating) : 0.0,
         totalReviews = u.ReviewsReceived.Count,
         priceRange = "$$", // TODO: Calculate based on services
         specialties = u.Services.Select(s => s.Category).Distinct().ToList(),
-        verified = true // TODO: Implement verification system
+        verified = u.ServiceProvider?.IsVerified ?? false
       }).ToList();
 
       // Apply rating filter in memory if specified
@@ -234,6 +236,7 @@ namespace FYLA2_Backend.Controllers
           .Include(u => u.Services.Where(s => s.IsActive))
           .Include(u => u.ReviewsReceived)
           .ThenInclude(r => r.Reviewer)
+          .Include(u => u.Portfolio)
           .Where(u => u.Id == id && u.IsServiceProvider)
           .FirstOrDefaultAsync();
 
@@ -291,6 +294,15 @@ namespace FYLA2_Backend.Controllers
             lastName = r.Reviewer.LastName,
             profilePictureUrl = r.Reviewer.ProfilePictureUrl
           }
+        }).ToList(),
+        portfolio = rawProvider.Portfolio.OrderBy(p => p.DisplayOrder).ThenByDescending(p => p.CreatedAt).Select(p => new
+        {
+          id = p.Id,
+          imageUrl = p.ImageUrl,
+          caption = p.Caption,
+          category = p.Category,
+          displayOrder = p.DisplayOrder,
+          createdAt = p.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ssZ")
         }).ToList()
       };
 

@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { LineChart, BarChart } from 'react-native-chart-kit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../../services/api';
+import FeatureGatingService from '../../services/featureGatingService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -101,7 +102,7 @@ const AnalyticsDashboardScreen: React.FC = () => {
       }
 
       // Load basic dashboard data
-      const dashboardResponse = await fetch('http://192.168.1.201:5224/api/analytics/dashboard', {
+      const dashboardResponse = await fetch('http://192.168.1.171:5224/api/analytics/dashboard', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -109,7 +110,7 @@ const AnalyticsDashboardScreen: React.FC = () => {
       });
 
       // Load advanced business intelligence
-      const businessIntelligenceResponse = await fetch('http://192.168.1.201:5224/api/advancedanalytics/business-intelligence', {
+      const businessIntelligenceResponse = await fetch('http://192.168.1.171:5224/api/advancedanalytics/business-intelligence', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -117,7 +118,7 @@ const AnalyticsDashboardScreen: React.FC = () => {
       });
 
       // Load revenue trends for chart
-      const revenueTrendsResponse = await fetch('http://192.168.1.201:5224/api/advancedanalytics/revenue-trends?periods=6', {
+      const revenueTrendsResponse = await fetch('http://192.168.1.171:5224/api/advancedanalytics/revenue-trends?periods=6', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

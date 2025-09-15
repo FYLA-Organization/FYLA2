@@ -54,6 +54,47 @@ namespace FYLA2_Backend.Controllers
                     return NotFound("Service not found");
                 }
 
+                // Get provider schedule for the requested day
+                var dayOfWeek = (DayOfWeekEnum)(int)requestDate.DayOfWeek;
+                var providerSchedule = await _context.ProviderSchedules
+                    .Include(ps => ps.Breaks)
+                    .FirstOrDefaultAsync(ps => ps.ProviderId == providerId && 
+                                              ps.DayOfWeek == dayOfWeek && 
+                                              ps.IsAvailable);
+
+                // Check for specific date overrides
+                var specificDateSchedule = await _context.ProviderSchedules
+                    .Include(ps => ps.Breaks)
+                    .FirstOrDefaultAsync(ps => ps.ProviderId == providerId && 
+                                              ps.SpecificDate.HasValue && 
+                                              ps.SpecificDate.Value.Date == requestDate.Date);
+
+                var workingSchedule = specificDateSchedule ?? providerSchedule;
+
+                if (workingSchedule == null || !workingSchedule.IsAvailable)
+                {
+                    // For future days, just return empty list (no special message)
+                    if (requestDate.Date > DateTime.Today)
+                    {
+                        return Ok(new List<AvailableTimeSlotDto>());
+                    }
+                    
+                    // For today only, find next available day and show message
+                    var nextAvailableInfo = await GetNextAvailableTime(providerId, requestDate);
+                    return Ok(new List<AvailableTimeSlotDto>
+                    {
+                        new AvailableTimeSlotDto
+                        {
+                            StartTime = DateTime.MinValue,
+                            EndTime = DateTime.MinValue,
+                            IsAvailable = false,
+                            Price = service.Price,
+                            Duration = service.DurationMinutes,
+                            UnavailableReason = nextAvailableInfo
+                        }
+                    });
+                }
+
                 // Get existing bookings for the day
                 var existingBookings = await _context.Bookings
                     .Where(b => b.ProviderId == providerId &&
@@ -61,32 +102,102 @@ namespace FYLA2_Backend.Controllers
                                b.Status != BookingStatus.Cancelled)
                     .ToListAsync();
 
-                // Generate time slots (9 AM to 6 PM, 30-minute intervals)
+                // Get blocked times for the day
+                var blockedTimes = await _context.ProviderBlockedTimes
+                    .Where(bt => bt.ProviderId == providerId && 
+                                bt.Date.Date == requestDate.Date)
+                    .ToListAsync();
+
+                // Generate time slots based on provider's working hours
                 var timeSlots = new List<AvailableTimeSlotDto>();
-                var startHour = 9;
-                var endHour = 18;
-                var intervalMinutes = 30;
+                var workingStart = workingSchedule.StartTime ?? new TimeSpan(9, 0, 0);
+                var workingEnd = workingSchedule.EndTime ?? new TimeSpan(18, 0, 0);
+                var serviceDuration = TimeSpan.FromMinutes(service.DurationMinutes);
+                var slotInterval = TimeSpan.FromMinutes(15); // 15-minute intervals for flexibility
+                var bufferTime = TimeSpan.FromMinutes(15); // 15-minute buffer between appointments
 
-                for (int hour = startHour; hour < endHour; hour++)
+                var currentTime = workingStart;
+                bool hasAvailableSlots = false;
+                
+                while (currentTime.Add(serviceDuration) <= workingEnd)
                 {
-                    for (int minute = 0; minute < 60; minute += intervalMinutes)
+                    var slotStart = requestDate.Date.Add(currentTime);
+                    var slotEnd = slotStart.Add(serviceDuration);
+
+                    // Skip past time slots entirely for today (don't include them in response)
+                    bool isPastTime = requestDate.Date == DateTime.Today && slotStart <= DateTime.Now.AddMinutes(30);
+                    if (isPastTime)
                     {
-                        var slotTime = new DateTime(requestDate.Year, requestDate.Month, requestDate.Day, hour, minute, 0);
-                        var slotEndTime = slotTime.AddMinutes(service.DurationMinutes);
-
-                        // Check if slot conflicts with existing bookings
-                        bool isAvailable = !existingBookings.Any(b =>
-                            (slotTime >= b.StartTime && slotTime < b.EndTime) ||
-                            (slotEndTime > b.StartTime && slotEndTime <= b.EndTime) ||
-                            (slotTime <= b.StartTime && slotEndTime >= b.EndTime));
-
-                        timeSlots.Add(new AvailableTimeSlotDto
-                        {
-                            StartTime = slotTime,
-                            EndTime = slotEndTime,
-                            IsAvailable = isAvailable
-                        });
+                        currentTime = currentTime.Add(slotInterval);
+                        continue;
                     }
+
+                    // Skip if it's during break time
+                    bool isDuringBreak = workingSchedule.Breaks.Any(breakTime =>
+                    {
+                        var breakStart = requestDate.Date.Add(breakTime.StartTime);
+                        var breakEnd = requestDate.Date.Add(breakTime.EndTime);
+                        return (slotStart < breakEnd && slotEnd > breakStart);
+                    });
+
+                    // Check if slot conflicts with existing bookings (with buffer)
+                    bool isBookingConflict = existingBookings.Any(b =>
+                        (slotStart < b.EndTime.Add(bufferTime) && slotEnd.Add(bufferTime) > b.StartTime));
+
+                    // Check if slot conflicts with blocked times
+                    bool isBlockedTime = blockedTimes.Any(bt =>
+                    {
+                        var blockedStart = requestDate.Date.Add(bt.StartTime);
+                        var blockedEnd = requestDate.Date.Add(bt.EndTime);
+                        return (slotStart < blockedEnd && slotEnd > blockedStart);
+                    });
+
+                    bool isAvailable = !isDuringBreak && !isBookingConflict && !isBlockedTime;
+
+                    if (isAvailable)
+                    {
+                        hasAvailableSlots = true;
+                    }
+
+                    string? unavailableReason = null;
+                    if (!isAvailable)
+                    {
+                        if (isDuringBreak)
+                            unavailableReason = "Break time";
+                        else if (isBookingConflict)
+                            unavailableReason = "Already booked";
+                        else if (isBlockedTime)
+                            unavailableReason = "Blocked time";
+                    }
+
+                    timeSlots.Add(new AvailableTimeSlotDto
+                    {
+                        StartTime = slotStart,
+                        EndTime = slotEnd,
+                        IsAvailable = isAvailable,
+                        Price = service.Price,
+                        Duration = service.DurationMinutes,
+                        UnavailableReason = unavailableReason
+                    });
+
+                    currentTime = currentTime.Add(slotInterval);
+                }
+
+                // If it's today and no future slots are available (all were in the past), find next available day
+                if (requestDate.Date == DateTime.Today && !hasAvailableSlots && timeSlots.Count == 0)
+                {
+                    var nextAvailableInfo = await GetNextAvailableTime(providerId, requestDate.AddDays(1));
+                    
+                    // Add a single slot indicating next availability
+                    timeSlots.Add(new AvailableTimeSlotDto
+                    {
+                        StartTime = DateTime.MinValue,
+                        EndTime = DateTime.MinValue,
+                        IsAvailable = false,
+                        Price = service.Price,
+                        Duration = service.DurationMinutes,
+                        UnavailableReason = $"Provider is done for today. {nextAvailableInfo}"
+                    });
                 }
 
                 return Ok(timeSlots);
@@ -310,6 +421,129 @@ namespace FYLA2_Backend.Controllers
             {
                 _logger.LogError(ex, "Error getting loyalty status");
                 return StatusCode(500, new { error = "Failed to get loyalty status", details = ex.Message });
+            }
+        }
+
+        private async Task<string> GetNextAvailableTime(string providerId, DateTime startDate)
+        {
+            try
+            {
+                // Look ahead up to 7 days to find next available time
+                for (int day = 0; day < 7; day++)
+                {
+                    var checkDate = startDate.AddDays(day);
+                    var dayOfWeek = (DayOfWeekEnum)(int)checkDate.DayOfWeek;
+                    
+                    var schedule = await _context.ProviderSchedules
+                        .Include(ps => ps.Breaks)
+                        .FirstOrDefaultAsync(ps => ps.ProviderId == providerId && 
+                                                  ps.DayOfWeek == dayOfWeek && 
+                                                  ps.IsAvailable);
+
+                    if (schedule != null && schedule.StartTime.HasValue)
+                    {
+                        var dayName = checkDate.ToString("dddd, MMMM d");
+                        var startTime = checkDate.Date.Add(schedule.StartTime.Value);
+                        var timeString = startTime.ToString("h:mm tt");
+                        
+                        if (day == 0)
+                            return $"Next available: Tomorrow at {timeString}";
+                        else if (day == 1)
+                            return $"Next available: {dayName} at {timeString}";
+                        else
+                            return $"Next available: {dayName} at {timeString}";
+                    }
+                }
+                
+                return "Next availability: Please contact provider";
+            }
+            catch (Exception)
+            {
+                return "Next availability: Please contact provider";
+            }
+        }
+
+        [HttpGet("available-days")]
+        public async Task<ActionResult<List<AvailableDayDto>>> GetAvailableDays(
+            [FromQuery] string providerId,
+            [FromQuery] int serviceId,
+            [FromQuery] string startDate,
+            [FromQuery] int daysCount = 14)
+        {
+            try
+            {
+                if (!DateTime.TryParse(startDate, out var start))
+                {
+                    return BadRequest("Invalid start date format");
+                }
+
+                var service = await _context.Services
+                    .FirstOrDefaultAsync(s => s.Id == serviceId);
+
+                if (service == null)
+                {
+                    return NotFound("Service not found");
+                }
+
+                var availableDays = new List<AvailableDayDto>();
+
+                for (int i = 0; i < daysCount; i++)
+                {
+                    var currentDate = start.AddDays(i);
+                    var dayOfWeek = (int)currentDate.DayOfWeek;
+
+                    // Check for specific date schedule first
+                    var specificSchedule = await _context.ProviderSchedules
+                        .Where(ps => ps.ProviderId == providerId && 
+                                ps.SpecificDate.HasValue && 
+                                ps.SpecificDate.Value.Date == currentDate.Date)
+                        .FirstOrDefaultAsync();
+
+                    bool isAvailable = false;
+                    string? workingHours = null;
+
+                    if (specificSchedule != null)
+                    {
+                        isAvailable = specificSchedule.IsAvailable;
+                        if (isAvailable)
+                        {
+                            workingHours = $"{specificSchedule.StartTime?.ToString(@"hh\:mm")} - {specificSchedule.EndTime?.ToString(@"hh\:mm")}";
+                        }
+                    }
+                    else
+                    {
+                        // Check regular weekly schedule
+                        var weeklySchedule = await _context.ProviderSchedules
+                            .Where(ps => ps.ProviderId == providerId && 
+                                    ps.DayOfWeek == (DayOfWeekEnum)dayOfWeek && 
+                                    ps.IsAvailable)
+                            .FirstOrDefaultAsync();
+
+                        if (weeklySchedule != null)
+                        {
+                            isAvailable = true;
+                            workingHours = $"{weeklySchedule.StartTime?.ToString(@"hh\:mm")} - {weeklySchedule.EndTime?.ToString(@"hh\:mm")}";
+                        }
+                    }
+
+                    if (isAvailable)
+                    {
+                        availableDays.Add(new AvailableDayDto
+                        {
+                            Date = currentDate,
+                            DayOfWeek = currentDate.DayOfWeek.ToString(),
+                            IsAvailable = true,
+                            WorkingHours = workingHours
+                        });
+                    }
+                }
+
+                return Ok(availableDays);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting available days for provider {ProviderId}", providerId);
+                return StatusCode(500, "An error occurred while retrieving available days");
             }
         }
     }

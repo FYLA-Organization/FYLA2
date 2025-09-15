@@ -12,6 +12,7 @@ import {
   StatusBar,
   Modal,
   TextInput,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -33,7 +34,7 @@ interface QuickAction {
   title: string;
   icon: string;
   color: string;
-  gradient: string[];
+  gradient: readonly string[];
   onPress: () => void;
 }
 
@@ -127,7 +128,7 @@ const EnhancedDashboardScreen: React.FC = () => {
           throw new Error('No auth token');
         }
 
-        const response = await fetch('http://192.168.1.201:5224/api/analytics/dashboard', {
+        const response = await fetch('http://192.168.1.171:5224/api/analytics/dashboard', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -197,7 +198,8 @@ const EnhancedDashboardScreen: React.FC = () => {
     try {
       // Try to load from API, fallback to demo data
       try {
-        const location = await ApiService.getBusinessLocation();
+        const locations = await ApiService.getBusinessLocations();
+        const location = locations[0];
         setBusinessLocationData(location);
         setLocationInput(location.address + ', ' + location.city + ', ' + location.state);
       } catch (apiError) {
@@ -292,6 +294,14 @@ const EnhancedDashboardScreen: React.FC = () => {
       onPress: () => navigation.navigate('Clients' as any),
     },
     {
+      id: 'seat-rental',
+      title: 'Seat Rental',
+      icon: 'business',
+      color: '#8B5CF6',
+      gradient: ['#8B5CF6', '#7C3AED'],
+      onPress: () => navigation.navigate('SeatRental' as any),
+    },
+    {
       id: 'coupons',
       title: 'Coupons & Loyalty',
       icon: 'gift',
@@ -309,11 +319,11 @@ const EnhancedDashboardScreen: React.FC = () => {
     },
     {
       id: 'location',
-      title: 'Business Location',
+      title: 'Multi-Location',
       icon: 'location',
       color: '#6C63FF',
       gradient: ['#6C63FF', '#4834D4'],
-      onPress: () => setShowLocationModal(true),
+      onPress: () => navigation.navigate('MultiLocation' as any),
     },
     {
       id: 'marketing',
@@ -323,12 +333,20 @@ const EnhancedDashboardScreen: React.FC = () => {
       gradient: ['#FF6B6B', '#EE5A24'],
       onPress: () => navigation.navigate('MarketingHub' as any),
     },
+    {
+      id: 'automation',
+      title: 'Automation',
+      icon: 'construct',
+      color: '#10B981',
+      gradient: ['#10B981', '#059669'],
+      onPress: () => navigation.navigate('AutomatedMarketing' as any),
+    },
   ];
 
   const updateBusinessLocation = async () => {
     try {
       // Save business location via API
-      console.log('Updating business location:', businessLocation);
+      console.log('Updating business location:', businessLocationData);
       Alert.alert('Success', 'Business location updated successfully!');
       setShowLocationModal(false);
     } catch (error) {
@@ -354,25 +372,35 @@ const EnhancedDashboardScreen: React.FC = () => {
     <>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
       <View style={styles.container}>
-        <LinearGradient colors={COLORS.gradient} style={styles.header}>
-          <View style={styles.headerContent}>
-            <View>
-              <Text style={styles.headerTitle}>Business Dashboard</Text>
-              <Text style={styles.headerSubtitle}>
-                {new Date().toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.notificationButton}>
-              <Ionicons name="notifications" size={24} color="white" />
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationCount}>3</Text>
+        <LinearGradient colors={['#667eea', '#764ba2', '#6B73FF']} style={styles.header}>
+          <BlurView intensity={30} style={styles.headerBlur}>
+            <View style={styles.headerContent}>
+              <View style={styles.headerLeft}>
+                <Text style={styles.headerTitle}>Business Dashboard</Text>
+                <Text style={styles.headerSubtitle}>
+                  {new Date().toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </Text>
               </View>
-            </TouchableOpacity>
-          </View>
+              <View style={styles.headerRight}>
+                <TouchableOpacity style={styles.notificationButton}>
+                  <Ionicons name="notifications-outline" size={22} color="white" />
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationCount}>3</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.settingsButton}
+                  onPress={() => navigation.navigate('Analytics' as any)}
+                >
+                  <Ionicons name="analytics-outline" size={22} color="white" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </BlurView>
         </LinearGradient>
 
         <ScrollView 
@@ -460,14 +488,71 @@ const EnhancedDashboardScreen: React.FC = () => {
                 <View style={styles.appointmentTime}>
                   <Ionicons name="calendar-outline" size={16} color="#4ECDC4" />
                   <Text style={styles.appointmentTimeText}>
-                    {formatDate(dashboardData.nextAppointment.scheduledDate)} • {dashboardData.nextAppointment.duration} min
+                    {formatDate(new Date(dashboardData.nextAppointment.scheduledDate))} • {dashboardData.nextAppointment.duration} min
                   </Text>
                 </View>
               </LinearGradient>
             </View>
           )}
 
-          {/* Quick Actions */}
+          {/* Performance Insights */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Performance Insights</Text>
+              <TouchableOpacity 
+                style={styles.viewAllButton}
+                onPress={() => navigation.navigate('Analytics' as any)}
+              >
+                <Text style={styles.viewAllText}>View All</Text>
+                <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.analyticsPreview}>
+              <LinearGradient 
+                colors={['#667eea', '#764ba2']} 
+                style={styles.analyticsCard}
+                start={{x: 0, y: 0}}
+                end={{x: 1, y: 1}}
+              >
+                <BlurView intensity={30} style={styles.analyticsBlur}>
+                  <View style={styles.analyticsContent}>
+                    <View style={styles.analyticsRow}>
+                      <View style={styles.analyticsItem}>
+                        <Text style={styles.analyticsValue}>
+                          {dashboardData?.weeklyRevenue ? formatCurrency(dashboardData.weeklyRevenue) : '$0'}
+                        </Text>
+                        <Text style={styles.analyticsLabel}>This Week</Text>
+                      </View>
+                      <View style={styles.analyticsItem}>
+                        <Text style={styles.analyticsValue}>
+                          {dashboardData?.monthlyRevenue ? formatCurrency(dashboardData.monthlyRevenue) : '$0'}
+                        </Text>
+                        <Text style={styles.analyticsLabel}>This Month</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.analyticsRow}>
+                      <View style={styles.analyticsItem}>
+                        <Text style={styles.analyticsValue}>
+                          {dashboardData?.totalClients || 0}
+                        </Text>
+                        <Text style={styles.analyticsLabel}>Total Clients</Text>
+                      </View>
+                      <View style={styles.analyticsItem}>
+                        <Text style={styles.analyticsValue}>
+                          {dashboardData?.recentBookings?.filter(b => b.status === 'Completed').length || 0}
+                        </Text>
+                        <Text style={styles.analyticsLabel}>Completed</Text>
+                      </View>
+                    </View>
+                  </View>
+                </BlurView>
+              </LinearGradient>
+            </View>
+          </View>
+
+          {/* Business Tools */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Business Tools</Text>
             <View style={styles.quickActionsGrid}>
@@ -477,7 +562,7 @@ const EnhancedDashboardScreen: React.FC = () => {
                   style={styles.quickActionCard}
                   onPress={action.onPress}
                 >
-                  <LinearGradient colors={action.gradient} style={styles.quickActionGradient}>
+                  <LinearGradient colors={action.gradient as any} style={styles.quickActionGradient}>
                     <Ionicons name={action.icon as any} size={28} color="white" />
                     <Text style={styles.quickActionText}>{action.title}</Text>
                   </LinearGradient>
@@ -496,7 +581,7 @@ const EnhancedDashboardScreen: React.FC = () => {
                     <Text style={styles.bookingClient}>{booking.clientName}</Text>
                     <Text style={styles.bookingService}>{booking.serviceName}</Text>
                     <Text style={styles.bookingTime}>
-                      {formatDate(booking.scheduledDate)} • {booking.status}
+                      {formatDate(new Date(booking.scheduledDate))} • {booking.status}
                     </Text>
                   </View>
                   <Text style={styles.bookingPrice}>
@@ -529,8 +614,8 @@ const EnhancedDashboardScreen: React.FC = () => {
                   <Text style={styles.modalLabel}>Update your business address for client visibility</Text>
                   <TextInput
                     style={styles.locationInput}
-                    value={businessLocation}
-                    onChangeText={setBusinessLocation}
+                    value={locationInput}
+                    onChangeText={setLocationInput}
                     placeholder="Enter your business address..."
                     multiline
                     numberOfLines={3}
@@ -579,44 +664,68 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   header: {
-    paddingTop: 50,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 20,
     paddingHorizontal: 20,
+  },
+  headerBlur: {
+    borderRadius: 0,
+    overflow: 'hidden',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  headerLeft: {
+    flex: 1,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+  },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: 'bold',
     color: 'white',
-    letterSpacing: -0.5,
+    marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 4,
+    fontWeight: '500',
   },
   notificationButton: {
     position: 'relative',
+    padding: 8,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  settingsButton: {
+    padding: 8,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   notificationBadge: {
     position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: COLORS.accent,
-    borderRadius: 12,
-    width: 24,
-    height: 24,
+    top: -2,
+    right: -2,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
   },
   notificationCount: {
+    fontSize: 10,
+    fontWeight: 'bold',
     color: 'white',
-    fontSize: 12,
-    fontWeight: '700',
   },
   scrollContainer: {
     flex: 1,
@@ -631,6 +740,67 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 16,
     letterSpacing: -0.3,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  analyticsPreview: {
+    marginBottom: 8,
+  },
+  analyticsCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  analyticsBlur: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    padding: 20,
+  },
+  analyticsContent: {
+    gap: 20,
+  },
+  analyticsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 20,
+  },
+  analyticsItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  analyticsValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 4,
+  },
+  analyticsLabel: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+    textAlign: 'center',
   },
   metricsGrid: {
     flexDirection: 'row',

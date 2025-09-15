@@ -16,7 +16,7 @@ export const ComponentStyles = {
       paddingVertical: Spacing.component.buttonPadding.vertical,
       height: Layout.button.height.medium,
       ...Shadows.button,
-      ...Typography.buttons.primary,
+      ...Typography.button.medium,
     },
     
     secondary: {

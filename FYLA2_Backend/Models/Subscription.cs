@@ -5,9 +5,8 @@ namespace FYLA2_Backend.Models
   public enum SubscriptionTier
   {
     Free = 0,
-    Basic = 1,
-    Premium = 2,
-    Enterprise = 3
+    Pro = 1,
+    Business = 2
   }
 
   public enum SubscriptionStatus
@@ -16,7 +15,8 @@ namespace FYLA2_Backend.Models
     Inactive = 1,
     Cancelled = 2,
     PastDue = 3,
-    Trialing = 4
+    Trialing = 4,
+    Pending = 5
   }
 
   public class Subscription
@@ -55,6 +55,8 @@ namespace FYLA2_Backend.Models
     public bool CanUseAutomatedMarketing { get; set; }
     public bool CanAcceptOnlinePayments { get; set; }
     public bool HasPrioritySupport { get; set; }
+    public bool CanManageMultipleLocations { get; set; }
+    public int MaxTeamMembers { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -98,86 +100,68 @@ namespace FYLA2_Backend.Models
                 new SubscriptionConfig
                 {
                     Name = "Free",
-                    Description = "Basic features to get started",
+                    Description = "Essential features to get started",
                     MonthlyPrice = 0,
-                    MaxServices = 2,
-                    MaxPhotosPerService = 3,
+                    MaxServices = 3,
+                    MaxPhotosPerService = 5,
                     CanUseAdvancedAnalytics = false,
                     CanUseCustomBranding = false,
                     CanUseAutomatedMarketing = false,
                     CanAcceptOnlinePayments = false,
                     HasPrioritySupport = false,
+                    CanManageMultipleLocations = false,
+                    MaxTeamMembers = 1,
                     Features = new List<string>
                     {
                         "Basic profile setup",
-                        "Up to 2 services",
-                        "3 photos per service",
+                        "Up to 3 services",
+                        "5 photos per service",
                         "Basic booking management",
-                        "Client messaging"
+                        "Client messaging",
+                        "Basic portfolio showcase"
                     }
                 }
             },
             {
-                SubscriptionTier.Basic,
+                SubscriptionTier.Pro,
                 new SubscriptionConfig
                 {
-                    Name = "Basic",
-                    Description = "Perfect for growing service providers",
+                    Name = "Pro",
+                    Description = "Advanced features for growing professionals",
                     MonthlyPrice = 19.99m,
                     AnnualPrice = 199.99m,
-                    MaxServices = 10,
-                    MaxPhotosPerService = 10,
-                    CanUseAdvancedAnalytics = false,
+                    MaxServices = 25,
+                    MaxPhotosPerService = 20,
+                    CanUseAdvancedAnalytics = true,
                     CanUseCustomBranding = false,
                     CanUseAutomatedMarketing = false,
                     CanAcceptOnlinePayments = true,
                     HasPrioritySupport = false,
+                    CanManageMultipleLocations = false,
+                    MaxTeamMembers = 5,
                     Features = new List<string>
                     {
-                        "Up to 10 services",
-                        "10 photos per service",
+                        "Up to 25 services",
+                        "20 photos per service",
                         "Online payment processing",
-                        "Basic analytics",
+                        "Advanced analytics & insights",
                         "Client reviews & ratings",
-                        "Social media integration"
+                        "Social media integration",
+                        "Portfolio showcase",
+                        "Business hours management",
+                        "Promotions & discounts",
+                        "Loyalty programs"
                     }
                 }
             },
             {
-                SubscriptionTier.Premium,
+                SubscriptionTier.Business,
                 new SubscriptionConfig
                 {
-                    Name = "Premium",
-                    Description = "Advanced features for established businesses",
+                    Name = "Business",
+                    Description = "Complete solution for established businesses",
                     MonthlyPrice = 49.99m,
                     AnnualPrice = 499.99m,
-                    MaxServices = 50,
-                    MaxPhotosPerService = 25,
-                    CanUseAdvancedAnalytics = true,
-                    CanUseCustomBranding = true,
-                    CanUseAutomatedMarketing = true,
-                    CanAcceptOnlinePayments = true,
-                    HasPrioritySupport = true,
-                    Features = new List<string>
-                    {
-                        "Unlimited services",
-                        "25 photos per service",
-                        "Advanced analytics & insights",
-                        "Custom branding",
-                        "Automated marketing tools",
-                        "Priority customer support",
-                        "Advanced booking features"
-                    }
-                }
-            },
-            {
-                SubscriptionTier.Enterprise,
-                new SubscriptionConfig
-                {
-                    Name = "Enterprise",
-                    Description = "Complete solution for large businesses",
-                    MonthlyPrice = 99.99m,
-                    AnnualPrice = 999.99m,
                     MaxServices = int.MaxValue,
                     MaxPhotosPerService = int.MaxValue,
                     CanUseAdvancedAnalytics = true,
@@ -185,15 +169,23 @@ namespace FYLA2_Backend.Models
                     CanUseAutomatedMarketing = true,
                     CanAcceptOnlinePayments = true,
                     HasPrioritySupport = true,
+                    CanManageMultipleLocations = true,
+                    MaxTeamMembers = int.MaxValue,
                     Features = new List<string>
                     {
-                        "Unlimited everything",
-                        "White-label solution",
-                        "API access",
+                        "Unlimited services",
+                        "Unlimited photos",
+                        "Advanced analytics & insights",
+                        "Custom branding",
+                        "Automated marketing tools",
+                        "Priority customer support",
+                        "Advanced booking features",
                         "Multi-location support",
-                        "Advanced team management",
-                        "Custom integrations",
-                        "Dedicated account manager"
+                        "Revenue tracking",
+                        "Client management CRM",
+                        "Promotions & discounts",
+                        "Loyalty programs",
+                        "Marketing campaigns"
                     }
                 }
             }
@@ -213,6 +205,8 @@ namespace FYLA2_Backend.Models
     public bool CanUseAutomatedMarketing { get; set; }
     public bool CanAcceptOnlinePayments { get; set; }
     public bool HasPrioritySupport { get; set; }
+    public bool CanManageMultipleLocations { get; set; }
+    public int MaxTeamMembers { get; set; }
     public List<string> Features { get; set; } = new();
   }
 }

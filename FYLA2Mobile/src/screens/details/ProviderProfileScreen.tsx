@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,22 +6,29 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
   ActivityIndicator,
   Dimensions,
   FlatList,
-  Modal,
   SafeAreaView,
   StatusBar,
+  Alert,
   Share,
+  Animated,
+  ImageBackground,
+  Pressable,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { ServiceProvider, Service, RootStackParamList, Review } from '../../types';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import ApiService from '../../services/api';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { MODERN_COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY, SHADOWS } from '../../constants/modernDesign';
+import { ServiceProvider, Service } from '../../types';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
+const HEADER_HEIGHT = 280; // Reduced for better proportions
 
 type ProviderProfileScreenRouteProp = {
   key: string;
@@ -29,1076 +36,1274 @@ type ProviderProfileScreenRouteProp = {
   params: { providerId: string };
 };
 
-type ProviderProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+type ProviderProfileScreenNavigationProp = StackNavigationProp<any>;
 
-const COLORS = {
-  primary: '#3797F0',
-  background: '#FFFFFF',
-  surface: '#FFFFFF',
-  text: '#262626',
-  textSecondary: '#8E8E8E',
-  button: '#3797F0',
-  border: '#DBDBDB',
-  borderLight: '#EFEFEF',
-  heart: '#ED4956',
-  success: '#00D563',
-};
+interface Review {
+  id: string;
+  user: {
+    name: string;
+    avatar: string;
+  };
+  rating: number;
+  comment: string;
+  date: string;
+  photos?: string[];
+  helpful: number;
+}
 
-const ProviderProfileScreen: React.FC = () => {
-  const [provider, setProvider] = useState<ServiceProvider | null>(null);
+const UberEatsProviderScreen: React.FC = () => {
+  const [provider, setProvider] = useState<Provider | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [posts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<'posts' | 'services' | 'reviews'>('posts');
-  const [showImageModal, setShowImageModal] = useState(false);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [isFollowing, setIsFollowing] = useState(false);
-  const [followersCount, setFollowersCount] = useState(0);
-  const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const [photoModalVisible, setPhotoModalVisible] = useState(false);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   
-  const route = useRoute<ProviderProfileScreenRouteProp>();
+  const scrollY = useRef(new Animated.Value(0)).current;
   const navigation = useNavigation<ProviderProfileScreenNavigationProp>();
+  const route = useRoute<ProviderProfileScreenRouteProp>();
   const { providerId } = route.params;
+
+  const categories = ['All', 'Hair', 'Makeup', 'Nails', 'Skincare', 'Massage'];
 
   useEffect(() => {
     loadProviderData();
-  }, [providerId]);
-
-  const handleStartChat = () => {
-    if (provider) {
-      navigation.navigate('Chat', { 
-        userId: provider.userId, 
-        userName: `${provider.businessName}`,
-        userImage: provider.profilePictureUrl
-      });
-    }
-  };
+  }, []);
 
   const loadProviderData = async () => {
     try {
       setIsLoading(true);
       
-      // Load provider details, services, and reviews
-      const [providerData, servicesData, reviewsData] = await Promise.all([
-        ApiService.getServiceProvider(providerId),
-        ApiService.getServicesByProvider(providerId), // Fixed: use correct method for provider-specific services
-        ApiService.getReviews(providerId)
-      ]);
-      
-      setProvider(providerData);
-      setServices(servicesData);
-      setReviews(reviewsData);
-
-      // Load follow status
+      // Try to get real provider data from the new backend APIs
       try {
-        const followStatus = await ApiService.getFollowStatus(providerId);
-        setIsFollowing(followStatus.isFollowing);
-        setFollowersCount(followStatus.followersCount);
-      } catch (error) {
-        console.error('Error loading follow status:', error);
-        // Set default values from provider data if available
-        setFollowersCount(providerData.followersCount || 0);
-        setIsFollowing(providerData.isFollowing || false);
+        console.log('🔄 Loading provider data from API...', providerId);
+        
+        // Get basic provider info
+        const providerProfile = await providerApiService.getProviderProfile(providerId);
+        const providerPortfolio = await providerApiService.getProviderPortfolio(providerId);
+        const providerSpecialties = await providerApiService.getProviderSpecialties(providerId);
+        const providerAnalytics = await providerApiService.getProviderAnalytics(providerId);
+        
+        // Get provider's services
+        const servicesResponse = await ApiService.getProviderServices(providerId);
+        
+        if (providerProfile) {
+          console.log('✅ Successfully loaded provider profile from API');
+          
+          // Convert API data to expected format
+          const realProvider: Provider = {
+            id: providerId,
+            businessName: providerProfile.businessName || 'Beauty Studio',
+            category: providerProfile.category || 'Beauty Services',
+            rating: providerProfile.averageRating || 0,
+            reviewCount: providerProfile.totalReviews || 0,
+            coverImage: providerProfile.coverImageUrl || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800',
+            profileImage: providerProfile.profilePictureUrl || 'https://images.unsplash.com/photo-1494790108755-2616b156d9b6?w=200',
+            bio: providerProfile.businessDescription || 'Professional beauty services',
+            location: providerProfile.businessAddress || 'Location',
+            distance: '0.8 miles',
+            isOpen: true,
+            openingHours: '9:00 AM - 7:00 PM',
+            priceRange: '$$',
+            deliveryTime: '~30 min',
+            isVerified: providerProfile.isVerified || false,
+            isPromoted: false,
+            badges: providerProfile.isVerified ? ['Verified', 'Top Rated'] : ['Top Rated'],
+            photos: providerPortfolio.map(p => p.imageUrl) || [],
+            specialties: providerSpecialties.map(s => s.name) || [],
+            features: ['WiFi Available', 'Parking Available', 'Wheelchair Accessible']
+          };
+          
+          // Convert services to local format
+          const convertedServices = (servicesResponse || []).map(service => ({
+            id: service.id?.toString() || '',
+            name: service.name || '',
+            description: service.description || '',
+            price: service.price || 0,
+            duration: `${service.duration || 60} min`,
+            image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=300',
+            category: service.category || 'Beauty',
+            isPopular: false,
+            rating: 4.8,
+            reviewCount: 25
+          }));
+          
+          setProvider(realProvider);
+          setServices(convertedServices);
+          setIsFollowing(providerProfile.isFollowedByCurrentUser || false);
+          
+          return;
+        }
+      } catch (apiError) {
+        console.log('📡 Real API unavailable, falling back to mock data:', apiError);
       }
+      
+      // Fallback to mock data if API is unavailable
+      const mockProvider: Provider = {
+        id: providerId,
+        businessName: 'Luxe Beauty Studio',
+        category: 'Premium Salon & Spa',
+        rating: 4.8,
+        reviewCount: 1247,
+        coverImage: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800',
+        profileImage: 'https://images.unsplash.com/photo-1494790108755-2616b156d9b6?w=200',
+        bio: 'Award-winning beauty studio specializing in luxury treatments. Expert team provides personalized beauty experiences using premium products.',
+        location: 'Beverly Hills, CA',
+        distance: '2.1 mi away',
+        isOpen: true,
+        openingHours: 'Open until 8:00 PM',
+        priceRange: '$$$',
+        deliveryTime: '30-45 min',
+        isVerified: true,
+        isPromoted: true,
+        badges: ['Top Rated', 'Premium', 'Eco-Friendly'],
+        photos: [
+          'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400',
+          'https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=400',
+          'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=400',
+          'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=400',
+          'https://images.unsplash.com/photo-1559599101-f09722fb4948?w=400',
+          'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400',
+        ],
+        specialties: ['Balayage', 'Bridal Makeup', 'Facials', 'Nail Art'],
+        features: ['Free WiFi', 'Refreshments', 'Parking', 'A/C'],
+      };
+
+      const mockServices: Service[] = [
+        {
+          id: '1',
+          name: 'Signature Balayage',
+          description: 'Hand-painted highlights with premium color for natural results',
+          price: 280,
+          duration: '3 hrs',
+          image: 'https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=300',
+          category: 'Hair',
+          isPopular: true,
+          rating: 4.9,
+          reviewCount: 156,
+        },
+        {
+          id: '2',
+          name: 'Photography Session',
+          description: 'Professional makeup for photo shoots and portraits',
+          price: 200,
+          duration: '2 hrs',
+          image: 'https://images.unsplash.com/photo-1559599101-f09722fb4948?w=300',
+          category: 'Skincare',
+          isPopular: true,
+          rating: 4.8,
+          reviewCount: 89,
+        },
+        {
+          id: '3',
+          name: 'Bridal Makeup Package',
+          description: 'Complete bridal look with trial and touch-up kit included',
+          price: 350,
+          duration: '2.5 hrs',
+          image: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=300',
+          category: 'Makeup',
+          isPopular: false,
+          rating: 5.0,
+          reviewCount: 42,
+        },
+        {
+          id: '4',
+          name: 'Gel Manicure & Art',
+          description: 'Long-lasting gel polish with custom nail art design',
+          price: 85,
+          duration: '75 minutes',
+          image: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=300',
+          category: 'Nails',
+          isPopular: false,
+          rating: 4.7,
+          reviewCount: 67,
+        },
+      ];
+
+      const mockReviews: Review[] = [
+        {
+          id: '1',
+          user: {
+            name: 'Emma Wilson',
+            avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100',
+          },
+          rating: 5,
+          comment: 'Absolutely incredible experience! The balayage turned out exactly like the inspiration photo I showed. Sarah is a true artist!',
+          date: '2024-08-15',
+          photos: ['https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=200'],
+          helpful: 23,
+        },
+        {
+          id: '2',
+          user: {
+            name: 'Jessica Chen',
+            avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100',
+          },
+          rating: 5,
+          comment: 'The luxury facial was amazing! My skin feels so refreshed and glowing. Will definitely be back!',
+          date: '2024-08-10',
+          helpful: 18,
+        },
+      ];
+
+      setProvider(mockProvider);
+      setServices(mockServices);
+      setReviews(mockReviews);
     } catch (error) {
       console.error('Error loading provider data:', error);
-      Alert.alert('Error', 'Failed to load provider information. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleFollow = async () => {
-    if (!provider || isFollowLoading) return;
+  // Photo Modal Functions
+  const openPhotoModal = (index: number) => {
+    setSelectedPhotoIndex(index);
+    setPhotoModalVisible(true);
+  };
 
-    try {
-      setIsFollowLoading(true);
-      
-      let response;
-      if (isFollowing) {
-        response = await ApiService.unfollowProvider(providerId);
-      } else {
-        response = await ApiService.followProvider(providerId);
-      }
+  const closePhotoModal = () => {
+    setPhotoModalVisible(false);
+    setSelectedPhotoIndex(0);
+  };
 
-      setIsFollowing(response.isFollowing);
-      setFollowersCount(response.followersCount);
-      
-    } catch (error) {
-      console.error('Error toggling follow status:', error);
-      Alert.alert('Error', 'Failed to update follow status. Please try again.');
-    } finally {
-      setIsFollowLoading(false);
+  const nextPhoto = () => {
+    if (provider?.photos && selectedPhotoIndex < provider.photos.length - 1) {
+      setSelectedPhotoIndex(selectedPhotoIndex + 1);
+    }
+  };
+
+  const previousPhoto = () => {
+    if (selectedPhotoIndex > 0) {
+      setSelectedPhotoIndex(selectedPhotoIndex - 1);
     }
   };
 
   const handleBookService = (service: Service) => {
-    if (!provider) return;
-    
-    // Navigate to enhanced booking flow with service and provider details
-    navigation.navigate('BookingFlow', {
-      service: service,
-      provider: provider
-    });
+    navigation.navigate('BookingFlow', { service, provider });
   };
 
-  const renderServiceCard = (service: Service) => (
-    <View key={service.id} style={styles.enhancedServiceCard}>
-      {service.imageUrl && (
-        <Image source={{ uri: service.imageUrl }} style={styles.serviceImage} />
-      )}
-      <View style={styles.serviceInfo}>
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `Check out ${provider?.businessName} on FYLA!`,
+        title: provider?.businessName,
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
+
+  const filteredServices = selectedCategory === 'All' 
+    ? services 
+    : services.filter(service => service.category === selectedCategory);
+
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, HEADER_HEIGHT - 100],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <ImageBackground
+        source={{ uri: provider?.coverImage }}
+        style={styles.coverImage}
+        resizeMode="cover"
+      >
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.6)']}
+          style={styles.coverGradient}
+        />
+        
+        {/* Navigation Bar */}
+        <SafeAreaView style={styles.navBar}>
+          <TouchableOpacity 
+            style={styles.navButton}
+            onPress={() => navigation.goBack()}
+          >
+            <BlurView intensity={20} style={styles.blurButton}>
+              <Ionicons name="arrow-back" size={28} color={MODERN_COLORS.white} />
+            </BlurView>
+          </TouchableOpacity>
+          
+          <View style={styles.navActions}>
+            <TouchableOpacity style={styles.navButton} onPress={handleShare}>
+              <BlurView intensity={20} style={styles.blurButton}>
+                <Ionicons name="share-outline" size={28} color={MODERN_COLORS.white} />
+              </BlurView>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.navButton}
+              onPress={() => setIsFollowing(!isFollowing)}
+            >
+              <BlurView intensity={20} style={styles.blurButton}>
+                <Ionicons 
+                  name={isFollowing ? "heart" : "heart-outline"} 
+                  size={28} 
+                  color={isFollowing ? MODERN_COLORS.error : MODERN_COLORS.white} 
+                />
+              </BlurView>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+
+        {/* Simplified Provider Info */}
+        <View style={styles.heroContent}>
+          <View style={styles.heroTextContainer}>
+            <View style={styles.titleRow}>
+              <Text style={styles.businessName}>{provider?.businessName}</Text>
+              {provider?.isVerified && (
+                <View style={styles.verifiedBadge}>
+                  <Ionicons name="checkmark" size={16} color={MODERN_COLORS.white} />
+                </View>
+              )}
+            </View>
+            <Text style={styles.category}>{provider?.category}</Text>
+            <View style={styles.simpleRatingRow}>
+              <Ionicons name="star" size={18} color={MODERN_COLORS.warning} />
+              <Text style={styles.rating}>{provider?.rating}</Text>
+              <Text style={styles.reviewCount}>({provider?.reviewCount}+ reviews)</Text>
+            </View>
+          </View>
+        </View>
+      </ImageBackground>
+    </View>
+  );
+
+  const renderStatusBar = () => (
+    <View style={styles.statusBar}>
+      <View style={styles.statusRow}>
+        <View style={styles.statusIndicator}>
+          <View style={[styles.statusDot, { backgroundColor: provider?.isOpen ? MODERN_COLORS.success : MODERN_COLORS.error }]} />
+          <Text style={styles.statusText}>
+            {provider?.isOpen ? provider?.openingHours : 'Closed'}
+          </Text>
+        </View>
+        
+        <View style={styles.locationInfo}>
+          <Ionicons name="location-outline" size={16} color={MODERN_COLORS.textSecondary} />
+          <Text style={styles.location}>{provider?.location}</Text>
+          <Text style={styles.separator}>•</Text>
+          <Text style={styles.distance}>{provider?.distance}</Text>
+        </View>
+      </View>
+      
+      <View style={styles.statusDetails}>
+        <Text style={styles.priceRange}>{provider?.priceRange}</Text>
+        <Text style={styles.separator}>•</Text>
+        <Text style={styles.deliveryTime}>{provider?.deliveryTime}</Text>
+      </View>
+    </View>
+  );
+
+  const renderBadges = () => (
+    <View style={styles.badgesContainer}>
+      {provider?.badges.map((badge, index) => (
+        <View key={index} style={styles.badge}>
+          <Text style={styles.badgeText}>{badge}</Text>
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderDescription = () => (
+    <View style={styles.descriptionContainer}>
+      <Text style={styles.sectionTitle}>About</Text>
+      <Text 
+        style={styles.description}
+        numberOfLines={showFullDescription ? undefined : 3}
+      >
+        {provider?.bio}
+      </Text>
+      <TouchableOpacity onPress={() => setShowFullDescription(!showFullDescription)}>
+        <Text style={styles.readMoreText}>
+          {showFullDescription ? 'Read less' : 'Read more'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderPhotos = () => (
+    <View style={styles.photosContainer}>
+      <Text style={styles.sectionTitle}>Photos</Text>
+      <FlatList
+        data={provider?.photos.slice(0, 6)}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(_, index) => index.toString()}
+        renderItem={({ item, index }) => (
+          <TouchableOpacity 
+            style={styles.photoItem}
+            onPress={() => openPhotoModal(index)}
+          >
+            <Image source={{ uri: item }} style={styles.photo} />
+            {index === 5 && provider?.photos && provider.photos.length > 6 && (
+              <View style={styles.photoOverlay}>
+                <Text style={styles.photoCount}>+{provider.photos.length - 6}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
+        contentContainerStyle={styles.photosList}
+      />
+    </View>
+  );
+
+  const renderCategoryTabs = () => (
+    <View style={styles.categoryContainer}>
+      <Text style={styles.sectionTitle}>Services</Text>
+      <FlatList
+        data={categories}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(item) => item}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[
+              styles.categoryTab,
+              selectedCategory === item && styles.activeCategoryTab
+            ]}
+            onPress={() => setSelectedCategory(item)}
+          >
+            <Text style={[
+              styles.categoryTabText,
+              selectedCategory === item && styles.activeCategoryTabText
+            ]}>
+              {item}
+            </Text>
+          </TouchableOpacity>
+        )}
+        contentContainerStyle={styles.categoriesList}
+      />
+    </View>
+  );
+
+  const renderService = ({ item: service }: { item: Service }) => (
+    <Pressable 
+      style={styles.serviceCard}
+      onPress={() => handleBookService(service)}
+    >
+      <Image source={{ uri: service.image }} style={styles.serviceImage} />
+      <View style={styles.serviceContent}>
         <View style={styles.serviceHeader}>
-          <Text style={styles.serviceName}>{service.name}</Text>
-          <View style={styles.priceContainer}>
-            <Text style={styles.servicePrice}>${service.price}</Text>
+          <View style={styles.serviceInfo}>
+            <Text style={styles.serviceName}>{service.name}</Text>
+            {service.isPopular && (
+              <View style={styles.popularBadge}>
+                <Text style={styles.popularText}>Popular</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.servicePrice}>${service.price}</Text>
+        </View>
+        
+        <Text style={styles.serviceDescription} numberOfLines={2}>
+          {service.description}
+        </Text>
+        
+        <View style={styles.serviceFooter}>
+          <View style={styles.serviceRating}>
+            <Ionicons name="star" size={14} color={MODERN_COLORS.warning} />
+            <Text style={styles.serviceRatingText}>{service.rating}</Text>
+            <Text style={styles.serviceReviewCount}>({service.reviewCount})</Text>
+          </View>
+          <Text style={styles.serviceDuration}>{service.duration}</Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+
+  const renderReviews = () => (
+    <View style={styles.reviewsContainer}>
+      <View style={styles.reviewsHeader}>
+        <Text style={styles.sectionTitle}>Reviews</Text>
+        <TouchableOpacity>
+          <Text style={styles.seeAllText}>See all</Text>
+        </TouchableOpacity>
+      </View>
+      
+      {reviews.slice(0, 2).map((review) => (
+        <View key={review.id} style={styles.reviewCard}>
+          <View style={styles.reviewHeader}>
+            <Image source={{ uri: review.user.avatar }} style={styles.reviewerAvatar} />
+            <View style={styles.reviewerInfo}>
+              <Text style={styles.reviewerName}>{review.user.name}</Text>
+              <View style={styles.reviewRating}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Ionicons
+                    key={star}
+                    name={star <= review.rating ? "star" : "star-outline"}
+                    size={14}
+                    color={MODERN_COLORS.warning}
+                  />
+                ))}
+              </View>
+            </View>
+            <Text style={styles.reviewDate}>{review.date}</Text>
+          </View>
+          
+          <Text style={styles.reviewComment}>{review.comment}</Text>
+          
+          {review.photos && (
+            <FlatList
+              data={review.photos}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(_, index) => index.toString()}
+              renderItem={({ item }) => (
+                <Image source={{ uri: item }} style={styles.reviewPhoto} />
+              )}
+              style={styles.reviewPhotos}
+            />
+          )}
+          
+          <View style={styles.reviewFooter}>
+            <TouchableOpacity style={styles.helpfulButton}>
+              <Ionicons name="thumbs-up-outline" size={16} color={MODERN_COLORS.gray500} />
+              <Text style={styles.helpfulText}>Helpful ({review.helpful})</Text>
+            </TouchableOpacity>
           </View>
         </View>
-        <Text style={styles.serviceDescription}>{service.description}</Text>
-        <View style={styles.serviceDetails}>
-          <View style={styles.detailItem}>
-            <Ionicons name="time-outline" size={16} color="rgba(255, 255, 255, 0.8)" />
-            <Text style={styles.detailText}>{service.duration} min</Text>
+      ))}
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={MODERN_COLORS.primary} />
+          <Text style={styles.loadingText}>Loading provider...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      
+      {/* Animated Header */}
+      <Animated.View style={[styles.animatedHeader, { opacity: headerOpacity }]}>
+        <BlurView intensity={100} style={styles.headerBlur}>
+          <SafeAreaView style={styles.headerContent}>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={28} color={MODERN_COLORS.textPrimary} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>{provider?.businessName}</Text>
+            <TouchableOpacity onPress={handleShare}>
+              <Ionicons name="share-outline" size={28} color={MODERN_COLORS.textPrimary} />
+            </TouchableOpacity>
+          </SafeAreaView>
+        </BlurView>
+      </Animated.View>
+
+      <Animated.ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+      >
+        {renderHeader()}
+        
+        <View style={styles.content}>
+          {renderStatusBar()}
+          {renderBadges()}
+          {renderDescription()}
+          {renderPhotos()}
+          {renderCategoryTabs()}
+          
+          <FlatList
+            data={filteredServices}
+            renderItem={renderService}
+            keyExtractor={(item) => item.id}
+            scrollEnabled={false}
+            contentContainerStyle={styles.servicesList}
+          />
+          
+          {renderReviews()}
+          
+          <View style={styles.bottomSpacing} />
+        </View>
+      </Animated.ScrollView>
+
+      {/* Photo Modal */}
+      <Modal
+        visible={photoModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closePhotoModal}
+      >
+        <View style={modalStyles.overlay}>
+          <TouchableOpacity 
+            style={modalStyles.closeButton}
+            onPress={closePhotoModal}
+          >
+            <Ionicons name="close" size={24} color={MODERN_COLORS.white} />
+          </TouchableOpacity>
+          
+                    <View style={modalStyles.imageContainer}>
+            <Image 
+              source={{ uri: provider?.photos?.[selectedPhotoIndex] }}
+              style={modalStyles.image}
+              resizeMode="contain"
+            />
           </View>
-          <View style={styles.detailItem}>
-            <Ionicons name="pricetag-outline" size={16} color="#FFD700" />
-            <Text style={styles.detailText}>{service.category}</Text>
+          
+          {(provider?.photos?.length || 0) > 1 && (
+            <>
+              {selectedPhotoIndex > 0 && (
+                <TouchableOpacity 
+                  style={[modalStyles.navButton, modalStyles.leftButton]}
+                  onPress={previousPhoto}
+                >
+                  <Ionicons name="chevron-back" size={24} color={MODERN_COLORS.white} />
+                </TouchableOpacity>
+              )}
+              
+              {selectedPhotoIndex < (provider?.photos?.length || 0) - 1 && (
+                <TouchableOpacity 
+                  style={[modalStyles.navButton, modalStyles.rightButton]}
+                  onPress={nextPhoto}
+                >
+                  <Ionicons name="chevron-forward" size={24} color={MODERN_COLORS.white} />
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+          
+          <View style={modalStyles.indicator}>
+            <Text style={modalStyles.indicatorText}>
+              {selectedPhotoIndex + 1} / {provider?.photos?.length || 0}
+            </Text>
           </View>
         </View>
+      </Modal>
+
+      {/* Floating Book Button */}
+      <View style={styles.floatingButton}>
         <TouchableOpacity 
           style={styles.bookButton}
-          onPress={() => handleBookService(service)}
+          onPress={() => navigation.navigate('BookingFlow', { provider })}
         >
-          <Ionicons name="calendar-outline" size={16} color="#fff" />
           <Text style={styles.bookButtonText}>Book Now</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
-
-  const renderReviewCard = (review: Review) => (
-    <View key={review.id} style={styles.reviewCard}>
-      <View style={styles.reviewHeader}>
-        <Image
-          source={{ uri: review.reviewer?.profilePictureUrl || 'https://via.placeholder.com/40' }}
-          style={styles.reviewerImage}
-        />
-        <View style={styles.reviewerInfo}>
-          <Text style={styles.reviewerName}>
-            {review.reviewer?.firstName} {review.reviewer?.lastName}
-          </Text>
-          <View style={styles.reviewRatingContainer}>
-            <View style={styles.reviewRating}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Ionicons
-                  key={star}
-                  name={star <= review.rating ? "star" : "star-outline"}
-                  size={16}
-                  color="#FFD700"
-                />
-              ))}
-            </View>
-            <Text style={styles.reviewRatingText}>{review.rating.toFixed(1)}</Text>
-          </View>
-        </View>
-        <Text style={styles.reviewDate}>
-          {new Date(review.createdAt).toLocaleDateString()}
-        </Text>
-      </View>
-      
-      {review.comment && (
-        <View style={styles.reviewCommentContainer}>
-          <Text style={styles.reviewComment}>{review.comment}</Text>
-        </View>
-      )}
-      
-      {/* Show aggregated questionnaire insights to clients (but not detailed data) */}
-      {review.questionnaire && (
-        <View style={styles.publicInsights}>
-          <View style={styles.insightRow}>
-            <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-            <Text style={styles.insightText}>
-              Detailed service assessment completed
-            </Text>
-          </View>
-          {review.questionnaire.wouldRecommend && (
-            <View style={styles.insightRow}>
-              <Ionicons name="thumbs-up" size={16} color="#4CAF50" />
-              <Text style={styles.insightText}>
-                Would recommend this service
-              </Text>
-            </View>
-          )}
-          {review.questionnaire.wouldUseAgain && (
-            <View style={styles.insightRow}>
-              <Ionicons name="repeat" size={16} color="#4CAF50" />
-              <Text style={styles.insightText}>
-                Would use this service again
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
-    </View>
-  );
-
-  const renderGalleryImage = ({ item, index }: { item: string; index: number }) => (
-    <TouchableOpacity
-      style={styles.galleryImageContainer}
-      onPress={() => {
-        setSelectedImageIndex(index);
-        setShowImageModal(true);
-      }}
-    >
-      <Image source={{ uri: item }} style={styles.galleryImage} />
-    </TouchableOpacity>
-  );
-
-  const renderTabContent = () => {
-    switch (selectedTab) {
-      case 'posts':
-        return renderPosts();
-      case 'services':
-        return (
-          <View style={styles.tabContent}>
-            {services.length > 0 ? (
-              services.map(renderServiceCard)
-            ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="calendar-outline" size={48} color="#ccc" />
-                <Text style={styles.emptyText}>No services available</Text>
-              </View>
-            )}
-          </View>
-        );
-      case 'reviews':
-        return (
-          <View style={styles.tabContent}>
-            {reviews.length > 0 ? (
-              <View>
-                {reviews.slice(0, 3).map(renderReviewCard)}
-                <TouchableOpacity
-                  style={styles.viewAllReviewsButton}
-                  onPress={() => {
-                    // TODO: Add navigation to ReviewsList when screen is added to navigation
-                    console.log('Navigate to reviews list for provider:', providerId);
-                    Alert.alert('Reviews', `Opening all reviews for ${provider?.businessName}`);
-                  }}
-                >
-                  <Text style={styles.viewAllReviewsText}>
-                    View All {reviews.length} Reviews
-                  </Text>
-                  <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="chatbubble-outline" size={48} color="#ccc" />
-                <Text style={styles.emptyText}>No reviews yet</Text>
-                <TouchableOpacity
-                  style={styles.writeReviewButton}
-                  onPress={() => {
-                    // TODO: Add navigation to CreateReview when screen is added to navigation
-                    console.log('Navigate to create review for provider:', providerId);
-                    Alert.alert('Create Review', 'Opening review creation form');
-                  }}
-                >
-                  <Text style={styles.writeReviewText}>Be the first to review</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        );
-      default:
-        return renderPosts();
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <View style={styles.container}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#3797F0" />
-            <Text style={styles.loadingText}>Loading provider details...</Text>
-          </View>
-        </View>
-      </>
-    );
-  }
-
-  if (!provider) {
-    return (
-      <>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <View style={styles.container}>
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={64} color="#8E8E8E" />
-            <Text style={styles.errorText}>Provider not found</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={loadProviderData}>
-              <Text style={styles.retryButtonText}>Try Again</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </>
-    );
-  }
-
-  // Render Functions
-  const renderPosts = () => {
-    const mockPosts = Array.from({ length: 9 }).map((_, index) => ({
-      id: `post-${index}`,
-      imageUrl: `https://picsum.photos/400/400?random=${index}`,
-      likesCount: Math.floor(Math.random() * 500) + 10,
-      commentsCount: Math.floor(Math.random() * 50) + 1,
-    }));
-
-    return (
-      <FlatList
-        data={mockPosts}
-        numColumns={3}
-        renderItem={({ item, index }) => (
-          <TouchableOpacity
-            style={styles.postItem}
-            onPress={() => {
-              // TODO: Add navigation to PostDetail when screen is added to navigation
-              console.log('Navigate to post detail:', item.id);
-              Alert.alert('Post Detail', `Opening post ${item.id}`);
-            }}
-          >
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={styles.postImage}
-            />
-            <View style={styles.postOverlay}>
-              <View style={styles.postStats}>
-                <View style={styles.postStat}>
-                  <Ionicons name="heart" size={16} color="white" />
-                  <Text style={styles.postStatText}>{item.likesCount}</Text>
-                </View>
-                <View style={styles.postStat}>
-                  <Ionicons name="chatbubble" size={16} color="white" />
-                  <Text style={styles.postStatText}>{item.commentsCount}</Text>
-                </View>
-              </View>
-            </View>
-          </TouchableOpacity>
-        )}
-        keyExtractor={(item) => item.id}
-        scrollEnabled={false}
-        contentContainerStyle={styles.postsGrid}
-      />
-    );
-  };
-
-  const renderServices = () => (
-    <View style={styles.servicesList}>
-      {services.map((service) => (
-        <View key={service.id} style={styles.serviceCard}>
-          <View style={styles.serviceHeader}>
-            <Text style={styles.serviceName}>{service.name}</Text>
-            <Text style={styles.servicePrice}>${service.price}</Text>
-          </View>
-          <Text style={styles.serviceDescription}>{service.description}</Text>
-          <View style={styles.serviceFooter}>
-            <Text style={styles.serviceDuration}>{service.duration} min</Text>
-            <TouchableOpacity 
-              style={styles.bookServiceButton}
-              onPress={() => handleBookService(service)}
-            >
-              <Text style={styles.bookServiceButtonText}>Book</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ))}
-    </View>
-  );
-
-  const renderReviews = () => (
-    <View style={styles.reviewsList}>
-      {reviews.map((review) => (
-        <View key={review.id} style={styles.reviewCard}>
-          <View style={styles.reviewHeader}>
-            <Image
-              source={{ uri: review.reviewer?.profilePictureUrl || 'https://via.placeholder.com/40' }}
-              style={styles.reviewerImage}
-            />
-            <View style={styles.reviewerInfo}>
-              <Text style={styles.reviewerName}>
-                {review.reviewer?.firstName} {review.reviewer?.lastName}
-              </Text>
-              <Text style={styles.reviewDate}>
-                {new Date(review.createdAt).toLocaleDateString()}
-              </Text>
-            </View>
-            <View style={styles.reviewRating}>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Ionicons
-                  key={i}
-                  name={i < review.rating ? 'star' : 'star-outline'}
-                  size={16}
-                  color="#FFD700"
-                />
-              ))}
-            </View>
-          </View>
-          <Text style={styles.reviewText}>{review.comment}</Text>
-        </View>
-      ))}
-    </View>
-  );
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{provider.businessName}</Text>
-        <TouchableOpacity>
-          <Ionicons name="ellipsis-horizontal" size={24} color={COLORS.text} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Profile Section */}
-        <View style={styles.profileSection}>
-          <View style={styles.profileTop}>
-            <Image
-              source={{
-                uri: provider.profilePictureUrl || 'https://via.placeholder.com/90',
-              }}
-              style={styles.profileImage}
-            />
-            
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{services.length}</Text>
-                <Text style={styles.statLabel}>Services</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{followersCount.toLocaleString()}</Text>
-                <Text style={styles.statLabel}>Followers</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{provider.followingCount || 0}</Text>
-                <Text style={styles.statLabel}>Following</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Business Info */}
-          <View style={styles.businessInfo}>
-            <Text style={styles.businessName}>{provider.businessName}</Text>
-            <Text style={styles.businessDescription}>{provider.businessDescription}</Text>
-            
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={16} color="#FFD700" />
-              <Text style={styles.ratingText}>{provider.averageRating || 'New'} ({provider.totalReviews || 0} reviews)</Text>
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.bookButton]}
-              onPress={() => {
-                if (services.length > 0) {
-                  navigation.navigate('BookingFlow', { 
-                    service: services[0], 
-                    provider: provider 
-                  });
-                }
-              }}
-            >
-              <Text style={styles.bookButtonText}>Book Appointment</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[
-                styles.actionButton, 
-                styles.followButton,
-                isFollowing && styles.followingButton
-              ]}
-              onPress={handleFollow}
-              disabled={isFollowLoading}
-            >
-              {isFollowLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={[
-                  styles.followButtonText,
-                  isFollowing && styles.followingButtonText
-                ]}>
-                  {isFollowing ? 'Following' : 'Follow'}
-                </Text>
-              )}
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.messageButton}
-              onPress={() => navigation.navigate('Chat', { 
-                userId: provider.userId, 
-                userName: provider.businessName,
-                userImage: provider.profilePictureUrl
-              })}
-            >
-              <Ionicons name="chatbubble-outline" size={20} color={COLORS.text} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Tab Navigation */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tab, selectedTab === 'posts' && styles.activeTab]}
-            onPress={() => setSelectedTab('posts')}
-          >
-            <Ionicons 
-              name="grid-outline" 
-              size={24} 
-              color={selectedTab === 'posts' ? COLORS.text : COLORS.textSecondary} 
-            />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, selectedTab === 'services' && styles.activeTab]}
-            onPress={() => setSelectedTab('services')}
-          >
-            <Ionicons 
-              name="pricetags-outline" 
-              size={24} 
-              color={selectedTab === 'services' ? COLORS.text : COLORS.textSecondary} 
-            />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, selectedTab === 'reviews' && styles.activeTab]}
-            onPress={() => setSelectedTab('reviews')}
-          >
-            <Ionicons 
-              name="star-outline" 
-              size={24} 
-              color={selectedTab === 'reviews' ? COLORS.text : COLORS.textSecondary} 
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Tab Content */}
-        <View style={styles.tabContent}>
-          {selectedTab === 'posts' && renderPosts()}
-          {selectedTab === 'services' && renderServices()}
-          {selectedTab === 'reviews' && renderReviews()}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
 };
 
 const styles = StyleSheet.create({
-  // Base Layout
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContainer: {
-    flex: 1,
+    backgroundColor: MODERN_COLORS.background,
   },
   
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  scrollContent: {
+    paddingBottom: SPACING.tabBarHeight + SPACING.lg,
+  },
+  
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.border,
+  },
+  loadingText: {
+    fontSize: TYPOGRAPHY.base,
+    color: MODERN_COLORS.textSecondary,
+    marginTop: SPACING.sm,
+  },
+
+  // Animated Header
+  animatedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+  },
+  headerBlur: {
+    paddingTop: StatusBar.currentHeight || 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.xl,
+    paddingTop: SPACING.xxl,
+    height: 90,
+    minHeight: 90,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.text,
+    fontSize: TYPOGRAPHY.xl,
+    fontWeight: TYPOGRAPHY.weight.bold,
+    color: MODERN_COLORS.textPrimary,
   },
 
-  // Profile Section
-  profileSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
+  // Header
+  scrollView: {
+    flex: 1,
   },
-  profileTop: {
+  header: {
+    height: HEADER_HEIGHT,
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+  },
+  coverGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: HEADER_HEIGHT,
+  },
+  
+  // Navigation
+  navBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+  },
+  navButton: {
+    borderRadius: BORDER_RADIUS.full,
+    overflow: 'hidden',
+  },
+  blurButton: {
+    width: 52,
+    height: 52,
+    borderRadius: BORDER_RADIUS.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+
+  // Provider Info
+  providerOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: SPACING.md,
+  },
+  
+  // Simplified Hero Content
+  heroContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xl,
+  },
+  heroTextContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+  },
+  simpleRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    gap: SPACING.xs,
+    marginTop: SPACING.xs,
+  },
+  
+  providerInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
   },
   profileImage: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    marginRight: 20,
+    width: 80,
+    height: 80,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 3,
+    borderColor: MODERN_COLORS.white,
+    marginRight: SPACING.md,
   },
-  statsContainer: {
+  providerDetails: {
     flex: 1,
+  },
+  titleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statItem: {
     alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-
-  // Business Info
-  businessInfo: {
-    marginBottom: 16,
+    gap: SPACING.sm,
+    marginBottom: SPACING.xs,
   },
   businessName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 4,
+    fontSize: TYPOGRAPHY['2xl'],
+    fontWeight: TYPOGRAPHY.weight.bold,
+    color: MODERN_COLORS.white,
   },
-  businessDescription: {
-    fontSize: 14,
-    color: COLORS.text,
-    lineHeight: 20,
-    marginBottom: 8,
+  verifiedBadge: {
+    backgroundColor: MODERN_COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  category: {
+    fontSize: TYPOGRAPHY.base,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: SPACING.xs,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: SPACING.xs / 2,
   },
-  ratingText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginLeft: 4,
+  rating: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.white,
+  },
+  reviewCount: {
+    fontSize: TYPOGRAPHY.sm,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  separator: {
+    fontSize: TYPOGRAPHY.sm,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginHorizontal: SPACING.sm,
+  },
+  location: {
+    fontSize: TYPOGRAPHY.sm,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  distance: {
+    fontSize: TYPOGRAPHY.sm,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
 
-  // Action Buttons
-  actionButtons: {
+  // Content
+  content: {
+    backgroundColor: MODERN_COLORS.background,
+    borderTopLeftRadius: BORDER_RADIUS.xl,
+    borderTopRightRadius: BORDER_RADIUS.xl,
+    marginTop: -20,
+    paddingTop: SPACING.lg,
+  },
+
+  // Status Bar
+  statusBar: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    backgroundColor: MODERN_COLORS.surface,
+    marginHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    marginBottom: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  statusRow: {
     flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 6,
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: SPACING.xs,
   },
-  bookButton: {
-    backgroundColor: COLORS.button,
-  },
-  bookButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  followButton: {
-    backgroundColor: COLORS.primary,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  followingButton: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  followButtonText: {
-    color: COLORS.background,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  followingButtonText: {
-    color: COLORS.text,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  messageButton: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Tabs
-  tabContainer: {
+  statusIndicator: {
     flexDirection: 'row',
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.border,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: 'transparent',
+    gap: SPACING.sm,
   },
-  activeTab: {
-    borderBottomColor: COLORS.text,
+  locationInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.medium,
+    color: MODERN_COLORS.textPrimary,
+  },
+  statusDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  priceRange: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.medium,
+    color: MODERN_COLORS.textSecondary,
+  },
+  deliveryTime: {
+    fontSize: TYPOGRAPHY.base,
+    color: MODERN_COLORS.textSecondary,
   },
 
-  // Tab Content
-  tabContent: {
-    flex: 1,
-    paddingTop: 16,
+  // Badges
+  badgesContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.lg,
+    gap: SPACING.sm,
+  },
+  badge: {
+    backgroundColor: MODERN_COLORS.primary + '20',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.lg,
+  },
+  badgeText: {
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.weight.medium,
+    color: MODERN_COLORS.primary,
   },
 
-  // Posts Grid
-  postsGrid: {
-    paddingHorizontal: 1,
+  // Description
+  descriptionContainer: {
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.lg,
   },
-  postItem: {
-    width: (width - 4) / 3,
-    height: (width - 4) / 3,
-    margin: 1,
+  sectionTitle: {
+    fontSize: TYPOGRAPHY.xl,
+    fontWeight: TYPOGRAPHY.weight.bold,
+    color: MODERN_COLORS.textPrimary,
+    marginBottom: SPACING.md,
+  },
+  description: {
+    fontSize: TYPOGRAPHY.base,
+    color: MODERN_COLORS.textSecondary,
+    lineHeight: 24,
+    marginBottom: SPACING.sm,
+  },
+  readMoreText: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.medium,
+    color: MODERN_COLORS.primary,
+  },
+
+  // Photos
+  photosContainer: {
+    marginBottom: SPACING.lg,
+  },
+  photosList: {
+    paddingHorizontal: SPACING.md,
+  },
+  photoItem: {
     position: 'relative',
+    marginRight: SPACING.sm,
   },
-  postImage: {
-    width: '100%',
-    height: '100%',
+  photo: {
+    width: 120,
+    height: 90,
+    borderRadius: BORDER_RADIUS.md,
   },
-  postOverlay: {
+  photoOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: BORDER_RADIUS.md,
     justifyContent: 'center',
     alignItems: 'center',
-    opacity: 0,
   },
-  postStats: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  postStat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  postStatText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
+  photoCount: {
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: TYPOGRAPHY.weight.bold,
+    color: MODERN_COLORS.white,
   },
 
-  // Services List
+  // Categories
+  categoryContainer: {
+    marginBottom: SPACING.lg,
+  },
+  categoriesList: {
+    paddingHorizontal: SPACING.md,
+  },
+  categoryTab: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: MODERN_COLORS.gray100,
+    marginRight: SPACING.sm,
+  },
+  activeCategoryTab: {
+    backgroundColor: MODERN_COLORS.primary,
+  },
+  categoryTabText: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.medium,
+    color: MODERN_COLORS.textSecondary,
+  },
+  activeCategoryTabText: {
+    color: MODERN_COLORS.white,
+  },
+
+  // Services
   servicesList: {
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.md,
   },
   serviceCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    flexDirection: 'row',
+    backgroundColor: MODERN_COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    marginBottom: SPACING.md,
+    overflow: 'hidden',
+    ...SHADOWS.sm,
+  },
+  serviceImage: {
+    width: 100,
+    height: 100,
+  },
+  serviceContent: {
+    flex: 1,
+    padding: SPACING.md,
   },
   serviceHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: SPACING.xs,
+  },
+  serviceInfo: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    gap: SPACING.sm,
   },
   serviceName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.textPrimary,
     flex: 1,
+  },
+  popularBadge: {
+    backgroundColor: MODERN_COLORS.warning,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  popularText: {
+    fontSize: TYPOGRAPHY.xs,
+    fontWeight: TYPOGRAPHY.weight.bold,
+    color: MODERN_COLORS.white,
   },
   servicePrice: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.button,
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: TYPOGRAPHY.weight.bold,
+    color: MODERN_COLORS.primary,
   },
   serviceDescription: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.textSecondary,
     lineHeight: 20,
-    marginBottom: 12,
-  },
-  serviceDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  serviceDuration: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  serviceBookButton: {
-    backgroundColor: COLORS.button,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  serviceBookText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-
-  // Reviews List
-  reviewsList: {
-    paddingHorizontal: 16,
-  },
-  reviewCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  reviewerImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  reviewerInfo: {
-    flex: 1,
-  },
-  reviewerName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  reviewRating: {
-    flexDirection: 'row',
-  },
-  reviewText: {
-    fontSize: 14,
-    color: COLORS.text,
-    lineHeight: 20,
-  },
-
-  reviewDate: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
+    marginBottom: SPACING.sm,
   },
   serviceFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
   },
-  bookServiceButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
+  serviceRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs / 2,
   },
-  bookServiceButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
+  serviceRatingText: {
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.weight.medium,
+    color: MODERN_COLORS.textPrimary,
+  },
+  serviceReviewCount: {
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.textTertiary,
+  },
+  serviceDuration: {
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.textSecondary,
   },
 
-  // Enhanced Service Styles
-  enhancedServiceCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+  // Reviews
+  reviewsContainer: {
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.lg,
   },
-  serviceImage: {
-    width: '100%',
-    height: 120,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  serviceInfo: {
-    flex: 1,
-  },
-  priceContainer: {
+  reviewsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING.md,
   },
-  detailItem: {
+  seeAllText: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.medium,
+    color: MODERN_COLORS.primary,
+  },
+  reviewCard: {
+    backgroundColor: MODERN_COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  reviewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: SPACING.sm,
   },
-  detailText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginLeft: 4,
+  reviewerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: SPACING.sm,
   },
-
-  // Enhanced Review Styles
-  reviewRatingContainer: {
+  reviewerInfo: {
+    flex: 1,
+  },
+  reviewerName: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.textPrimary,
+    marginBottom: 2,
+  },
+  reviewRating: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+    gap: 2,
   },
-  reviewRatingText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginLeft: 4,
-  },
-  reviewCommentContainer: {
-    marginTop: 8,
+  reviewDate: {
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.textTertiary,
   },
   reviewComment: {
-    fontSize: 14,
-    color: COLORS.text,
-    lineHeight: 20,
+    fontSize: TYPOGRAPHY.base,
+    color: MODERN_COLORS.textSecondary,
+    lineHeight: 22,
+    marginBottom: SPACING.sm,
   },
-
-  // Public Insights
-  publicInsights: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+  reviewPhotos: {
+    marginBottom: SPACING.sm,
   },
-  insightRow: {
+  reviewPhoto: {
+    width: 80,
+    height: 80,
+    borderRadius: BORDER_RADIUS.md,
+    marginRight: SPACING.sm,
+  },
+  reviewFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
   },
-  insightText: {
-    fontSize: 14,
-    color: COLORS.text,
-  },
-
-  // Gallery
-  galleryImageContainer: {
-    margin: 1,
-    flex: 1,
-    aspectRatio: 1,
-  },
-  galleryImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
-  },
-  galleryRow: {
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-
-  // Empty States
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-
-  // Loading States
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: COLORS.text,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  errorText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: COLORS.text,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: 16,
-    backgroundColor: COLORS.button,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 6,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontWeight: '600',
-  },
-
-  // Review Navigation Buttons
-  viewAllReviewsButton: {
+  helpfulButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    marginHorizontal: 16,
-    marginTop: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    gap: SPACING.xs,
   },
-  viewAllReviewsText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.primary,
+  helpfulText: {
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.textSecondary,
   },
-  writeReviewButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 16,
+
+  // Floating Button
+  floatingButton: {
+    position: 'absolute',
+    bottom: SPACING.lg,
+    left: SPACING.md,
+    right: SPACING.md,
   },
-  writeReviewText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
+  bookButton: {
+    backgroundColor: MODERN_COLORS.primary,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    alignItems: 'center',
+    ...SHADOWS.lg,
+  },
+  bookButtonText: {
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: TYPOGRAPHY.weight.bold,
+    color: MODERN_COLORS.white,
+  },
+
+  // Spacing
+  bottomSpacing: {
+    height: 100,
   },
 });
 
-export default ProviderProfileScreen;
+// Modal Styles
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+    padding: 8,
+  },
+  imageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  image: {
+    width: '90%',
+    height: '70%',
+  },
+  navButton: {
+    position: 'absolute',
+    top: '50%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+    padding: 8,
+    marginTop: -20,
+  },
+  leftButton: {
+    left: 20,
+  },
+  rightButton: {
+    right: 20,
+  },
+  indicator: {
+    position: 'absolute',
+    bottom: 50,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  indicatorText: {
+    color: MODERN_COLORS.white,
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.weight.medium,
+  },
+});
+
+export default UberEatsProviderScreen;

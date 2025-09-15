@@ -21,6 +21,7 @@ import PrivacyPolicyScreen from '../screens/legal/PrivacyPolicyScreen';
 import HomeScreen from '../screens/main/HomeScreen';
 import SearchScreen from '../screens/main/SearchScreen';
 import BookingsScreen from '../screens/main/BookingsScreen';
+import BookingsTabNavigator from '../screens/main/BookingsTabNavigator';
 import MessagesScreen from '../screens/main/MessagesScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 
@@ -35,7 +36,11 @@ import EnhancedScheduleManagementScreen from '../screens/provider/EnhancedSchedu
 import ClientsScreen from '../screens/provider/ClientsScreen';
 import ClientManagementScreen from '../screens/provider/ClientManagementScreen';
 import CouponsLoyaltyScreen from '../screens/provider/CouponsLoyaltyScreen';
+import EnhancedCouponsLoyaltyScreen from '../screens/provider/EnhancedCouponsLoyaltyScreen';
 import ServiceManagementScreen from '../screens/provider/ServiceManagementScreen';
+import EnhancedServiceManagementScreen from '../screens/provider/EnhancedServiceManagementScreen';
+import ProviderStorefrontScreen from '../screens/provider/ProviderStorefrontScreen';
+import ProviderAvailabilityScreen from '../screens/provider/ProviderAvailabilityScreen';
 import ReviewsScreen from '../screens/reviews/ReviewsScreen';
 
 // Detail Screens (Shared)
@@ -43,12 +48,18 @@ import ServiceDetailsScreen from '../screens/details/ServiceDetailsScreen';
 import ProviderProfileScreen from '../screens/details/ProviderProfileScreen';
 import BookingDetailsScreen from '../screens/details/BookingDetailsScreen';
 import BookingFlowScreen from '../screens/booking/BookingFlowScreen';
+import ModernBookingCalendarScreen from '../screens/booking/ModernBookingCalendarScreen';
+import ModernBookingFlowScreen from '../screens/booking/ModernBookingFlowScreen';
 import ChatListScreen from '../screens/ChatListScreen';
 import ChatScreen from '../screens/ChatScreen';
 import UserSelectionScreen from '../screens/UserSelectionScreen';
 import NotificationSettingsScreen from '../screens/settings/NotificationSettingsScreen';
 import NotificationTestScreen from '../screens/testing/NotificationTestScreen';
-import EnhancedProfileScreen from '../screens/profile/EnhancedProfileScreen';
+import ModernProfileScreen from '../screens/profile/ModernProfileScreen';
+
+// Onboarding Screens
+import ClientOnboardingScreen from '../screens/onboarding/ClientOnboardingScreen';
+import ProviderOnboardingScreen from '../screens/onboarding/ProviderOnboardingScreen';
 
 // Social Media Screens
 import SocialFeedScreen from '../screens/social/SocialFeedScreen';
@@ -57,9 +68,24 @@ import PostCommentsScreen from '../screens/social/PostCommentsScreen';
 import UserProfileScreen from '../screens/social/UserProfileScreen';
 import FollowingBookmarksScreen from '../screens/social/FollowingBookmarksScreen';
 import WorkingEnhancedProviderProfileScreen from '../screens/provider/WorkingEnhancedProviderProfileScreen';
+import ModernProviderScheduleScreen from '../screens/provider/ModernProviderScheduleScreen';
 
 // Instagram-style Search
 import InstagramSearchScreen from '../screens/main/InstagramSearchScreen';
+
+// Subscription Screens
+import SubscriptionPlansScreen from '../screens/subscription/SubscriptionPlansScreen';
+
+// Advanced Subscription Feature Screens
+import CustomBrandingScreen from '../screens/advanced/CustomBrandingScreen';
+import MarketingToolsScreen from '../screens/advanced/MarketingToolsScreen';
+import PrioritySupportScreen from '../screens/advanced/PrioritySupportScreen';
+import MultiLocationScreen from '../screens/advanced/MultiLocationScreen';
+import ChairRentalScreen from '../screens/advanced/ChairRentalScreen';
+import SeatRentalScreen from '../screens/provider/SeatRentalScreen';
+
+// Client-specific screens
+import ProviderPromotionsScreen from '../screens/client/ProviderPromotionsScreen';
 
 const RootStack = createStackNavigator<RootStackParamList>();
 const AuthStack = createStackNavigator<AuthStackParamList>();
@@ -142,7 +168,7 @@ const ClientTabNavigator = () => {
       />
       <ClientTab.Screen 
         name="Search" 
-        component={InstagramSearchScreen}
+        component={SearchScreen}
         options={{ tabBarLabel: 'Discover' }}
       />
       <ClientTab.Screen 
@@ -184,6 +210,9 @@ const ProviderTabNavigator = () => {
               break;
             case 'AddPost':
               iconName = focused ? 'add-circle' : 'add-circle-outline';
+              break;
+            case 'Search':
+              iconName = focused ? 'search' : 'search-outline';
               break;
             case 'Appointments':
               iconName = focused ? 'calendar' : 'calendar-outline';
@@ -241,9 +270,14 @@ const ProviderTabNavigator = () => {
         }}
       />
       <ProviderTab.Screen 
+        name="Search" 
+        component={SearchScreen}
+        options={{ tabBarLabel: 'Search' }}
+      />
+      <ProviderTab.Screen 
         name="Appointments" 
-        component={AppointmentsScreen}
-        options={{ tabBarLabel: 'Bookings' }}
+        component={BookingsTabNavigator}
+        options={{ tabBarLabel: 'Schedule' }}
       />
       <ProviderTab.Screen 
         name="Profile" 
@@ -267,11 +301,25 @@ const AppNavigator = () => {
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
           <>
-            {/* Role-based navigation */}
-            {user?.isServiceProvider ? (
-              <RootStack.Screen name="ProviderMain" component={ProviderTabNavigator} />
+            {/* Check if onboarding is completed */}
+            {!user?.onboardingCompleted ? (
+              <>
+                {/* Onboarding screens based on user type */}
+                {user?.isServiceProvider ? (
+                  <RootStack.Screen name="ProviderOnboarding" component={ProviderOnboardingScreen} />
+                ) : (
+                  <RootStack.Screen name="ClientOnboarding" component={ClientOnboardingScreen} />
+                )}
+              </>
             ) : (
-              <RootStack.Screen name="ClientMain" component={ClientTabNavigator} />
+              <>
+                {/* Role-based navigation */}
+                {user?.isServiceProvider ? (
+                  <RootStack.Screen name="ProviderMain" component={ProviderTabNavigator} />
+                ) : (
+                  <RootStack.Screen name="ClientMain" component={ClientTabNavigator} />
+                )}
+              </>
             )}
             
             {/* Shared detail screens */}
@@ -311,33 +359,27 @@ const AppNavigator = () => {
               options={{ headerShown: false }}
             />
             <RootStack.Screen 
+              name="ModernBookingCalendar" 
+              component={ModernBookingCalendarScreen}
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
+              name="ModernBookingFlow" 
+              component={ModernBookingFlowScreen}
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
               name="ProviderProfile" 
               component={ProviderProfileScreen}
               options={{ 
-                headerShown: true, 
-                title: 'Provider Profile',
-                headerStyle: {
-                  backgroundColor: 'transparent',
-                },
-                headerBackground: () => (
-                  <BlurView
-                    intensity={100}
-                    tint="dark"
-                    style={{
-                      flex: 1,
-                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                      borderBottomWidth: 1,
-                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-                    }}
-                  />
-                ),
-                headerTintColor: 'white',
-                headerTitleStyle: {
-                  fontSize: 18,
-                  fontWeight: '700',
-                  letterSpacing: -0.3,
-                },
-                headerBackTitleVisible: false,
+                headerShown: false,
+              }}
+            />
+            <RootStack.Screen 
+              name="ProviderPromotions" 
+              component={ProviderPromotionsScreen}
+              options={{ 
+                headerShown: false,
               }}
             />
             <RootStack.Screen 
@@ -402,7 +444,7 @@ const AppNavigator = () => {
             />
             <RootStack.Screen 
               name="EnhancedProfile" 
-              component={EnhancedProfileScreen}
+              component={ModernProfileScreen}
               options={{ headerShown: false }}
             />
             
@@ -418,6 +460,11 @@ const AppNavigator = () => {
               options={{ headerShown: false }}
             />
             <RootStack.Screen 
+              name="EnhancedCouponsLoyalty" 
+              component={EnhancedCouponsLoyaltyScreen}
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
               name="EnhancedSchedule" 
               component={EnhancedScheduleScreen}
               options={{ headerShown: false }}
@@ -430,6 +477,21 @@ const AppNavigator = () => {
             <RootStack.Screen 
               name="ServiceManagement" 
               component={ServiceManagementScreen}
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
+              name="EnhancedServiceManagement" 
+              component={EnhancedServiceManagementScreen}
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
+              name="ProviderStorefront" 
+              component={ProviderStorefrontScreen}
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
+              name="ProviderAvailability" 
+              component={ProviderAvailabilityScreen}
               options={{ headerShown: false }}
             />
             
@@ -573,37 +635,14 @@ const AppNavigator = () => {
               component={CreatePostScreen}
               options={{ 
                 headerShown: false,
-                presentation: 'fullScreenModal'
+                presentation: 'modal'
               }}
             />
             <RootStack.Screen 
               name="PostComments" 
               component={PostCommentsScreen}
               options={{ 
-                headerShown: true, 
-                title: 'Comments',
-                headerStyle: {
-                  backgroundColor: 'transparent',
-                },
-                headerBackground: () => (
-                  <BlurView
-                    intensity={100}
-                    tint="dark"
-                    style={{
-                      flex: 1,
-                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                      borderBottomWidth: 1,
-                      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-                    }}
-                  />
-                ),
-                headerTintColor: 'white',
-                headerTitleStyle: {
-                  fontSize: 18,
-                  fontWeight: '700',
-                  letterSpacing: -0.3,
-                },
-                headerBackTitleVisible: false,
+                headerShown: false
               }}
             />
             <RootStack.Screen 
@@ -694,6 +733,69 @@ const AppNavigator = () => {
                   letterSpacing: -0.3,
                 },
                 headerBackTitleVisible: false,
+              }}
+            />
+
+            <RootStack.Screen 
+              name="ModernProviderSchedule" 
+              component={ModernProviderScheduleScreen}
+              options={{ 
+                headerShown: false,
+                title: 'Working Hours'
+              }}
+            />
+            
+            {/* Subscription Screen */}
+            <RootStack.Screen 
+              name="SubscriptionPlans" 
+              component={SubscriptionPlansScreen}
+              options={{ 
+                headerShown: false,
+                presentation: 'modal'
+              }}
+            />
+            
+            {/* Advanced Subscription Feature Screens */}
+            <RootStack.Screen 
+              name="CustomBranding" 
+              component={CustomBrandingScreen}
+              options={{ 
+                headerShown: false
+              }}
+            />
+            <RootStack.Screen 
+              name="MarketingTools" 
+              component={MarketingToolsScreen}
+              options={{ 
+                headerShown: false
+              }}
+            />
+            <RootStack.Screen 
+              name="PrioritySupport" 
+              component={PrioritySupportScreen}
+              options={{ 
+                headerShown: false
+              }}
+            />
+            <RootStack.Screen 
+              name="MultiLocation" 
+              component={MultiLocationScreen}
+              options={{ 
+                headerShown: false
+              }}
+            />
+            <RootStack.Screen 
+              name="ChairRental" 
+              component={ChairRentalScreen}
+              options={{ 
+                headerShown: false
+              }}
+            />
+            <RootStack.Screen 
+              name="SeatRental" 
+              component={SeatRentalScreen}
+              options={{ 
+                headerShown: false
               }}
             />
           </>

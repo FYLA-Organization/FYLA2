@@ -10,6 +10,11 @@ namespace FYLA2_Backend.DTOs
     public string CancelUrl { get; set; } = string.Empty;
   }
 
+  public class ActivateSubscriptionDto
+  {
+    public string? SessionId { get; set; } // Optional Stripe session ID for verification
+  }
+
   public class CreateBookingPaymentDto
   {
     public int BookingId { get; set; }
@@ -94,6 +99,14 @@ namespace FYLA2_Backend.DTOs
   {
     public string PaymentIntentId { get; set; } = string.Empty;
     public string PaymentMethodId { get; set; } = string.Empty;
+  }
+
+  public class ChangeSubscriptionDto
+  {
+    public SubscriptionTier NewTier { get; set; }
+    public string BillingInterval { get; set; } = "month"; // "month" or "year"
+    public string SuccessUrl { get; set; } = string.Empty;
+    public string CancelUrl { get; set; } = string.Empty;
   }
 
   public class RefundPaymentDto

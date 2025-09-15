@@ -18,9 +18,14 @@ namespace FYLA2_Backend.Models
     public string UserId { get; set; } = string.Empty;
 
     [Required]
+    public string ClientId { get; set; } = string.Empty;
+
+    [Required]
     public string ProviderId { get; set; } = string.Empty;
 
     public int? BookingId { get; set; }
+
+    public int? LoyaltyMemberId { get; set; }
 
     [Required]
     public int Points { get; set; }
@@ -39,5 +44,6 @@ namespace FYLA2_Backend.Models
     public virtual User User { get; set; } = null!;
     public virtual User Provider { get; set; } = null!;
     public virtual Booking? Booking { get; set; }
+    public virtual LoyaltyMember? LoyaltyMember { get; set; }
   }
 }

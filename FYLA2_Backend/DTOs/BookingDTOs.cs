@@ -222,6 +222,9 @@ namespace FYLA2_Backend.DTOs
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public bool IsAvailable { get; set; }
+        public decimal Price { get; set; }
+        public int Duration { get; set; }
+        public string? UnavailableReason { get; set; }
     }
 
     public class UpdateBookingStatusDto

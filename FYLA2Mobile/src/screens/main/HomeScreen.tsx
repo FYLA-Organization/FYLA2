@@ -3,60 +3,78 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   Image,
   RefreshControl,
   Dimensions,
   StatusBar,
-  Alert,
-  FlatList,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
-import { Post, RootStackParamList } from '../../types';
+import { RootStackParamList } from '../../types';
 import ApiService from '../../services/api';
-import ShareModal from '../../components/ShareModal';
+import FirstTimeUserGuide, { useFirstTimeUserGuide } from '../../components/FirstTimeUserGuide';
+import QuickStartGuide, { useQuickStartGuide } from '../../components/QuickStartGuide';
+import SmartTooltip, { useSmartTooltips } from '../../components/SmartTooltip';
+import { MODERN_COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY, SHADOWS } from '../../constants/modernDesign';
 
 const { width } = Dimensions.get('window');
 
-// Instagram-style Color Palette
-const COLORS = {
-  background: '#FAFAFA',
-  surface: '#FFFFFF',
-  text: '#262626',
-  textSecondary: '#8E8E8E',
-  border: '#DBDBDB',
-  borderLight: '#EFEFEF',
-  primary: '#3797F0',
-  accent: '#FF3040',
-  heart: '#FF3040',
-  verified: '#3797F0',
-};
-
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
+interface PostType {
+  id: string;
+  content: string;
+  images?: string[];
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profilePictureUrl?: string;
+    isVerified?: boolean;
+    isServiceProvider?: boolean;
+    businessName?: string;
+    serviceCategory?: string;
+  };
+  createdAt: string;
+  likesCount: number;
+  commentsCount: number;
+  isLikedByCurrentUser: boolean;
+  isBookmarkedByCurrentUser?: boolean;
+  location?: string;
+  tags?: string[];
+}
+
 const HomeScreen: React.FC = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<PostType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
-  const [lastTap, setLastTap] = useState<{ [key: string]: number }>({});
   const [likedPosts, setLikedPosts] = useState<{ [key: string]: boolean }>({});
   const [bookmarkedPosts, setBookmarkedPosts] = useState<{ [key: string]: boolean }>({});
   const [postLikes, setPostLikes] = useState<{ [key: string]: number }>({});
-  const [showComments, setShowComments] = useState<string | null>(null);
-  const [showShare, setShowShare] = useState<string | null>(null);
-  const [comments, setComments] = useState<{ [key: string]: any[] }>({});
+  
+  // First-time user experience
+  const [showFirstTimeGuide, setShowFirstTimeGuide] = useState(false);
+  const [showQuickStart, setShowQuickStart] = useState(false);
+  
   const { user } = useAuth();
   const navigation = useNavigation<HomeScreenNavigationProp>();
+  
+  // Initialize first-time user experience
+  const userType = user?.isServiceProvider ? 'provider' : 'client';
+  const firstTimeGuide = useFirstTimeUserGuide(userType);
+  const quickStartGuide = useQuickStartGuide(userType);
+  const smartTooltips = useSmartTooltips('Home', userType);
 
-  // Helper function for Instagram-like time formatting
+  // Helper function for time formatting
   const formatTimeAgo = (dateString: string) => {
     const now = new Date();
     const postDate = new Date(dateString);
@@ -71,7 +89,14 @@ const HomeScreen: React.FC = () => {
 
   useEffect(() => {
     loadSocialFeed(1, true);
-  }, []);
+    
+    // Show first-time user experience if needed
+    if (!firstTimeGuide.loading && firstTimeGuide.shouldShow) {
+      setTimeout(() => setShowFirstTimeGuide(true), 2000);
+    } else if (!quickStartGuide.loading && quickStartGuide.shouldShow) {
+      setTimeout(() => setShowQuickStart(true), 2500);
+    }
+  }, [firstTimeGuide.loading, firstTimeGuide.shouldShow, quickStartGuide.loading, quickStartGuide.shouldShow]);
 
   const loadSocialFeed = async (pageNum: number = 1, isRefresh: boolean = false) => {
     if (loadingMore && !isRefresh) return;
@@ -85,113 +110,93 @@ const HomeScreen: React.FC = () => {
         setIsLoading(true);
       }
 
-      console.log('🔄 Loading social feed...', { page: pageNum, isRefresh });
-      
-      // Try to get real data from API
-      try {
-        const response = await ApiService.getSocialFeed(pageNum, 10, 'all');
-        console.log('✅ Social feed API response:', response);
-        
-        if (response.posts && Array.isArray(response.posts)) {
-          const newPosts = response.posts.map((post: any) => ({
-            ...post,
-            isLikedByCurrentUser: post.isLiked || false,
-            isBookmarkedByCurrentUser: post.isBookmarked || false,
-            user: post.provider || post.user || {
-              id: post.userId,
-              firstName: post.userName?.split(' ')[0] || 'Unknown',
-              lastName: post.userName?.split(' ')[1] || 'User',
-              profilePictureUrl: post.userAvatar,
-              isServiceProvider: post.isBusinessPost || false,
-            }
-          }));
-
-          if (isRefresh || pageNum === 1) {
-            setPosts(newPosts);
-            setPage(2);
-          } else {
-            setPosts(prev => [...prev, ...newPosts]);
-            setPage(pageNum + 1);
-          }
-          
-          setHasMore(response.hasMore);
-          return;
-        }
-      } catch (apiError) {
-        console.log('📡 API unavailable, falling back to mock data');
-      }
-
-      // Fallback to enhanced mock data
-      const mockPosts: Post[] = [
+      // Mock data for demo with proper types
+      const mockPosts: PostType[] = [
         {
-          id: `mock-${pageNum}-1`,
-          content: 'Just finished an amazing hair transformation! 💇‍♀️✨ Book your appointment today! #hairgoals #transformation #beauty',
-          imageUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400&h=300&fit=crop',
-          isBusinessPost: true,
-          userId: 'provider1',
+          id: '1',
+          content: 'Just finished an amazing balayage transformation! ✨ Loving how the blonde blends seamlessly with the natural brunette base. Book your appointment today!',
+          images: ['https://images.unsplash.com/photo-1562322140-8baeececf3df?w=500'],
           user: {
-            id: 'provider1',
+            id: '1',
             firstName: 'Sarah',
             lastName: 'Johnson',
-            email: 'sarah@salon.com',
-            profilePictureUrl: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face',
+            profilePictureUrl: 'https://images.unsplash.com/photo-1494790108755-2616b156d9b6?w=150',
+            isVerified: true,
             isServiceProvider: true,
-            createdAt: new Date().toISOString(),
+            businessName: 'Glamour Studio',
+            serviceCategory: 'Hair Styling',
           },
-          createdAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-          likesCount: Math.floor(Math.random() * 100) + 10,
-          commentsCount: Math.floor(Math.random() * 20) + 3,
-          bookmarksCount: Math.floor(Math.random() * 15) + 1,
-          isLikedByCurrentUser: Math.random() > 0.5,
-          isBookmarkedByCurrentUser: Math.random() > 0.7,
-          comments: []
+          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          likesCount: 42,
+          commentsCount: 8,
+          isLikedByCurrentUser: false,
+          isBookmarkedByCurrentUser: false,
+          location: 'Beverly Hills, CA',
+          tags: ['balayage', 'haircolor', 'transformation'],
         },
         {
-          id: `mock-${pageNum}-2`,
-          content: 'Beautiful nail art session completed! 💅 Perfect for any occasion. DM for bookings! #nailart #beauty #nails',
-          imageUrl: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&h=300&fit=crop',
-          isBusinessPost: true,
-          userId: 'provider2',
+          id: '2',
+          content: 'Bridal makeup for today\'s gorgeous bride! 💄 Natural glam with a touch of sparkle ✨ Perfect for outdoor weddings!',
+          images: ['https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=500'],
           user: {
-            id: 'provider2',
+            id: '2',
             firstName: 'Maria',
             lastName: 'Rodriguez',
-            email: 'maria@nails.com',
-            profilePictureUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face',
+            profilePictureUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
+            isVerified: false,
             isServiceProvider: true,
-            createdAt: new Date().toISOString(),
+            businessName: 'Beauty Bliss Makeup',
+            serviceCategory: 'Makeup Artist',
           },
-          createdAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-          likesCount: Math.floor(Math.random() * 100) + 20,
-          commentsCount: Math.floor(Math.random() * 25) + 5,
-          bookmarksCount: Math.floor(Math.random() * 20) + 2,
-          isLikedByCurrentUser: Math.random() > 0.5,
-          isBookmarkedByCurrentUser: Math.random() > 0.7,
-          comments: []
+          createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+          likesCount: 67,
+          commentsCount: 12,
+          isLikedByCurrentUser: true,
+          isBookmarkedByCurrentUser: true,
+          location: 'Santa Monica, CA',
+          tags: ['bridal', 'makeup', 'wedding'],
         },
         {
-          id: `mock-${pageNum}-3`,
-          content: 'Relaxing massage therapy session. Your wellness is our priority! 🌿 Book now for ultimate relaxation. #massage #wellness #selfcare',
-          imageUrl: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&h=300&fit=crop',
-          isBusinessPost: true,
-          userId: 'provider3',
+          id: '3',
+          content: 'Obsessed with my new gel nails! 💅 The marble effect is everything! Thank you Jessica for the amazing work!',
+          images: ['https://images.unsplash.com/photo-1604654894610-df63bc536371?w=500'],
           user: {
-            id: 'provider3',
+            id: '3',
             firstName: 'Emma',
-            lastName: 'Thompson',
-            email: 'emma@spa.com',
-            profilePictureUrl: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=40&h=40&fit=crop&crop=face',
-            isServiceProvider: true,
-            createdAt: new Date().toISOString(),
+            lastName: 'Davis',
+            profilePictureUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150',
+            isVerified: false,
+            isServiceProvider: false,
           },
-          createdAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-          likesCount: Math.floor(Math.random() * 80) + 15,
-          commentsCount: Math.floor(Math.random() * 15) + 2,
-          bookmarksCount: Math.floor(Math.random() * 10) + 1,
-          isLikedByCurrentUser: Math.random() > 0.5,
-          isBookmarkedByCurrentUser: Math.random() > 0.7,
-          comments: []
-        }
+          createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+          likesCount: 23,
+          commentsCount: 5,
+          isLikedByCurrentUser: false,
+          isBookmarkedByCurrentUser: false,
+          tags: ['nails', 'gelmanicure', 'marble'],
+        },
+        {
+          id: '4',
+          content: 'Fresh cut and style! ✂️ Love working with different textures and creating unique looks for each client.',
+          images: ['https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=500'],
+          user: {
+            id: '4',
+            firstName: 'Alex',
+            lastName: 'Thompson',
+            profilePictureUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+            isVerified: true,
+            isServiceProvider: true,
+            businessName: 'Modern Cuts Salon',
+            serviceCategory: 'Hair Stylist',
+          },
+          createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+          likesCount: 89,
+          commentsCount: 15,
+          isLikedByCurrentUser: false,
+          isBookmarkedByCurrentUser: false,
+          location: 'West Hollywood, CA',
+          tags: ['haircut', 'styling', 'texture'],
+        },
       ];
 
       if (isRefresh || pageNum === 1) {
@@ -201,34 +206,10 @@ const HomeScreen: React.FC = () => {
         setPosts(prev => [...prev, ...mockPosts]);
         setPage(pageNum + 1);
       }
-      
-      // Simulate pagination
-      setHasMore(pageNum < 5); // Allow 5 pages of mock data
 
-      console.log('✅ Social feed loaded successfully');
-      
-      // Initialize social interaction state
-      const allPosts = isRefresh || pageNum === 1 ? mockPosts : [...posts, ...mockPosts];
-      const initialLikes: { [key: string]: number } = {};
-      const initialLikedState: { [key: string]: boolean } = {};
-      const initialBookmarkState: { [key: string]: boolean } = {};
-      
-      allPosts.forEach((post: Post) => {
-        initialLikes[post.id] = post.likesCount || 0;
-        initialLikedState[post.id] = post.isLikedByCurrentUser || false;
-        initialBookmarkState[post.id] = post.isBookmarkedByCurrentUser || false;
-      });
-      
-      setPostLikes(prev => ({ ...prev, ...initialLikes }));
-      setLikedPosts(prev => ({ ...prev, ...initialLikedState }));
-      setBookmarkedPosts(prev => ({ ...prev, ...initialBookmarkState }));
-    } catch (error: any) {
-      console.error('❌ Error loading social feed:', error);
-      
-      // Don't clear posts on error if we have existing ones
-      if (pageNum === 1) {
-        setPosts([]);
-      }
+      setHasMore(mockPosts.length === 10);
+    } catch (error) {
+      console.error('Error loading social feed:', error);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -240,653 +221,535 @@ const HomeScreen: React.FC = () => {
     loadSocialFeed(1, true);
   };
 
-  const onEndReached = () => {
-    if (hasMore && !loadingMore && !isLoading) {
+  const loadMore = () => {
+    if (hasMore && !loadingMore) {
       loadSocialFeed(page);
     }
   };
 
-  // Enhanced interaction handlers with API calls
-  const handleLikePress = async (postId: string) => {
-    const isCurrentlyLiked = likedPosts[postId];
-    const currentLikes = postLikes[postId] || 0;
-    
-    // Optimistic update
-    setLikedPosts(prev => ({
-      ...prev,
-      [postId]: !isCurrentlyLiked
-    }));
-    
-    setPostLikes(prev => ({
-      ...prev,
-      [postId]: isCurrentlyLiked ? currentLikes - 1 : currentLikes + 1
-    }));
-
-    // Try to call API
+  const handleLike = async (postId: string) => {
     try {
-      if (isCurrentlyLiked) {
-        await ApiService.unlikePost(postId);
-      } else {
-        await ApiService.likePost(postId);
-      }
-      console.log(`✅ ${isCurrentlyLiked ? 'Unliked' : 'Liked'} post ${postId}`);
+      const isCurrentlyLiked = likedPosts[postId];
+      
+      // Optimistic update
+      setLikedPosts(prev => ({ ...prev, [postId]: !isCurrentlyLiked }));
+      setPostLikes(prev => ({ 
+        ...prev, 
+        [postId]: (prev[postId] || 0) + (isCurrentlyLiked ? -1 : 1) 
+      }));
+
+      // API call would go here
+      // await ApiService.toggleLike(postId);
     } catch (error) {
-      // Revert optimistic update on error
-      setLikedPosts(prev => ({
-        ...prev,
-        [postId]: isCurrentlyLiked
+      console.error('Error toggling like:', error);
+      // Revert optimistic update
+      setLikedPosts(prev => ({ ...prev, [postId]: !prev[postId] }));
+      setPostLikes(prev => ({ 
+        ...prev, 
+        [postId]: (prev[postId] || 0) + (likedPosts[postId] ? 1 : -1) 
       }));
-      
-      setPostLikes(prev => ({
-        ...prev,
-        [postId]: currentLikes
-      }));
-      
-      console.error('❌ Error toggling like:', error);
     }
   };
 
-  const handleBookmarkPress = async (postId: string) => {
-    const isCurrentlyBookmarked = bookmarkedPosts[postId];
-    
-    // Optimistic update
-    setBookmarkedPosts(prev => ({
-      ...prev,
-      [postId]: !isCurrentlyBookmarked
-    }));
-
-    // Try to call API
+  const handleBookmark = async (postId: string) => {
     try {
-      if (isCurrentlyBookmarked) {
-        await ApiService.unbookmarkPost(postId);
-      } else {
-        await ApiService.bookmarkPost(postId);
-      }
-      console.log(`✅ ${isCurrentlyBookmarked ? 'Removed bookmark' : 'Bookmarked'} post ${postId}`);
-    } catch (error) {
-      // Revert optimistic update on error
-      setBookmarkedPosts(prev => ({
-        ...prev,
-        [postId]: isCurrentlyBookmarked
-      }));
+      const isCurrentlyBookmarked = bookmarkedPosts[postId];
       
-      console.error('❌ Error toggling bookmark:', error);
+      // Optimistic update
+      setBookmarkedPosts(prev => ({ ...prev, [postId]: !isCurrentlyBookmarked }));
+
+      // API call would go here
+      // await ApiService.toggleBookmark(postId);
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
+      // Revert optimistic update
+      setBookmarkedPosts(prev => ({ ...prev, [postId]: !prev[postId] }));
     }
   };
 
-  const handleSharePress = (postId: string) => {
-    setShowShare(postId);
-  };
-
-  const handleCommentPress = (postId: string) => {
+  const handleComment = (postId: string) => {
     navigation.navigate('PostComments', { postId });
   };
 
-  const handleDoublePress = (postId: string) => {
-    const now = Date.now();
-    const DOUBLE_PRESS_DELAY = 300;
-    
-    if (lastTap[postId] && now - lastTap[postId] < DOUBLE_PRESS_DELAY) {
-      // Double tap to like
-      if (!likedPosts[postId]) {
-        handleLikePress(postId);
-      }
-    } else {
-      setLastTap(prev => ({ ...prev, [postId]: now }));
+  const handleShare = async (post: PostType) => {
+    try {
+      // Share functionality would go here
+      console.log('Sharing post:', post.id);
+    } catch (error) {
+      console.error('Error sharing post:', error);
     }
   };
 
-  const categories = [
-    { name: 'Hair', icon: 'cut-outline', color: '#FF6B6B' },
-    { name: 'Nails', icon: 'hand-right-outline', color: '#4ECDC4' },
-    { name: 'Makeup', icon: 'brush-outline', color: '#FFE66D' },
-    { name: 'Massage', icon: 'body-outline', color: '#A8E6CF' },
-    { name: 'Skin Care', icon: 'flower-outline', color: '#DDA0DD' },
-    { name: 'Fitness', icon: 'barbell-outline', color: '#FFA07A' },
-  ];
-
-  const handleCategoryPress = (category: { name: string; icon: string; color?: string; gradient?: string[]; }) => {
-    navigation.navigate('Search');
+  const handleUserPress = (userId: string, isServiceProvider: boolean = false) => {
+    if (isServiceProvider) {
+      navigation.navigate('EnhancedProviderProfile', { providerId: userId });
+    } else {
+      navigation.navigate('UserProfile', { userId });
+    }
   };
-  
-  return (
-    <>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <View style={styles.container}>
-        
-        {/* Instagram-style Header */}
-        <View style={styles.header}>
-          <View style={styles.headerRow}>
-            <View style={styles.logoContainer}>
-              <Text style={styles.appName}>FYLA</Text>
+
+  const renderPost = ({ item: post }: { item: PostType }) => (
+    <View style={styles.postCard}>
+      {/* Post Header */}
+      <View style={styles.postHeader}>
+        <TouchableOpacity 
+          style={styles.userInfo}
+          onPress={() => handleUserPress(post.user?.id || '', post.user?.isServiceProvider)}
+        >
+          <View style={styles.avatarContainer}>
+            <Image 
+              source={{ uri: post.user?.profilePictureUrl || 'https://via.placeholder.com/40' }}
+              style={styles.userAvatar}
+            />
+            {post.user?.isServiceProvider && (
+              <View style={styles.providerBadge}>
+                <Ionicons name="briefcase" size={12} color={MODERN_COLORS.white} />
+              </View>
+            )}
+          </View>
+          <View style={styles.userDetails}>
+            <View style={styles.usernameRow}>
+              <Text style={styles.username}>
+                {post.user?.isServiceProvider 
+                  ? post.user.businessName 
+                  : post.user ? `${post.user.firstName} ${post.user.lastName}` : 'Unknown User'
+                }
+              </Text>
+              {post.user?.isVerified && (
+                <Ionicons name="checkmark-circle" size={16} color={MODERN_COLORS.primary} />
+              )}
             </View>
-            <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.iconButton}>
-                <Ionicons name="heart-outline" size={24} color="#262626" />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.iconButton}
-                onPress={() => navigation.navigate('Messages')}
-              >
-                <Ionicons name="chatbubble-outline" size={24} color="#262626" />
-              </TouchableOpacity>
+            <View style={styles.postMetadata}>
+              <Text style={styles.timeAgo}>{formatTimeAgo(post.createdAt)}</Text>
+              {post.user?.isServiceProvider && post.user.serviceCategory && (
+                <>
+                  <Text style={styles.metadataSeparator}>•</Text>
+                  <Text style={styles.serviceCategory}>{post.user.serviceCategory}</Text>
+                </>
+              )}
+              {post.location && (
+                <>
+                  <Text style={styles.metadataSeparator}>•</Text>
+                  <Text style={styles.location}>{post.location}</Text>
+                </>
+              )}
             </View>
           </View>
-        </View>
-
-        {/* Feed Content */}
-        <FlatList
-          style={styles.content}
-          data={posts}
-          renderItem={({ item: post }) => (
-            <View style={styles.feedCard}>
-              {/* Post Header */}
-              <View style={styles.postHeader}>
-                <TouchableOpacity 
-                  style={styles.userInfo}
-                  onPress={() => {
-                    // Only navigate to provider profile if the user is a service provider
-                    if (post.user?.isServiceProvider) {
-                      navigation.navigate('ProviderProfile', { providerId: post.userId });
-                    } else {
-                      // For regular clients, show an alert or do nothing
-                      Alert.alert(
-                        'Profile Unavailable', 
-                        'This user is a client and does not have a business profile.',
-                        [{ text: 'OK' }]
-                      );
-                    }
-                  }}
-                >
-                  <Image
-                    source={{ uri: post.user?.profilePictureUrl || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face' }}
-                    style={styles.userAvatar}
-                  />
-                  <View style={styles.userDetails}>
-                    <Text style={styles.username}>
-                      {post.user ? `${post.user.firstName} ${post.user.lastName}` : 'Beauty Provider'}
-                      {post.user?.isServiceProvider && (
-                        <Text style={styles.verifiedBadge}> ✓</Text>
-                      )}
-                    </Text>
-                    <Text style={styles.location}>
-                      {post.isBusinessPost ? 'Professional Service' : formatTimeAgo(post.createdAt)}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.moreButton}>
-                  <Ionicons name="ellipsis-horizontal" size={16} color="#262626" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Post Image */}
-              <TouchableOpacity 
-                onPress={() => handleDoublePress(post.id)}
-                activeOpacity={1}
-              >
-                <Image
-                  source={{ uri: post.imageUrl || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400&h=400&fit=crop' }}
-                  style={styles.postImage}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-
-              {/* Post Actions */}
-              <View style={styles.postActions}>
-                <View style={styles.leftActions}>
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={() => handleLikePress(post.id)}
-                  >
-                    <Ionicons 
-                      name={likedPosts[post.id] ? "heart" : "heart-outline"}
-                      size={24} 
-                      color={likedPosts[post.id] ? COLORS.heart : "#262626"}
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={() => handleCommentPress(post.id)}
-                  >
-                    <Ionicons name="chatbubble-outline" size={24} color="#262626" />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={() => handleSharePress(post.id)}
-                  >
-                    <Ionicons name="paper-plane-outline" size={24} color="#262626" />
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity 
-                  style={styles.bookmarkButton}
-                  onPress={() => handleBookmarkPress(post.id)}
-                >
-                  <Ionicons 
-                    name={bookmarkedPosts[post.id] ? "bookmark" : "bookmark-outline"}
-                    size={24} 
-                    color="#262626"
-                  />
-                </TouchableOpacity>
-              </View>
-
-              {/* Post Info */}
-              <View style={styles.postInfo}>
-                <TouchableOpacity style={styles.likesContainer}>
-                  <Text style={styles.likesText}>
-                    {postLikes[post.id] || 0} likes
-                  </Text>
-                </TouchableOpacity>
-                
-                <Text style={styles.postDescription}>
-                  <Text style={styles.username}>
-                    {post.user ? `${post.user.firstName} ${post.user.lastName}` : 'Beauty Provider'}
-                    {post.user?.isServiceProvider && (
-                      <Text style={styles.verifiedBadge}> ✓</Text>
-                    )}
-                  </Text>
-                  {' '}{post.content}
-                </Text>
-                
-                {post.commentsCount > 0 && (
-                  <TouchableOpacity onPress={() => handleCommentPress(post.id)}>
-                    <Text style={styles.viewComments}>
-                      View all {post.commentsCount} comments
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                
-                <Text style={styles.postTime}>
-                  {formatTimeAgo(post.createdAt)}
-                </Text>
-              </View>
-            </View>
-          )}
-          keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          onEndReached={onEndReached}
-          onEndReachedThreshold={0.1}
-          ListFooterComponent={() => (
-            loadingMore ? (
-              <View style={styles.loadingMore}>
-                <Text style={styles.loadingText}>Loading more posts...</Text>
-              </View>
-            ) : null
-          )}
-          ListHeaderComponent={() => (
-            <>
-              {/* Stories-style Categories */}
-              <View style={styles.storiesSection}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.storiesScroll}>
-                  {categories.map((category, index) => (
-                    <TouchableOpacity 
-                      key={index} 
-                      style={styles.storyItem}
-                      onPress={() => handleCategoryPress(category)}
-                    >
-                      <View style={[styles.storyCircle, { borderColor: category.color }]}>
-                        <View style={[styles.storyIcon, { backgroundColor: category.color }]}>
-                          <Ionicons name={category.icon as any} size={20} color="white" />
-                        </View>
-                      </View>
-                      <Text style={styles.storyText}>{category.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-
-              {/* Welcome Card */}
-              <View style={styles.welcomeCard}>
-                <Text style={styles.welcomeTitle}>Hello, {user?.firstName}! 👋</Text>
-                <Text style={styles.welcomeSubtitle}>Discover amazing beauty services near you</Text>
-              </View>
-            </>
-          )}
-          ListEmptyComponent={() => (
-            isLoading ? (
-              <View style={styles.loadingView}>
-                <Text style={styles.loadingText}>Loading amazing posts...</Text>
-              </View>
-            ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="images-outline" size={64} color={COLORS.textSecondary} />
-                <Text style={styles.emptyTitle}>No posts yet</Text>
-                <Text style={styles.emptySubtitle}>Follow some providers to see their posts here!</Text>
-              </View>
-            )
-          )}
-        />
-
-        {/* Share Modal */}
-        <ShareModal
-          visible={showShare !== null}
-          onClose={() => setShowShare(null)}
-          postId={showShare || ''}
-          postContent={posts.find(p => p.id === showShare)?.content}
-          userName={posts.find(p => p.id === showShare)?.user ? 
-            `${posts.find(p => p.id === showShare)?.user?.firstName} ${posts.find(p => p.id === showShare)?.user?.lastName}` 
-            : undefined}
-        />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.moreButton}>
+          <Ionicons name="ellipsis-horizontal" size={20} color={MODERN_COLORS.gray500} />
+        </TouchableOpacity>
       </View>
-    </>
+
+      {/* Post Content */}
+      <View style={styles.postContentSection}>
+        <Text style={styles.postText}>
+          <Text style={styles.postUsername}>
+            {post.user?.isServiceProvider 
+              ? post.user.businessName 
+              : post.user ? `${post.user.firstName} ${post.user.lastName}` : 'Unknown User'
+            }
+          </Text>
+          {' '}{post.content}
+        </Text>
+        
+        {/* Tags */}
+        {post.tags && post.tags.length > 0 && (
+          <View style={styles.tagsContainer}>
+            {post.tags.map((tag, index) => (
+              <TouchableOpacity key={index} style={styles.tag}>
+                <Text style={styles.tagText}>#{tag}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* Post Image */}
+      {post.images && post.images.length > 0 && (
+        <Image source={{ uri: post.images[0] }} style={styles.postImage} />
+      )}
+
+      {/* Post Actions */}
+      <View style={styles.postActions}>
+        <View style={styles.leftActions}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => handleLike(post.id)}
+          >
+            <Ionicons 
+              name={likedPosts[post.id] || post.isLikedByCurrentUser ? "heart" : "heart-outline"} 
+              size={24} 
+              color={likedPosts[post.id] || post.isLikedByCurrentUser ? MODERN_COLORS.error : MODERN_COLORS.gray700}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => handleComment(post.id)}
+          >
+            <Ionicons name="chatbubble-outline" size={24} color={MODERN_COLORS.gray700} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => handleShare(post)}
+          >
+            <Ionicons name="paper-plane-outline" size={24} color={MODERN_COLORS.gray700} />
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => handleBookmark(post.id)}
+        >
+          <Ionicons 
+            name={bookmarkedPosts[post.id] || post.isBookmarkedByCurrentUser ? "bookmark" : "bookmark-outline"} 
+            size={24} 
+            color={bookmarkedPosts[post.id] || post.isBookmarkedByCurrentUser ? MODERN_COLORS.warning : MODERN_COLORS.gray700}
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Post Stats */}
+      <View style={styles.postStats}>
+        <TouchableOpacity>
+          <Text style={styles.likesCount}>
+            {(post.likesCount + (postLikes[post.id] || 0)).toLocaleString()} likes
+          </Text>
+        </TouchableOpacity>
+        {post.commentsCount > 0 && (
+          <TouchableOpacity onPress={() => handleComment(post.id)}>
+            <Text style={styles.viewComments}>
+              View all {post.commentsCount} comments
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={MODERN_COLORS.background} />
+      
+      {/* Modern Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.logoContainer}>
+          <LinearGradient
+            colors={[MODERN_COLORS.primary, MODERN_COLORS.primaryLight]}
+            style={styles.logoGradient}
+          >
+            <Text style={styles.logoText}>FYLA</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+        
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={() => navigation.navigate('Search')}
+          >
+            <Ionicons name="search-outline" size={24} color={MODERN_COLORS.gray700} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={() => navigation.navigate('Messages')}
+          >
+            <Ionicons name="chatbubble-outline" size={24} color={MODERN_COLORS.gray700} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Feed */}
+      <FlatList
+        data={posts}
+        renderItem={renderPost}
+        keyExtractor={(item) => item.id.toString()}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.feedContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={MODERN_COLORS.primary}
+            colors={[MODERN_COLORS.primary]}
+          />
+        }
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.1}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyState}>
+            {isLoading ? (
+              <Text style={styles.loadingText}>Loading amazing content...</Text>
+            ) : (
+              <>
+                <Ionicons name="images-outline" size={64} color={MODERN_COLORS.gray400} />
+                <Text style={styles.emptyTitle}>No posts yet</Text>
+                <Text style={styles.emptyText}>
+                  Follow some providers or create your first post!
+                </Text>
+              </>
+            )}
+          </View>
+        )}
+      />
+
+      {/* First-Time User Components */}
+      <FirstTimeUserGuide
+        visible={showFirstTimeGuide}
+        onClose={() => {
+          setShowFirstTimeGuide(false);
+          firstTimeGuide.setShouldShow(false);
+        }}
+        userType={userType}
+        navigation={navigation}
+      />
+
+      <QuickStartGuide
+        visible={showQuickStart}
+        onClose={() => {
+          setShowQuickStart(false);
+          quickStartGuide.setShouldShow(false);
+        }}
+        userType={userType}
+        navigation={navigation}
+      />
+
+      {/* Smart Tooltips */}
+      {smartTooltips.map((tooltip) => (
+        <SmartTooltip
+          key={tooltip.id}
+          {...tooltip}
+          onAction={() => {
+            if (tooltip.actionText === 'Explore') {
+              navigation.navigate('Search');
+            }
+          }}
+        />
+      ))}
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  // Base Layout - Instagram Clean White
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: MODERN_COLORS.background,
   },
   
-  // Instagram-style Header
-  header: {
-    paddingTop: 44,
-    paddingBottom: 10,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+  feedContent: {
+    paddingBottom: SPACING.tabBarHeight + SPACING.md,
   },
-  headerRow: {
+  
+  // Modern Header Design
+  header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    backgroundColor: MODERN_COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: MODERN_COLORS.border,
+    ...SHADOWS.sm,
   },
   logoContainer: {
     flex: 1,
   },
-  appName: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: COLORS.text,
-    letterSpacing: -0.8,
-    fontFamily: 'System',
+  logoGradient: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.lg,
+    alignSelf: 'flex-start',
+  },
+  logoText: {
+    fontSize: TYPOGRAPHY['2xl'],
+    fontWeight: TYPOGRAPHY.weight.bold,
+    color: MODERN_COLORS.white,
+    letterSpacing: -0.5,
   },
   headerActions: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: SPACING.sm,
   },
-  iconButton: {
-    padding: 8,
-    marginLeft: 8,
+  headerButton: {
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: MODERN_COLORS.gray50,
   },
-  
-  // Stories-style Categories Section
-  storiesSection: {
-    backgroundColor: COLORS.surface,
-    paddingVertical: 16,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+
+  // Post Card Styles
+  postCard: {
+    backgroundColor: MODERN_COLORS.surface,
+    marginBottom: SPACING.sm,
+    borderRadius: BORDER_RADIUS.lg,
+    marginHorizontal: SPACING.sm,
+    ...SHADOWS.sm,
   },
-  storiesScroll: {
-    paddingHorizontal: 8,
-  },
-  storyItem: {
-    alignItems: 'center',
-    marginHorizontal: 8,
-    width: 75,
-  },
-  storyCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    borderWidth: 2.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    backgroundColor: COLORS.surface,
-  },
-  storyIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  storyText: {
-    fontSize: 12,
-    color: COLORS.text,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  
-  // Feed Content
-  content: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  
-  // Welcome Card
-  welcomeCard: {
-    backgroundColor: COLORS.surface,
-    margin: 16,
-    padding: 24,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 6,
-  },
-  welcomeSubtitle: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    fontWeight: '400',
-    lineHeight: 20,
-  },
-  
-  // Instagram-style Feed Cards
-  feedCard: {
-    backgroundColor: COLORS.surface,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  
-  // Post Header (like Instagram)
   postHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.borderLight,
+    padding: SPACING.md,
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: SPACING.sm,
+  },
   userAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 12,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  providerBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: MODERN_COLORS.primary,
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: MODERN_COLORS.surface,
   },
   userDetails: {
     flex: 1,
   },
-  username: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 2,
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
-  verifiedBadge: {
-    color: '#3797F0',
-    fontSize: 14,
-    fontWeight: '600',
+  username: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.textPrimary,
+  },
+  postMetadata: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  timeAgo: {
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.textSecondary,
+  },
+  metadataSeparator: {
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.textTertiary,
+    marginHorizontal: SPACING.xs,
+  },
+  serviceCategory: {
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.primary,
+    fontWeight: TYPOGRAPHY.weight.medium,
   },
   location: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontWeight: '400',
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.textTertiary,
   },
   moreButton: {
-    padding: 8,
+    padding: SPACING.xs,
   },
-  
-  // Post Image
   postImage: {
     width: '100%',
-    height: 400,
-    backgroundColor: '#F7F7F7',
+    height: 300,
+    resizeMode: 'cover',
   },
   
-  // Post Actions (like Instagram)
+  // Post Content Section
+  postContentSection: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  postUsername: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.textPrimary,
+  },
+  postText: {
+    fontSize: TYPOGRAPHY.base,
+    color: MODERN_COLORS.textPrimary,
+    lineHeight: TYPOGRAPHY.lineHeight.relaxed * TYPOGRAPHY.base,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
+    marginTop: SPACING.sm,
+  },
+  tag: {
+    backgroundColor: MODERN_COLORS.primary + '15',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs / 2,
+    borderRadius: BORDER_RADIUS.lg,
+  },
+  tagText: {
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.primary,
+    fontWeight: TYPOGRAPHY.weight.medium,
+  },
+  
   postActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
   },
   leftActions: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: SPACING.md,
   },
   actionButton: {
-    padding: 8,
-    marginRight: 12,
-  },
-  bookmarkButton: {
-    padding: 8,
+    padding: SPACING.xs,
   },
   
-  // Post Info
-  postInfo: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+  // Post Stats
+  postStats: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.md,
   },
-  likesContainer: {
-    marginBottom: 8,
-  },
-  likesText: {
-    fontWeight: '600',
-    color: COLORS.text,
-    fontSize: 14,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  rating: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginLeft: 4,
-  },
-  reviewCount: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginLeft: 4,
-  },
-  description: {
-    fontSize: 14,
-    color: COLORS.text,
-    lineHeight: 20,
-    marginBottom: 6,
-  },
-  postUsername: {
-    fontWeight: '600',
-    color: COLORS.text,
+  likesCount: {
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.textPrimary,
+    marginBottom: SPACING.xs,
   },
   viewComments: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginBottom: 6,
-    fontWeight: '400',
+    fontSize: TYPOGRAPHY.sm,
+    color: MODERN_COLORS.textSecondary,
+    marginTop: SPACING.xs,
   },
-  timestamp: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    fontWeight: '400',
-    textTransform: 'uppercase',
-  },
-  viewMore: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '500',
-  },
-  
-  // Loading State
-  loadingView: {
-    padding: 60,
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: COLORS.textSecondary,
-    fontSize: 16,
-    fontWeight: '400',
-  },
-  loadingMore: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  
+
   // Empty State
   emptyState: {
-    padding: 60,
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: SPACING.xxxl,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-    marginTop: 16,
+    fontSize: TYPOGRAPHY.xl,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: MODERN_COLORS.textPrimary,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.xs,
   },
-  emptySubtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginTop: 4,
+  emptyText: {
+    fontSize: TYPOGRAPHY.base,
+    color: MODERN_COLORS.textSecondary,
     textAlign: 'center',
+    maxWidth: 280,
   },
-  
-  // Enhanced Post Styles
-  postDescription: {
-    fontSize: 14,
-    color: COLORS.text,
-    lineHeight: 18,
-    marginBottom: 8,
-  },
-  postTime: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    marginTop: 8,
-  },
-  
-  // Bottom Spacing
-  bottomPadding: {
-    height: 100,
+  loadingText: {
+    fontSize: TYPOGRAPHY.base,
+    color: MODERN_COLORS.textSecondary,
+    textAlign: 'center',
   },
 });
 

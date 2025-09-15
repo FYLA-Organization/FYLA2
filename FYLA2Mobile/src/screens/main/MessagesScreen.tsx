@@ -16,6 +16,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChatRoom, RootStackParamList } from '../../types';
 import ApiService from '../../services/api';
+import { SPACING } from '../../constants/modernDesign';
 
 type MessagesScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   chatListContent: {
-    paddingBottom: 24,
+    paddingBottom: SPACING.tabBarHeight + 24,
     paddingHorizontal: 20,
   },
   

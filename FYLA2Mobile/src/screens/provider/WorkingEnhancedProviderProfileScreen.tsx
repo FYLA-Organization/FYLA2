@@ -2,21 +2,24 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Image,
+  ImageBackground,
+  TouchableOpacity,
+  StyleSheet,
   StatusBar,
-  RefreshControl,
   ActivityIndicator,
   Alert,
+  RefreshControl,
+  Modal,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useAuth } from '../../context/AuthContext';
-import { RootStackParamList, ServiceProvider, Service } from '../../types';
+import { RootStackParamList, ServiceProvider, Service, PortfolioItem } from '../../types';
 import { COLORS, COMMON_STYLES } from '../../constants/colors';
 import ApiService from '../../services/api';
 
@@ -51,6 +54,10 @@ const WorkingEnhancedProviderProfileScreen: React.FC = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Portfolio slideshow state
+  const [showPortfolioModal, setShowPortfolioModal] = useState(false);
+  const [selectedPortfolioIndex, setSelectedPortfolioIndex] = useState(0);
 
   const providerId = (route.params as any)?.providerId || 'mock-provider-1';
 
@@ -63,96 +70,77 @@ const WorkingEnhancedProviderProfileScreen: React.FC = () => {
       setLoading(true);
       
       // Try to get real provider data from API
+      console.log('🔄 Loading provider profile for ID:', providerId);
+      
       try {
         const providerResponse = await ApiService.getServiceProvider(providerId);
+        console.log('📡 Provider response:', providerResponse);
         
         if (providerResponse) {
-          // Get additional data (these have fallbacks if they fail)
-          const socialStats = await ApiService.getUserSocialStats(providerId);
-          const servicesResponse = await ApiService.getProviderServices(providerId);
-          const promosResponse = await ApiService.getProviderPromosForClient(providerId);
-          
+          // Build the profile data from real API response
           const realData: ProviderProfileData = {
-            provider: providerResponse,
-            socialStats: socialStats,
-            services: servicesResponse || [],
+            provider: {
+              ...providerResponse,
+              businessName: providerResponse.businessName,
+              businessDescription: providerResponse.businessDescription || 'Professional service provider',
+              businessAddress: providerResponse.businessAddress || 'Service Location',
+              averageRating: providerResponse.averageRating || 0,
+              totalReviews: providerResponse.totalReviews || 0,
+              isVerified: providerResponse.isVerified || false,
+              profilePictureUrl: providerResponse.profilePictureUrl,
+              specialties: providerResponse.specialties || [],
+              priceRange: providerResponse.priceRange || 'Contact for pricing',
+              services: providerResponse.services || []
+            },
+            socialStats: {
+              postsCount: 0,
+              followersCount: providerResponse.followersCount || 0,
+              followingCount: providerResponse.followingCount || 0,
+              totalLikes: 0,
+              engagementRate: 0
+            },
+            services: providerResponse.services || [],
             averageRating: providerResponse.averageRating || 0,
-            activePromos: promosResponse || []
+            activePromos: [] // TODO: Implement promos endpoint
           };
           
+          console.log('✅ Using real provider data:', realData);
           setProfileData(realData);
           setIsFollowing(providerResponse.isFollowedByCurrentUser || false);
           return;
         }
-      } catch (apiError) {
-        console.log('API error loading provider profile:', apiError);
+      } catch (apiError: any) {
+        console.log('❌ API error loading provider profile:', apiError.response?.status, apiError.message);
       }
       
-      // Fallback data when API is not available
+      // Fallback data when API is not available (should not be used in production)
+      console.log('⚠️ Using fallback data for provider:', providerId);
       const fallbackData: ProviderProfileData = {
         provider: {
           id: providerId,
-          userId: 'user-1',
-          businessName: 'Elite Beauty Studio',
-          businessDescription: 'Premium beauty services with over 10 years of experience. Specializing in hair styling, makeup, and skincare treatments.',
-          businessAddress: 'Downtown Business District',
-          profilePictureUrl: 'https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?w=300&h=300&fit=crop',
-          priceRange: '$50 - $200',
-          averageRating: 4.8,
-          totalReviews: 150,
-          isVerified: true,
-          specialties: ['Bridal Makeup', 'Color Correction', 'Anti-Aging Treatments'],
-          yearsOfExperience: 12,
+          userId: providerId,
+          businessName: `Provider ${providerId.slice(-4)}`,
+          businessDescription: 'Professional service provider. Please check back later for updated information.',
+          businessAddress: 'Service Location',
+          profilePictureUrl: undefined,
+          priceRange: 'Contact for pricing',
+          averageRating: 0,
+          totalReviews: 0,
+          isVerified: false,
+          specialties: [],
+          yearsOfExperience: 0,
           portfolioImages: [],
         },
         socialStats: {
-          postsCount: 45,
-          followersCount: 1250,
-          followingCount: 180,
-          totalLikes: 3400,
-          engagementRate: 0.085,
+          postsCount: 0,
+          followersCount: 0,
+          followingCount: 0,
+          totalLikes: 0,
+          engagementRate: 0,
         },
-        services: [
-          {
-            id: 'service-1',
-            serviceProviderId: providerId,
-            name: 'Hair Cut & Style',
-            description: 'Professional haircut and styling service',
-            price: 75,
-            duration: 60,
-            category: 'Hair',
-            imageUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=300&h=300&fit=crop',
-            isActive: true,
-          },
-          {
-            id: 'service-2',
-            serviceProviderId: providerId,
-            name: 'Makeup Application',
-            description: 'Professional makeup for special events',
-            price: 120,
-            duration: 90,
-            category: 'Makeup',
-            imageUrl: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=300&h=300&fit=crop',
-            isActive: true,
-          },
-        ],
-        averageRating: 4.8,
-        activePromos: [
-          {
-            id: 'promo-1',
-            title: 'First Time Client Special',
-            description: 'Get 20% off your first service',
-            discountValue: 20,
-            validUntil: '2025-08-31T23:59:59Z',
-          },
-          {
-            id: 'promo-2',
-            title: 'Weekend Special',
-            description: 'Book weekend appointments and save',
-            discountValue: 15,
-            validUntil: '2025-08-15T23:59:59Z',
-          },
-        ],
+        services: [], // No fallback services
+        averageRating: 0,
+        activePromos: [] // No fallback promos
       };
       
       setProfileData(fallbackData);
@@ -184,10 +172,44 @@ const WorkingEnhancedProviderProfileScreen: React.FC = () => {
   };
 
   const handleBookService = (service: Service) => {
-    navigation.navigate('BookingFlow', {
-      service,
-      provider: profileData!.provider
+    if (!profileData?.provider) {
+      Alert.alert('Error', 'Provider information not available');
+      return;
+    }
+
+    console.log('Navigating to modern booking flow for service:', service.name);
+    navigation.navigate('ModernBookingFlow', {
+      service: service,
+      provider: profileData.provider,
     });
+  };
+
+  const handlePortfolioItemPress = (item: PortfolioItem) => {
+    if (profileData?.provider.portfolio) {
+      const index = profileData.provider.portfolio.findIndex(p => p.id === item.id);
+      setSelectedPortfolioIndex(index >= 0 ? index : 0);
+      setShowPortfolioModal(true);
+    }
+  };
+
+  const handlePreviousPortfolioItem = () => {
+    if (profileData?.provider.portfolio) {
+      setSelectedPortfolioIndex((prevIndex) => 
+        prevIndex > 0 ? prevIndex - 1 : profileData.provider.portfolio!.length - 1
+      );
+    }
+  };
+
+  const handleNextPortfolioItem = () => {
+    if (profileData?.provider.portfolio) {
+      setSelectedPortfolioIndex((prevIndex) => 
+        prevIndex < profileData.provider.portfolio!.length - 1 ? prevIndex + 1 : 0
+      );
+    }
+  };
+
+  const closePortfolioModal = () => {
+    setShowPortfolioModal(false);
   };
 
   const onRefresh = () => {
@@ -220,182 +242,275 @@ const WorkingEnhancedProviderProfileScreen: React.FC = () => {
 
   return (
     <>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{profileData.provider.businessName}</Text>
-          <TouchableOpacity style={styles.shareButton}>
-            <Ionicons name="share-outline" size={24} color={COLORS.text} />
-          </TouchableOpacity>
-        </View>
-
         <ScrollView 
           style={styles.scrollContainer}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           showsVerticalScrollIndicator={false}
         >
-          {/* Profile Header */}
-          <View style={styles.profileHeader}>
-            <LinearGradient
-              colors={COLORS.gradientPrimary}
-              style={styles.profileGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+          {/* Hero Image Header */}
+          <View style={styles.heroContainer}>
+            <ImageBackground
+              source={{
+                uri: profileData.provider.profilePictureUrl || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&h=400&fit=crop'
+              }}
+              style={styles.heroBackground}
+              imageStyle={styles.heroImage}
             >
-              <View style={styles.profileContent}>
-                <Image
-                  source={{
-                    uri: profileData.provider.profilePictureUrl || 'https://via.placeholder.com/120',
-                  }}
-                  style={styles.profileImage}
-                />
-                <Text style={styles.businessName}>{profileData.provider.businessName}</Text>
-                <Text style={styles.businessCategory}>{profileData.provider.priceRange}</Text>
-                
-                {/* Social Stats */}
-                <View style={styles.socialStats}>
-                  <View style={styles.socialStat}>
-                    <Text style={styles.socialNumber}>{profileData.socialStats.postsCount}</Text>
-                    <Text style={styles.socialLabel}>Posts</Text>
-                  </View>
-                  <View style={styles.socialStat}>
-                    <Text style={styles.socialNumber}>{profileData.socialStats.followersCount}</Text>
-                    <Text style={styles.socialLabel}>Followers</Text>
-                  </View>
-                  <View style={styles.socialStat}>
-                    <Text style={styles.socialNumber}>{profileData.socialStats.totalLikes}</Text>
-                    <Text style={styles.socialLabel}>Likes</Text>
-                  </View>
-                  <View style={styles.socialStat}>
-                    <Text style={styles.socialNumber}>{(profileData.socialStats.engagementRate * 100).toFixed(1)}%</Text>
-                    <Text style={styles.socialLabel}>Engagement</Text>
-                  </View>
+              <LinearGradient
+                colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
+                style={styles.heroOverlay}
+              >
+                {/* Header Controls */}
+                <View style={styles.headerControls}>
+                  <TouchableOpacity 
+                    style={styles.headerButton}
+                    onPress={() => navigation.goBack()}
+                  >
+                    <Ionicons name="arrow-back" size={24} color="white" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.headerButton}>
+                    <Ionicons name="share-outline" size={24} color="white" />
+                  </TouchableOpacity>
                 </View>
 
-                {/* Action Buttons */}
-                <View style={styles.actionButtons}>
-                  <TouchableOpacity 
-                    style={[styles.followButton, isFollowing && styles.followingButton]}
-                    onPress={handleFollow}
-                  >
-                    <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
-                      {isFollowing ? 'Following' : 'Follow'}
-                    </Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={styles.messageButton}
-                    onPress={() => navigation.navigate('Chat', { 
-                      userId: profileData.provider.userId,
-                      userName: profileData.provider.businessName
-                    })}
-                  >
-                    <Ionicons name="chatbubble-outline" size={18} color={COLORS.surface} />
-                    <Text style={styles.messageButtonText}>Message</Text>
-                  </TouchableOpacity>
+                {/* Provider Info Overlay */}
+                <View style={styles.heroContent}>
+                  <View style={styles.providerInfo}>
+                    <View style={styles.profileImageContainer}>
+                      <Image
+                        source={{
+                          uri: profileData.provider.profilePictureUrl || 'https://via.placeholder.com/80',
+                        }}
+                        style={styles.profileImage}
+                      />
+                      {profileData.provider.isVerified && (
+                        <View style={styles.verifiedBadge}>
+                          <Ionicons name="checkmark" size={12} color="white" />
+                        </View>
+                      )}
+                    </View>
+                    
+                    <View style={styles.providerDetails}>
+                      <Text style={styles.businessName}>{profileData.provider.businessName}</Text>
+                      <Text style={styles.businessDescriptionHero}>
+                        {profileData.provider.businessDescription || 'Professional service provider'}
+                      </Text>
+                      
+                      {/* Rating and Reviews */}
+                      <View style={styles.ratingRow}>
+                        <View style={styles.ratingContainer}>
+                          <Ionicons name="star" size={16} color="#FFD700" />
+                          <Text style={styles.rating}>
+                            {profileData.averageRating > 0 ? profileData.averageRating.toFixed(1) : 'New'}
+                          </Text>
+                          <Text style={styles.reviewCount}>
+                            ({profileData.provider.totalReviews || 0} reviews)
+                          </Text>
+                        </View>
+                        <Text style={styles.separator}>•</Text>
+                        <Text style={styles.priceRange}>{profileData.provider.priceRange}</Text>
+                      </View>
+                    </View>
+                  </View>
                 </View>
-              </View>
-            </LinearGradient>
+              </LinearGradient>
+            </ImageBackground>
           </View>
 
-          {/* Business Info */}
-          <View style={styles.businessInfo}>
-            <Text style={styles.businessDescription}>
-              {profileData.provider.businessDescription}
-            </Text>
+          {/* Status Bar */}
+          <View style={styles.statusBar}>
+            <View style={styles.statusIndicator}>
+              <View style={[styles.statusDot, { backgroundColor: '#4CAF50' }]} />
+              <Text style={styles.statusText}>Available for booking</Text>
+            </View>
+            <TouchableOpacity style={styles.scheduleButton}>
+              <Ionicons name="calendar-outline" size={16} color="#5A4FCF" />
+              <Text style={styles.scheduleButtonText}>View Schedule</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              style={[styles.followButton, isFollowing && styles.followingButton]}
+              onPress={handleFollow}
+            >
+              <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
+                {isFollowing ? 'Following' : 'Follow'}
+              </Text>
+            </TouchableOpacity>
             
-            {profileData.provider.specialties && (
-              <View style={styles.specialties}>
-                <Text style={styles.specialtiesTitle}>Specialties</Text>
-                <View style={styles.specialtyTags}>
-                  {profileData.provider.specialties.map((specialty, index) => (
-                    <View key={index} style={styles.specialtyTag}>
-                      <Text style={styles.specialtyText}>{specialty}</Text>
+            <TouchableOpacity style={styles.messageButton}>
+              <Ionicons name="chatbubble-outline" size={18} color="white" />
+              <Text style={styles.messageButtonText}>Message</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Specialties Badges */}
+          {profileData.provider.specialties && profileData.provider.specialties.length > 0 && (
+            <View style={styles.specialtiesContainer}>
+              <Text style={styles.sectionTitle}>Specialties</Text>
+              <View style={styles.badgesContainer}>
+                {profileData.provider.specialties.map((specialty, index) => (
+                  <View key={index} style={styles.specialtyBadge}>
+                    <Text style={styles.specialtyBadgeText}>{specialty}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Services Section */}
+          <View style={styles.servicesSection}>
+            <Text style={styles.sectionTitle}>Services</Text>
+            {profileData.services.length > 0 ? (
+              profileData.services.map((service) => (
+                <View key={service.id} style={styles.serviceCard}>
+                  <View style={styles.serviceInfo}>
+                    <Text style={styles.serviceName}>{service.name}</Text>
+                    <Text style={styles.serviceDescription}>{service.description}</Text>
+                    <View style={styles.serviceDetails}>
+                      <Text style={styles.servicePrice}>${service.price}</Text>
+                      <Text style={styles.serviceDuration}>{service.duration}min</Text>
                     </View>
-                  ))}
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.bookButton}
+                    onPress={() => handleBookService(service)}
+                  >
+                    <Text style={styles.bookButtonText}>Book Now</Text>
+                  </TouchableOpacity>
                 </View>
+              ))
+            ) : (
+              <View style={styles.noServicesContainer}>
+                <Ionicons name="list-outline" size={48} color="#E0E0E0" />
+                <Text style={styles.noServicesText}>No services available</Text>
               </View>
             )}
-            
-            {profileData.provider.yearsOfExperience && (
-              <View style={styles.experienceInfo}>
-                <Ionicons name="star" size={20} color={COLORS.warning} />
-                <Text style={styles.experienceText}>
-                  {profileData.provider.yearsOfExperience} years of experience
+          </View>
+
+          {/* Portfolio Section */}
+          <View style={styles.portfolioSection}>
+            <Text style={styles.sectionTitle}>Portfolio</Text>
+            {profileData.provider.portfolio && profileData.provider.portfolio.length > 0 ? (
+              <View style={styles.portfolioGrid}>
+                {profileData.provider.portfolio.map((item) => (
+                  <TouchableOpacity 
+                    key={item.id} 
+                    style={styles.portfolioItem}
+                    onPress={() => handlePortfolioItemPress(item)}
+                  >
+                    <Image
+                      source={{ uri: item.imageUrl }}
+                      style={styles.portfolioImage}
+                      resizeMode="cover"
+                    />
+                    {item.caption && (
+                      <View style={styles.portfolioCaption}>
+                        <Text style={styles.portfolioCaptionText} numberOfLines={2}>
+                          {item.caption}
+                        </Text>
+                      </View>
+                    )}
+                    {item.category && (
+                      <View style={styles.portfolioCategory}>
+                        <Text style={styles.portfolioCategoryText}>{item.category}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.noPortfolioContainer}>
+                <Ionicons name="images-outline" size={48} color="#E0E0E0" />
+                <Text style={styles.noPortfolioText}>No portfolio items yet</Text>
+                <Text style={styles.noPortfolioSubtext}>
+                  Check back later to see examples of their work
                 </Text>
               </View>
             )}
           </View>
 
-          {/* Services Section */}
-          <View style={styles.servicesSection}>
-            <Text style={styles.sectionTitle}>Services</Text>
-            {profileData.services.map((service) => (
-              <TouchableOpacity 
-                key={service.id}
-                style={styles.serviceCard}
-                onPress={() => handleBookService(service)}
-              >
-                <Image 
-                  source={{ uri: service.imageUrl || 'https://via.placeholder.com/100' }}
-                  style={styles.serviceImage}
-                />
-                <View style={styles.serviceContent}>
-                  <Text style={styles.serviceName}>{service.name}</Text>
-                  <Text style={styles.serviceDescription} numberOfLines={2}>
-                    {service.description}
-                  </Text>
-                  <View style={styles.serviceFooter}>
-                    <View style={styles.servicePrice}>
-                      <Text style={styles.priceText}>${service.price}</Text>
-                      <Text style={styles.durationText}>{service.duration}min</Text>
-                    </View>
-                    <TouchableOpacity style={styles.bookButton}>
-                      <Text style={styles.bookButtonText}>Book</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Active Promos Section */}
-          <View style={styles.promosSection}>
-            <Text style={styles.sectionTitle}>Active Promotions</Text>
-            {profileData.activePromos.map((promo) => (
-              <View key={promo.id} style={styles.promoCard}>
-                <LinearGradient
-                  colors={COLORS.gradientPrimary}
-                  style={styles.promoGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                >
-                  <View style={styles.promoContent}>
-                    <View style={styles.promoLeft}>
-                      <Text style={styles.promoTitle}>{promo.title}</Text>
-                      <Text style={styles.promoDescription}>{promo.description}</Text>
-                      <Text style={styles.promoExpiry}>
-                        Valid until {new Date(promo.validUntil).toLocaleDateString()}
-                      </Text>
-                    </View>
-                    <View style={styles.promoRight}>
-                      <Text style={styles.discountValue}>{promo.discountValue}%</Text>
-                      <Text style={styles.discountLabel}>OFF</Text>
-                    </View>
-                  </View>
-                </LinearGradient>
-              </View>
-            ))}
-          </View>
         </ScrollView>
       </View>
+
+      {/* Portfolio Slideshow Modal */}
+      <Modal
+        visible={showPortfolioModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closePortfolioModal}
+      >
+        <View style={styles.modalContainer}>
+          <StatusBar barStyle="light-content" backgroundColor="rgba(0,0,0,0.9)" />
+          
+          {/* Close button */}
+          <TouchableOpacity 
+            style={styles.closeButton}
+            onPress={closePortfolioModal}
+          >
+            <Ionicons name="close" size={28} color="white" />
+          </TouchableOpacity>
+
+          {/* Image counter */}
+          {profileData?.provider.portfolio && profileData.provider.portfolio.length > 1 && (
+            <View style={styles.imageCounter}>
+              <Text style={styles.imageCounterText}>
+                {selectedPortfolioIndex + 1} / {profileData.provider.portfolio.length}
+              </Text>
+            </View>
+          )}
+
+          {/* Main image */}
+          {profileData?.provider.portfolio && profileData.provider.portfolio[selectedPortfolioIndex] && (
+            <View style={styles.imageContainer}>
+              <Image
+                source={{ uri: profileData.provider.portfolio[selectedPortfolioIndex].imageUrl }}
+                style={styles.fullscreenImage}
+                resizeMode="contain"
+              />
+              
+              {/* Image details */}
+              <View style={styles.imageDetails}>
+                {profileData.provider.portfolio[selectedPortfolioIndex].caption && (
+                  <Text style={styles.imageCaption}>
+                    {profileData.provider.portfolio[selectedPortfolioIndex].caption}
+                  </Text>
+                )}
+                {profileData.provider.portfolio[selectedPortfolioIndex].category && (
+                  <View style={styles.imageCategoryContainer}>
+                    <Text style={styles.imageCategoryText}>
+                      {profileData.provider.portfolio[selectedPortfolioIndex].category}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Navigation arrows */}
+          {profileData?.provider.portfolio && profileData.provider.portfolio.length > 1 && (
+            <>
+              <TouchableOpacity 
+                style={styles.leftArrow}
+                onPress={handlePreviousPortfolioItem}
+              >
+                <Ionicons name="chevron-back" size={32} color="white" />
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.rightArrow}
+                onPress={handleNextPortfolioItem}
+              >
+                <Ionicons name="chevron-forward" size={32} color="white" />
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </Modal>
     </>
   );
 };
@@ -444,305 +559,465 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Header
-  header: {
+  // Modern Hero Design
+  heroContainer: {
+    height: 300,
+    position: 'relative',
+  },
+  heroBackground: {
+    flex: 1,
+    height: '100%',
+  },
+  heroImage: {
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  heroOverlay: {
+    flex: 1,
+    justifyContent: 'space-between',
+    padding: 20,
+    paddingTop: 50,
+  },
+  headerControls: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
   },
-  backButton: {
+  headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.text,
+  heroContent: {
     flex: 1,
-    textAlign: 'center',
+    justifyContent: 'flex-end',
   },
-  shareButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Profile Header
-  profileHeader: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  profileGradient: {
-    padding: 24,
-  },
-  profileContent: {
-    alignItems: 'center',
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
-    borderColor: COLORS.surface,
-    marginBottom: 16,
-  },
-  businessName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.surface,
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  businessCategory: {
-    fontSize: 16,
-    color: COLORS.surface,
-    opacity: 0.9,
+  providerInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
     marginBottom: 20,
   },
-  socialStats: {
-    flexDirection: 'row',
-    gap: 24,
-    marginBottom: 24,
+  profileImageContainer: {
+    position: 'relative',
+    marginRight: 16,
   },
-  socialStat: {
+  verifiedBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
   },
-  socialNumber: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.surface,
-  },
-  socialLabel: {
-    fontSize: 12,
-    color: COLORS.surface,
-    opacity: 0.8,
-    marginTop: 4,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  followButton: {
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
+  providerDetails: {
     flex: 1,
   },
-  followingButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-    borderColor: COLORS.surface,
-  },
-  followButtonText: {
-    color: COLORS.primary,
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  followingButtonText: {
-    color: COLORS.surface,
-  },
-  messageButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  messageButtonText: {
-    color: COLORS.surface,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  // Business Info
-  businessInfo: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 16,
-    marginTop: 16,
-    ...COMMON_STYLES.shadow,
-  },
-  businessDescription: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: COLORS.text,
-    marginBottom: 16,
-  },
-  specialties: {
-    marginBottom: 16,
-  },
-  specialtiesTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
+  businessDescriptionHero: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
     marginBottom: 8,
   },
-  specialtyTags: {
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rating: {
+    fontSize: 14,
+    color: 'white',
+    fontWeight: '600',
+    marginLeft: 4,
+    marginRight: 6,
+  },
+  reviewCount: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  separator: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    marginHorizontal: 8,
+  },
+  priceRange: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+  },
+
+  // Status Bar
+  statusBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginHorizontal: 20,
+    marginTop: -20,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  statusText: {
+    fontSize: 14,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+  scheduleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(90, 79, 207, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  scheduleButtonText: {
+    fontSize: 12,
+    color: '#5A4FCF',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+
+  // Specialties
+  specialtiesContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  badgesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    marginTop: 8,
   },
-  specialtyTag: {
-    backgroundColor: COLORS.background,
+  specialtyBadge: {
+    backgroundColor: 'rgba(90, 79, 207, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
   },
-  specialtyText: {
-    fontSize: 14,
-    color: COLORS.primary,
+  specialtyBadgeText: {
+    fontSize: 12,
+    color: '#5A4FCF',
     fontWeight: '500',
   },
-  experienceInfo: {
+
+  // Service card updates
+  serviceInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  serviceDetails: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+  },
+  servicePrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
+  serviceDuration: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  noServicesContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noServicesText: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    marginTop: 12,
+  },
+
+  // Action Buttons
+  actionButtons: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 12,
+  },
+  followButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    alignItems: 'center',
+  },
+  followingButton: {
+    backgroundColor: COLORS.primary,
+  },
+  followButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  followingButtonText: {
+    color: 'white',
+  },
+  messageButton: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    borderRadius: 12,
     gap: 8,
   },
-  experienceText: {
+  messageButtonText: {
     fontSize: 16,
-    color: COLORS.text,
-    fontWeight: '500',
+    fontWeight: '600',
+    color: 'white',
+  },
+
+  // Profile Image
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: 'white',
+  },
+  businessName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 4,
   },
 
   // Services Section
   servicesSection: {
-    marginHorizontal: 16,
-    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   serviceCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: 'white',
     borderRadius: 16,
-    marginBottom: 16,
-    overflow: 'hidden',
-    ...COMMON_STYLES.shadow,
-  },
-  serviceImage: {
-    width: '100%',
-    height: 120,
-    backgroundColor: COLORS.borderLight,
-  },
-  serviceContent: {
     padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   serviceName: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   serviceDescription: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    marginBottom: 16,
+    marginBottom: 8,
     lineHeight: 20,
-  },
-  serviceFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  servicePrice: {
-    flex: 1,
-  },
-  priceText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  durationText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
   },
   bookButton: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   bookButtonText: {
-    color: COLORS.surface,
     fontSize: 14,
     fontWeight: '600',
+    color: 'white',
   },
 
-  // Promos Section
-  promosSection: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 32,
+  // Portfolio Section
+  portfolioSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
-  promoCard: {
-    marginBottom: 16,
+  portfolioGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  portfolioItem: {
+    width: '48%',
+    backgroundColor: 'white',
     borderRadius: 16,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 12,
   },
-  promoGradient: {
-    padding: 20,
+  portfolioImage: {
+    width: '100%',
+    height: 140,
+    backgroundColor: '#F5F5F5',
   },
-  promoContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  portfolioCaption: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 8,
+  },
+  portfolioCaptionText: {
+    fontSize: 12,
+    color: 'white',
+    lineHeight: 16,
+  },
+  portfolioCategory: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  portfolioCategoryText: {
+    fontSize: 10,
+    color: 'white',
+    fontWeight: '600',
+  },
+  noPortfolioContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noPortfolioText: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    marginTop: 12,
+  },
+  noPortfolioSubtext: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+    textAlign: 'center',
+    opacity: 0.7,
+  },
+
+  // Portfolio Modal Styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  promoLeft: {
-    flex: 1,
+  closeButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 1000,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
+    padding: 8,
   },
-  promoTitle: {
-    fontSize: 18,
+  imageCounter: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 1000,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
+  imageCounterText: {
+    color: 'white',
+    fontSize: 14,
     fontWeight: '600',
-    color: COLORS.surface,
+  },
+  imageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  fullscreenImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height * 0.7,
+    maxHeight: '70%',
+  },
+  imageDetails: {
+    position: 'absolute',
+    bottom: 80,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  imageCaption: {
+    color: 'white',
+    fontSize: 16,
+    lineHeight: 22,
     marginBottom: 8,
   },
-  promoDescription: {
-    fontSize: 14,
-    color: COLORS.surface,
-    opacity: 0.9,
-    marginBottom: 4,
+  imageCategoryContainer: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(90, 79, 207, 0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  promoExpiry: {
+  imageCategoryText: {
+    color: 'white',
     fontSize: 12,
-    color: COLORS.surface,
-    opacity: 0.8,
-  },
-  promoRight: {
-    alignItems: 'center',
-    marginLeft: 16,
-  },
-  discountValue: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: COLORS.surface,
-  },
-  discountLabel: {
-    fontSize: 12,
-    color: COLORS.surface,
     fontWeight: '600',
+  },
+  leftArrow: {
+    position: 'absolute',
+    left: 20,
+    top: '50%',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 25,
+    padding: 12,
+    zIndex: 1000,
+  },
+  rightArrow: {
+    position: 'absolute',
+    right: 20,
+    top: '50%',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 25,
+    padding: 12,
+    zIndex: 1000,
   },
 });
 

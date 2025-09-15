@@ -14,6 +14,7 @@ import {
 import { launchImageLibrary, launchCamera, ImagePickerResponse } from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import apiService from '../../services/apiService';
+import FeatureGatingService from '../../services/featureGatingService';
 import Modal from 'react-native-modal';
 
 const { width } = Dimensions.get('window');
@@ -61,7 +62,28 @@ const ImageUploadScreen = ({ navigation, route }) => {
     return true;
   };
 
-  const handleImagePicker = () => {
+  const handleImagePicker = async () => {
+    // Check if user can upload photos for this service
+    const { serviceId } = route.params || {};
+    if (serviceId) {
+      const canUpload = await FeatureGatingService.canAddPhoto(serviceId);
+      
+      if (!canUpload.allowed) {
+        Alert.alert(
+          'Photo Limit Reached',
+          canUpload.message + '\n\nWould you like to upgrade your plan?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Upgrade', 
+              onPress: () => navigation.navigate('SubscriptionPlans')
+            }
+          ]
+        );
+        return;
+      }
+    }
+    
     setShowOptionsModal(true);
   };
 

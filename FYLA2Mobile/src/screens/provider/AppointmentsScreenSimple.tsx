@@ -23,27 +23,42 @@ import ApiService from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
-// Instagram-style Color Palette
+// Luxury Color Palette - Updated to match dashboard
 const COLORS = {
-  background: '#F0F0F0',
+  // Main colors
+  primary: '#3797F0',
+  secondary: '#8E44AD',
+  background: '#FAFAFA',
   surface: '#FFFFFF',
-  text: '#1A1A1A',
-  textSecondary: '#666666',
-  border: '#C0C0C0',
-  borderLight: '#E0E0E0',
-  primary: '#2B7CE6',
-  accent: '#E6283A',
-  success: '#00B355',
-  warning: '#E6A800',
-  verified: '#2B7CE6',
-  instagram: '#C7285F',
-  gradient1: '#5A6FD8',
-  gradient2: '#674BA8',
-  pending: '#FFD93D',
-  confirmed: '#4ECDC4',
-  inProgress: '#45B7D1',
-  completed: '#96CEB4',
-  cancelled: '#FF6B6B',
+  
+  // Text colors
+  text: '#262626',
+  textSecondary: '#8E8E93',
+  textTertiary: '#C7C7CC',
+  
+  // Status colors
+  success: '#34C759',
+  error: '#FF3B30',
+  warning: '#FF9500',
+  info: '#007AFF',
+  
+  // Booking status colors
+  pending: '#FF9500',
+  confirmed: '#34C759',
+  inProgress: '#007AFF',
+  completed: '#8E44AD',
+  cancelled: '#FF3B30',
+  
+  // UI colors
+  border: '#EBEBEB',
+  shadow: 'rgba(0, 0, 0, 0.1)',
+  overlay: 'rgba(0, 0, 0, 0.5)',
+  
+  // Gradient colors
+  gradientStart: '#667eea',
+  gradientEnd: '#764ba2',
+  premiumGradientStart: '#f093fb',
+  premiumGradientEnd: '#f5576c',
 };
 
 interface AppointmentFilters {
@@ -231,7 +246,7 @@ const AppointmentsScreen = () => {
     } else if (item.status === 'InProgress') {
       return (
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: COLORS.verified }]}
+          style={[styles.actionButton, { backgroundColor: COLORS.secondary }]}
           onPress={() => handleStatusChange(item.id, 'Completed')}
         >
           <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
@@ -340,7 +355,7 @@ const AppointmentsScreen = () => {
             <Text style={styles.quickInfoText}>{formatDate(item.bookingDate)}</Text>
           </View>
           <View style={styles.quickInfoItem}>
-            <Ionicons name="time" size={14} color={COLORS.accent} />
+            <Ionicons name="time" size={14} color={COLORS.warning} />
             <Text style={styles.quickInfoText}>{formatTime(item.startTime)}</Text>
           </View>
           {!isExpanded && item.notes && (
@@ -386,11 +401,27 @@ const AppointmentsScreen = () => {
     );
   };  if (loading) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-        <View style={styles.loadingCard}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading appointments...</Text>
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        
+        {/* Gradient Header */}
+        <LinearGradient
+          colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+          style={styles.gradientHeader}
+        >
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.headerTitle}>Appointments</Text>
+              <Text style={styles.headerSubtitle}>Manage your bookings</Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        <View style={[styles.content, styles.loadingContainer]}>
+          <BlurView intensity={10} style={styles.loadingCard}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.loadingText}>Loading appointments...</Text>
+          </BlurView>
         </View>
       </View>
     );
@@ -398,27 +429,40 @@ const AppointmentsScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>My Appointments ({filteredAppointments.length})</Text>
-          <TouchableOpacity 
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      {/* Gradient Header */}
+      <LinearGradient
+        colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+        style={styles.gradientHeader}
+      >
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.headerTitle}>Appointments</Text>
+            <Text style={styles.headerSubtitle}>{filteredAppointments.length} bookings</Text>
+          </View>
+          
+          <TouchableOpacity
             style={styles.filterButton}
             onPress={() => setShowFilters(!showFilters)}
           >
-            <Ionicons name="filter" size={20} color={COLORS.primary} />
-            {getActiveFilterCount() > 0 && (
-              <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>{getActiveFilterCount()}</Text>
-              </View>
-            )}
+            <BlurView intensity={20} style={styles.filterButtonBlur}>
+              <Ionicons name="filter" size={20} color="#FFFFFF" />
+              {getActiveFilterCount() > 0 && (
+                <View style={styles.filterBadge}>
+                  <Text style={styles.filterBadgeText}>{getActiveFilterCount()}</Text>
+                </View>
+              )}
+            </BlurView>
           </TouchableOpacity>
         </View>
+      </LinearGradient>
+
+      <View style={styles.content}>
 
         {/* Filter Panel */}
         {showFilters && (
-          <View style={styles.filterPanel}>
+          <BlurView intensity={15} style={styles.filterPanel}>
             <ScrollView showsVerticalScrollIndicator={false}>
               {/* Status Filter */}
               <View style={styles.filterSection}>
@@ -517,7 +561,7 @@ const AppointmentsScreen = () => {
                 </TouchableOpacity>
               )}
             </ScrollView>
-          </View>
+          </BlurView>
         )}
 
         <FlatList
@@ -531,7 +575,7 @@ const AppointmentsScreen = () => {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
           }
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
+            <BlurView intensity={10} style={styles.emptyContainer}>
               <Ionicons name="calendar-outline" size={64} color={COLORS.textSecondary} />
               <Text style={styles.emptyText}>
                 {getActiveFilterCount() > 0 ? 'No appointments match your filters' : 'No appointments found'}
@@ -542,7 +586,7 @@ const AppointmentsScreen = () => {
                   : 'Appointments will appear here when clients book your services'
                 }
               </Text>
-            </View>
+            </BlurView>
           }
         />
       </View>
@@ -556,10 +600,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  
+  // Gradient Header
+  gradientHeader: {
+    paddingTop: 50, // Status bar padding
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 4,
+    letterSpacing: -1,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+  
   content: {
     flex: 1,
-    padding: 20,
-    paddingBottom: 100, // Extra padding for tab navigation
+    paddingHorizontal: 20,
+    marginTop: -20, // Overlap with gradient
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    backgroundColor: COLORS.background,
+    paddingTop: 25,
   },
   
   // Loading
@@ -574,7 +647,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: COLORS.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
@@ -611,45 +684,49 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     flex: 1,
   },
+  // Filter Button - Modern Glass Effect
   filterButton: {
+    padding: 0,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  filterButtonBlur: {
     padding: 12,
-    borderRadius: 16,
-    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
     position: 'relative',
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
   },
   filterBadge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: COLORS.accent,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    top: -8,
+    right: -8,
+    backgroundColor: COLORS.error,
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   filterBadgeText: {
     color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
+    fontSize: 12,
+    fontWeight: '700',
   },
 
-  // Filter Panel
+  // Filter Panel - Modern Glass Effect
   filterPanel: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 20,
     padding: 20,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    maxHeight: 300,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+    maxHeight: 350,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   filterSection: {
     marginBottom: 16,
@@ -671,7 +748,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: COLORS.border,
   },
   filterChipActive: {
     backgroundColor: COLORS.primary,
@@ -698,7 +775,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: COLORS.border,
   },
   amountRow: {
     flexDirection: 'row',
@@ -713,7 +790,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: COLORS.border,
   },
   amountSeparator: {
     color: COLORS.textSecondary,
@@ -721,7 +798,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   clearButton: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.error,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -881,7 +958,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderTopWidth: 1,
-    borderTopColor: COLORS.borderLight,
+    borderTopColor: COLORS.border,
   },
   appointmentDetails: {
     marginBottom: 16,

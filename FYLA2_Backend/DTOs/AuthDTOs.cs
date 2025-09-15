@@ -50,6 +50,8 @@ namespace FYLA2_Backend.DTOs
     public string? ProfilePictureUrl { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public bool IsServiceProvider { get; set; }
+    public bool OnboardingCompleted { get; set; }
+    public string SubscriptionTier { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
   }
 
@@ -60,5 +62,7 @@ namespace FYLA2_Backend.DTOs
     public string? Bio { get; set; }
     public string? ProfilePictureUrl { get; set; }
     public DateTime? DateOfBirth { get; set; }
+    public bool? OnboardingCompleted { get; set; }
+    public string? SubscriptionTier { get; set; }
   }
 }

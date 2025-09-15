@@ -18,6 +18,7 @@ import { Service, ServiceProvider, RootStackParamList, CreateBookingRequest } fr
 import ApiService from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import PushNotificationService from '../../services/pushNotificationService';
+import FeatureGatingService from '../../services/featureGatingService';
 
 type BookingFlowScreenRouteProp = {
   key: string;
@@ -47,6 +48,8 @@ const BookingFlowScreen: React.FC = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('credit-card');
   const [loyaltyPointsEarned, setLoyaltyPointsEarned] = useState<any>(null);
+  const [canAcceptOnlinePayments, setCanAcceptOnlinePayments] = useState(true);
+  const [paymentUpgradeMessage, setPaymentUpgradeMessage] = useState('');
   
   // Card details state
   const [cardNumber, setCardNumber] = useState('');
@@ -95,7 +98,7 @@ const BookingFlowScreen: React.FC = () => {
     return paymentMethods[method] || 'Credit/Debit Card';
   }, []);
 
-  // Auto-login for testing purposes
+  // Auto-login for testing purposes and check payment permissions
   useEffect(() => {
     const ensureAuthenticated = async () => {
       console.log('=== AUTHENTICATION CHECK ===');
@@ -114,9 +117,23 @@ const BookingFlowScreen: React.FC = () => {
         console.log('User already authenticated');
       }
     };
+
+    const checkPaymentPermissions = async () => {
+      try {
+        const paymentCheck = await FeatureGatingService.canAcceptOnlinePayments();
+        setCanAcceptOnlinePayments(paymentCheck.allowed);
+        if (!paymentCheck.allowed) {
+          setPaymentUpgradeMessage(paymentCheck.message || '');
+          setSelectedPaymentMethod('cash'); // Default to cash if online payments not available
+        }
+      } catch (error) {
+        console.error('Error checking payment permissions:', error);
+      }
+    };
     
     ensureAuthenticated();
-  }, [isAuthenticated]); // Removed devLoginClient to prevent infinite loop
+    checkPaymentPermissions();
+  }, [isAuthenticated, devLoginClient]);
 
   const loadAvailableSlots = useCallback(async () => {
     setIsLoadingSlots(true);
@@ -685,11 +702,35 @@ const BookingFlowScreen: React.FC = () => {
       {/* Payment Methods Section */}
       <View style={styles.enhancedPaymentSection}>
         <Text style={styles.enhancedSectionTitle}>💳 Select Payment Method</Text>
+        
+        {!canAcceptOnlinePayments && paymentUpgradeMessage && (
+          <View style={styles.upgradeNotice}>
+            <View style={styles.upgradeNoticeContent}>
+              <Ionicons name="lock-closed" size={20} color="#F59E0B" />
+              <Text style={styles.upgradeNoticeText}>{paymentUpgradeMessage}</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.upgradeButton}
+              onPress={() => navigation.navigate('SubscriptionPlans')}
+            >
+              <Text style={styles.upgradeButtonText}>Upgrade Plan</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
         <View style={styles.paymentMethodsGridContainer}>
-          {renderEnhancedPaymentMethod('credit-card', 'card-outline', 'Credit/Debit Card', 'Visa, Mastercard, Amex', '#007AFF')}
-          {renderEnhancedPaymentMethod('paypal', 'logo-paypal', 'PayPal', 'PayPal account', '#0070BA')}
-          {renderEnhancedPaymentMethod('apple-pay', 'logo-apple', 'Apple Pay', 'Touch/Face ID', '#000')}
-          {renderEnhancedPaymentMethod('google-pay', 'logo-google', 'Google Pay', 'Google account', '#4285F4')}
+          {/* Always show cash payment */}
+          {renderEnhancedPaymentMethod('cash', 'cash-outline', 'Cash Payment', 'Pay at appointment', '#10B981')}
+          
+          {/* Online payment methods - gated by subscription */}
+          {canAcceptOnlinePayments && (
+            <>
+              {renderEnhancedPaymentMethod('credit-card', 'card-outline', 'Credit/Debit Card', 'Visa, Mastercard, Amex', '#007AFF')}
+              {renderEnhancedPaymentMethod('paypal', 'logo-paypal', 'PayPal', 'PayPal account', '#0070BA')}
+              {renderEnhancedPaymentMethod('apple-pay', 'logo-apple', 'Apple Pay', 'Touch/Face ID', '#000')}
+              {renderEnhancedPaymentMethod('google-pay', 'logo-google', 'Google Pay', 'Google account', '#4285F4')}
+            </>
+          )}
         </View>
       </View>
 
@@ -1887,6 +1928,39 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
     marginLeft: 8,
+  },
+  
+  // Feature gating styles
+  upgradeNotice: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  upgradeNoticeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  upgradeNoticeText: {
+    fontSize: 14,
+    color: '#92400E',
+    marginLeft: 8,
+    flex: 1,
+  },
+  upgradeButton: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  upgradeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

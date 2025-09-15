@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using FYLA2_Backend.Data;
 
 namespace FYLA2_Backend.Controllers
 {
@@ -6,6 +8,12 @@ namespace FYLA2_Backend.Controllers
     [Route("api/[controller]")]
     public class TestController : ControllerBase
     {
+        private readonly ApplicationDbContext _context;
+
+        public TestController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
         // Simple test endpoint to verify API connectivity
         [HttpGet]
         public ActionResult<object> Get()
@@ -64,6 +72,68 @@ namespace FYLA2_Backend.Controllers
             };
 
             return Ok(mockFeed);
+        }
+
+        // Test endpoint to add addresses to existing providers
+        [HttpPost("update-provider-addresses")]
+        public async Task<ActionResult<object>> UpdateProviderAddresses()
+        {
+            var providers = await _context.ServiceProviders.ToListAsync();
+            
+            if (!providers.Any())
+            {
+                return NotFound("No providers found");
+            }
+
+            // Sample addresses for different provider types
+            var sampleAddresses = new[]
+            {
+                "123 Main Street, Downtown Los Angeles, CA 90012",
+                "456 Beauty Blvd, Beverly Hills, CA 90210", 
+                "789 Wellness Way, Santa Monica, CA 90401",
+                "321 Style Avenue, West Hollywood, CA 90069",
+                "654 Glamour Lane, Hollywood, CA 90028",
+                "987 Spa Street, Pasadena, CA 91101",
+                "147 Salon Circle, Burbank, CA 91502",
+                "258 Treatment Terrace, Glendale, CA 91205",
+                "369 Beauty Boulevard, Long Beach, CA 90802",
+                "741 Wellness Walk, Culver City, CA 90232"
+            };
+
+            var updatedCount = 0;
+            for (int i = 0; i < providers.Count && i < sampleAddresses.Length; i++)
+            {
+                if (string.IsNullOrEmpty(providers[i].BusinessAddress))
+                {
+                    providers[i].BusinessAddress = sampleAddresses[i];
+                    providers[i].UpdatedAt = DateTime.UtcNow;
+                    updatedCount++;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { 
+                message = $"Updated {updatedCount} providers with addresses",
+                updated = updatedCount,
+                total = providers.Count
+            });
+        }
+
+        // Test endpoint to check provider addresses directly from database
+        [HttpGet("provider-addresses")]
+        public async Task<ActionResult<object>> GetProviderAddresses()
+        {
+            var providers = await _context.ServiceProviders
+                .Select(sp => new {
+                    id = sp.Id,
+                    userId = sp.UserId,
+                    businessName = sp.BusinessName,
+                    businessAddress = sp.BusinessAddress
+                })
+                .ToListAsync();
+
+            return Ok(providers);
         }
     }
 }

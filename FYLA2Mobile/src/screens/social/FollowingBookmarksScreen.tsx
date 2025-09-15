@@ -319,7 +319,7 @@ const FollowingBookmarksScreen = () => {
       </Text>
       <TouchableOpacity
         style={styles.exploreButton}
-        onPress={() => navigation.navigate('Search')}
+        onPress={() => navigation.navigate('SocialSearch')}
       >
         <LinearGradient
           colors={[COLORS.primary, COLORS.lavenderMist]}

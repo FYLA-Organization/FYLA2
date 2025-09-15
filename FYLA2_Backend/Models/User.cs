@@ -22,6 +22,10 @@ namespace FYLA2_Backend.Models
 
     public bool IsServiceProvider { get; set; }
 
+    public bool OnboardingCompleted { get; set; } = false;
+
+    public string SubscriptionTier { get; set; } = "free";
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -48,5 +52,8 @@ namespace FYLA2_Backend.Models
     public virtual PaymentSettings? PaymentSettings { get; set; }
     public virtual ICollection<LoyaltyTransaction> LoyaltyTransactionsAsClient { get; set; } = new List<LoyaltyTransaction>();
     public virtual ICollection<LoyaltyTransaction> LoyaltyTransactionsAsProvider { get; set; } = new List<LoyaltyTransaction>();
+    
+    // Portfolio for service providers
+    public virtual ICollection<ProviderPortfolio> Portfolio { get; set; } = new List<ProviderPortfolio>();
   }
 }

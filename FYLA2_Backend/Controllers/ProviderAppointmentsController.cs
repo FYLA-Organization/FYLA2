@@ -466,9 +466,10 @@ namespace FYLA2_Backend.Controllers
     private decimal? GetTipAmount(int? bookingId)
     {
       if (!bookingId.HasValue) return null;
-      return _context.PaymentRecords
+      var tips = _context.PaymentRecords
           .Where(p => p.BookingId == bookingId && p.Type == PaymentType.Tip)
-          .Sum(p => p.Amount);
+          .ToList();
+      return tips.Any() ? tips.Sum(p => p.Amount) : 0;
     }
 
     private async Task<AppointmentStatsDto> CalculateAppointmentStats(string providerId, AppointmentFilterDto filter)

@@ -85,3 +85,7 @@ jspm_packages/
 
 # Ignore package-lock.json in React Native projects
 FYLA2Mobile/package-lock.json
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

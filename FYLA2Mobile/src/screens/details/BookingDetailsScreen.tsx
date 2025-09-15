@@ -16,6 +16,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Booking, BookingStatus, RootStackParamList } from '../../types';
 import ApiService from '../../services/api';
+import { SPACING } from '../../constants/modernDesign';
 
 type BookingDetailsScreenRouteProp = {
   key: string;
@@ -198,7 +199,11 @@ const BookingDetailsScreen: React.FC = () => {
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Status Card */}
         <View style={styles.statusCard}>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) }]}>
@@ -366,6 +371,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  
+  scrollContent: {
+    paddingBottom: SPACING.tabBarHeight + 24,
   },
   
   // Header Section

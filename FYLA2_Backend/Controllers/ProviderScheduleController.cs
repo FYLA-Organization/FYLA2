@@ -41,8 +41,12 @@ namespace FYLA2_Backend.Controllers
             isAvailable = ps.IsAvailable,
             startTime = ps.StartTime != null ? ps.StartTime.Value.ToString(@"hh\:mm") : null,
             endTime = ps.EndTime != null ? ps.EndTime.Value.ToString(@"hh\:mm") : null,
-            breakStartTime = ps.BreakStartTime != null ? ps.BreakStartTime.Value.ToString(@"hh\:mm") : null,
-            breakEndTime = ps.BreakEndTime != null ? ps.BreakEndTime.Value.ToString(@"hh\:mm") : null,
+            breaks = ps.Breaks.Select(b => new {
+                startTime = b.StartTime.ToString(@"hh\:mm"),
+                endTime = b.EndTime.ToString(@"hh\:mm"),
+                title = b.Title,
+                type = b.Type.ToString()
+            }).ToList(),
             specificDate = ps.SpecificDate != null ? ps.SpecificDate.Value.ToString("yyyy-MM-dd") : null
           })
           .ToListAsync();
@@ -110,12 +114,30 @@ namespace FYLA2_Backend.Controllers
           DayOfWeek = dayOfWeek,
           IsAvailable = request.IsAvailable,
           StartTime = startTime,
-          EndTime = endTime,
-          BreakStartTime = breakStartTime,
-          BreakEndTime = breakEndTime
+          EndTime = endTime
         };
 
         _context.ProviderSchedules.Add(schedule);
+        await _context.SaveChangesAsync();
+
+        // Add break times if provided
+        if (!string.IsNullOrEmpty(request.BreakStartTime) &&
+            !string.IsNullOrEmpty(request.BreakEndTime))
+        {
+          if (TimeSpan.TryParse(request.BreakStartTime, out var parsedBreakStart) &&
+              TimeSpan.TryParse(request.BreakEndTime, out var parsedBreakEnd))
+          {
+            var breakTime = new ProviderBreak
+            {
+              ScheduleId = schedule.Id,
+              StartTime = parsedBreakStart,
+              EndTime = parsedBreakEnd,
+              Title = "Break",
+              Type = BreakType.Lunch
+            };
+            _context.ProviderBreaks.Add(breakTime);
+          }
+        }
       }
 
       await _context.SaveChangesAsync();
@@ -205,9 +227,101 @@ namespace FYLA2_Backend.Controllers
 
       return Ok(new { message = "Blocked time removed successfully" });
     }
+
+    // POST: api/providerschedule/weekly
+    [HttpPost("weekly")]
+    public async Task<ActionResult> SetWeeklySchedule([FromBody] SetWeeklyScheduleRequest request)
+    {
+      var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+      if (string.IsNullOrEmpty(userId))
+        return Unauthorized();
+
+      var user = await _context.Users.FindAsync(userId);
+      if (user == null || !user.IsServiceProvider)
+        return Forbid("Only service providers can set schedules");
+
+      try
+      {
+        // Remove existing schedule for this provider
+        var existingSchedules = await _context.ProviderSchedules
+            .Where(ps => ps.ProviderId == userId && ps.SpecificDate == null)
+            .ToListAsync();
+        
+        _context.ProviderSchedules.RemoveRange(existingSchedules);
+
+        // Add new schedule entries
+        foreach (var scheduleItem in request.Schedule)
+        {
+          if (!Enum.TryParse<DayOfWeek>(scheduleItem.DayOfWeek, out var dayOfWeek))
+            continue;
+
+          var providerSchedule = new ProviderSchedule
+          {
+            ProviderId = userId,
+            DayOfWeek = (DayOfWeekEnum)dayOfWeek,
+            IsAvailable = scheduleItem.IsAvailable
+          };
+
+          if (scheduleItem.IsAvailable)
+          {
+            if (!string.IsNullOrEmpty(scheduleItem.StartTime) && TimeSpan.TryParse(scheduleItem.StartTime, out var startTime))
+              providerSchedule.StartTime = startTime;
+
+            if (!string.IsNullOrEmpty(scheduleItem.EndTime) && TimeSpan.TryParse(scheduleItem.EndTime, out var endTime))
+              providerSchedule.EndTime = endTime;
+          }
+
+          _context.ProviderSchedules.Add(providerSchedule);
+        }
+
+        await _context.SaveChangesAsync();
+
+        // Add break times for each schedule if provided
+        foreach (var scheduleItem in request.Schedule)
+        {
+          if (scheduleItem.IsAvailable && 
+              !string.IsNullOrEmpty(scheduleItem.BreakStartTime) && 
+              !string.IsNullOrEmpty(scheduleItem.BreakEndTime))
+          {
+            if (Enum.TryParse<DayOfWeek>(scheduleItem.DayOfWeek, out var dayOfWeek) &&
+                TimeSpan.TryParse(scheduleItem.BreakStartTime, out var breakStart) &&
+                TimeSpan.TryParse(scheduleItem.BreakEndTime, out var breakEnd))
+            {
+              var schedule = _context.ProviderSchedules
+                .FirstOrDefault(ps => ps.ProviderId == userId && ps.DayOfWeek == (DayOfWeekEnum)dayOfWeek);
+              
+              if (schedule != null)
+              {
+                var breakTime = new ProviderBreak
+                {
+                  ScheduleId = schedule.Id,
+                  StartTime = breakStart,
+                  EndTime = breakEnd,
+                  Title = "Break",
+                  Type = BreakType.Lunch
+                };
+                _context.ProviderBreaks.Add(breakTime);
+              }
+            }
+          }
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Weekly schedule updated successfully" });
+      }
+      catch (Exception ex)
+      {
+        return BadRequest(new { message = "Failed to update schedule", error = ex.Message });
+      }
+    }
   }
 
   // DTOs
+  public class SetWeeklyScheduleRequest
+  {
+    public List<SetScheduleRequest> Schedule { get; set; } = new();
+  }
   public class SetScheduleRequest
   {
     public string DayOfWeek { get; set; } = string.Empty;

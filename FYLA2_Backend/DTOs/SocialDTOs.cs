@@ -147,4 +147,17 @@ namespace FYLA2_Backend.DTOs
     {
         public List<string> Tags { get; set; } = new List<string>();
     }
+
+    // Social Media Kit DTO for Branding
+    public class SocialMediaKitDto
+    {
+        public List<string> InstagramPosts { get; set; } = new List<string>();
+        public List<string> FacebookCovers { get; set; } = new List<string>();
+        public List<string> TwitterHeaders { get; set; } = new List<string>();
+        public List<string> LinkedInBanners { get; set; } = new List<string>();
+        public List<string> LogoVariations { get; set; } = new List<string>();
+        public string BrandName { get; set; } = string.Empty;
+        public string PrimaryColor { get; set; } = string.Empty;
+        public string SecondaryColor { get; set; } = string.Empty;
+    }
 }

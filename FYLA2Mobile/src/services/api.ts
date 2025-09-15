@@ -200,6 +200,43 @@ class ApiService {
     }
   }
 
+  // Generic HTTP Methods
+  async get(url: string): Promise<AxiosResponse> {
+    try {
+      return await this.api.get(url);
+    } catch (error) {
+      console.error(`GET ${url} error:`, error);
+      throw error;
+    }
+  }
+
+  async post(url: string, data?: any): Promise<AxiosResponse> {
+    try {
+      return await this.api.post(url, data);
+    } catch (error) {
+      console.error(`POST ${url} error:`, error);
+      throw error;
+    }
+  }
+
+  async put(url: string, data?: any): Promise<AxiosResponse> {
+    try {
+      return await this.api.put(url, data);
+    } catch (error) {
+      console.error(`PUT ${url} error:`, error);
+      throw error;
+    }
+  }
+
+  async delete(url: string): Promise<AxiosResponse> {
+    try {
+      return await this.api.delete(url);
+    } catch (error) {
+      console.error(`DELETE ${url} error:`, error);
+      throw error;
+    }
+  }
+
   // Service Provider Methods
   async getServiceProviders(
     page: number = 1, 
@@ -313,6 +350,28 @@ class ApiService {
     }
   }
 
+  // Service count for feature gating
+  async getServiceCount(): Promise<number> {
+    try {
+      const response = await this.api.get('/services/count');
+      return response.data.count || 0;
+    } catch (error) {
+      console.error('Error fetching service count:', error);
+      return 0; // Return 0 on error for safety
+    }
+  }
+
+  // Service photo count for feature gating
+  async getServicePhotoCount(serviceId: number): Promise<number> {
+    try {
+      const response = await this.api.get(`/services/${serviceId}/photos/count`);
+      return response.data.count || 0;
+    } catch (error) {
+      console.error('Error fetching service photo count:', error);
+      return 0; // Return 0 on error for safety
+    }
+  }
+
   async createService(serviceData: any): Promise<Service> {
     try {
       const response = await this.api.post('/services', serviceData);
@@ -418,6 +477,16 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('Error fetching availability:', error);
+      throw error;
+    }
+  }
+
+  async getAvailableSlots(providerId: string, serviceId: string, date: string): Promise<any[]> {
+    try {
+      const response = await this.api.get(`/booking/available-slots?providerId=${providerId}&serviceId=${serviceId}&date=${date}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching available slots:', error);
       throw error;
     }
   }
@@ -544,7 +613,7 @@ class ApiService {
   async getUserPosts(userId: string, page: number = 1, pageSize: number = 20): Promise<PaginatedResponse<Post>> {
     try {
       const params = { page, pageSize };
-      const response = await this.api.get(`/posts/user/${userId}`, { params });
+      const response = await this.api.get(`/social/posts/user/${userId}`, { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching user posts:', error);
@@ -893,6 +962,274 @@ class ApiService {
     }
   }
 
+  // ===== SUBSCRIPTION MANAGEMENT =====
+  
+  async getUserSubscription(): Promise<any> {
+    try {
+      const response = await this.api.get('/payment/subscription');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user subscription:', error);
+      throw error;
+    }
+  }
+
+  // Alias for FeatureGatingService compatibility
+  async getCurrentSubscription(): Promise<any> {
+    return this.getUserSubscription();
+  }
+
+  async createSubscription(tier: string, billingInterval: string = 'month'): Promise<any> {
+    try {
+      const response = await this.api.post('/payment/create-subscription', {
+        tier: tier,
+        billingInterval: billingInterval,
+        successUrl: 'fyla://subscription-success',
+        cancelUrl: 'fyla://subscription-cancel'
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating subscription:', error);
+      throw error;
+    }
+  }
+
+  async activateSubscription(sessionId?: string): Promise<any> {
+    try {
+      const response = await this.api.post('/payment/activate-subscription', {
+        sessionId: sessionId
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error activating subscription:', error);
+      throw error;
+    }
+  }
+
+  async debugSubscription(): Promise<any> {
+    try {
+      const response = await this.api.get('/payment/debug-subscription');
+      return response.data;
+    } catch (error) {
+      console.error('Error debugging subscription:', error);
+      throw error;
+    }
+  }
+
+  async getSubscriptionTiers(): Promise<any[]> {
+    try {
+      const response = await this.api.get('/payment/subscription-tiers');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching subscription tiers:', error);
+      throw error;
+    }
+  }
+
+  // ===== ADVANCED BUSINESS FEATURES API =====
+  
+  // Custom Branding
+  async getCustomBranding(): Promise<any> {
+    try {
+      const response = await this.api.get('/AdvancedFeatures/custom-branding');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching custom branding:', error);
+      throw error;
+    }
+  }
+
+  async createCustomBranding(branding: any): Promise<any> {
+    try {
+      const response = await this.api.post('/AdvancedFeatures/custom-branding', branding);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating custom branding:', error);
+      throw error;
+    }
+  }
+
+  async updateCustomBranding(branding: any): Promise<any> {
+    try {
+      const response = await this.api.put('/AdvancedFeatures/custom-branding', branding);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating custom branding:', error);
+      throw error;
+    }
+  }
+
+  // Business Locations
+  async getBusinessLocations(): Promise<any[]> {
+    try {
+      const response = await this.api.get('/AdvancedFeatures/business-locations');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching business locations:', error);
+      throw error;
+    }
+  }
+
+  async createBusinessLocation(location: any): Promise<any> {
+    try {
+      const response = await this.api.post('/AdvancedFeatures/business-locations', location);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating business location:', error);
+      throw error;
+    }
+  }
+
+  async updateBusinessLocation(id: number, location: any): Promise<any> {
+    try {
+      const response = await this.api.put(`/AdvancedFeatures/business-locations/${id}`, location);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating business location:', error);
+      throw error;
+    }
+  }
+
+  async deleteBusinessLocation(id: number): Promise<void> {
+    try {
+      await this.api.delete(`/AdvancedFeatures/business-locations/${id}`);
+    } catch (error) {
+      console.error('Error deleting business location:', error);
+      throw error;
+    }
+  }
+
+  // Marketing Campaigns
+  async getMarketingCampaigns(): Promise<any[]> {
+    try {
+      const response = await this.api.get('/AdvancedFeatures/marketing-campaigns');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching marketing campaigns:', error);
+      throw error;
+    }
+  }
+
+  async createMarketingCampaign(campaign: any): Promise<any> {
+    try {
+      const response = await this.api.post('/AdvancedFeatures/marketing-campaigns', campaign);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating marketing campaign:', error);
+      throw error;
+    }
+  }
+
+  async updateMarketingCampaign(id: number, campaign: any): Promise<any> {
+    try {
+      const response = await this.api.put(`/AdvancedFeatures/marketing-campaigns/${id}`, campaign);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating marketing campaign:', error);
+      throw error;
+    }
+  }
+
+  async deleteMarketingCampaign(id: number): Promise<void> {
+    try {
+      await this.api.delete(`/AdvancedFeatures/marketing-campaigns/${id}`);
+    } catch (error) {
+      console.error('Error deleting marketing campaign:', error);
+      throw error;
+    }
+  }
+
+  // Support Tickets
+  async getSupportTickets(): Promise<any[]> {
+    try {
+      const response = await this.api.get('/AdvancedFeatures/support-tickets');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching support tickets:', error);
+      throw error;
+    }
+  }
+
+  async createSupportTicket(ticket: any): Promise<any> {
+    try {
+      const response = await this.api.post('/AdvancedFeatures/support-tickets', ticket);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating support ticket:', error);
+      throw error;
+    }
+  }
+
+  async getSupportTicketMessages(ticketId: number): Promise<any[]> {
+    try {
+      const response = await this.api.get(`/AdvancedFeatures/support-tickets/${ticketId}/messages`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching support ticket messages:', error);
+      throw error;
+    }
+  }
+
+  async addSupportTicketMessage(ticketId: number, message: any): Promise<any> {
+    try {
+      const response = await this.api.post(`/AdvancedFeatures/support-tickets/${ticketId}/messages`, message);
+      return response.data;
+    } catch (error) {
+      console.error('Error adding support ticket message:', error);
+      throw error;
+    }
+  }
+
+  // Chair Rental
+  async getChairRentals(): Promise<any[]> {
+    try {
+      const response = await this.api.get('/ChairRental');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching chair rentals:', error);
+      throw error;
+    }
+  }
+
+  async createChairRental(rental: any): Promise<any> {
+    try {
+      const response = await this.api.post('/ChairRental', rental);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating chair rental:', error);
+      throw error;
+    }
+  }
+
+  async updateChairRental(id: number, rental: any): Promise<any> {
+    try {
+      const response = await this.api.put(`/ChairRental/${id}`, rental);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating chair rental:', error);
+      throw error;
+    }
+  }
+
+  async deleteChairRental(id: number): Promise<void> {
+    try {
+      await this.api.delete(`/ChairRental/${id}`);
+    } catch (error) {
+      console.error('Error deleting chair rental:', error);
+      throw error;
+    }
+  }
+
+  async getChairRentalPayments(rentalId: number): Promise<any[]> {
+    try {
+      const response = await this.api.get(`/ChairRental/${rentalId}/payments`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching chair rental payments:', error);
+      throw error;
+    }
+  }
+
   // ===== ENHANCED PROVIDER BUSINESS MANAGEMENT =====
   
   // Client Management
@@ -927,20 +1264,20 @@ class ApiService {
     }
   }
 
-  // Coupons Management
+  // Coupons Management (using Marketing Promotions endpoint)
   async getCoupons(): Promise<any[]> {
     try {
-      const response = await this.api.get('/serviceprovider/coupons');
+      const response = await this.api.get('/marketing/promotions');
       return response.data;
     } catch (error) {
       console.error('Error fetching coupons:', error);
-      throw error;
+      return [];
     }
   }
 
   async createCoupon(couponData: any): Promise<any> {
     try {
-      const response = await this.api.post('/serviceprovider/coupons', couponData);
+      const response = await this.api.post('/marketing/promotions', couponData);
       return response.data;
     } catch (error) {
       console.error('Error creating coupon:', error);
@@ -950,7 +1287,7 @@ class ApiService {
 
   async updateCoupon(couponId: string, couponData: any): Promise<any> {
     try {
-      const response = await this.api.put(`/serviceprovider/coupons/${couponId}`, couponData);
+      const response = await this.api.put(`/marketing/promotions/${couponId}`, couponData);
       return response.data;
     } catch (error) {
       console.error('Error updating coupon:', error);
@@ -960,7 +1297,7 @@ class ApiService {
 
   async toggleCoupon(couponId: string, isActive: boolean): Promise<void> {
     try {
-      await this.api.patch(`/serviceprovider/coupons/${couponId}/toggle`, { isActive });
+      await this.api.patch(`/marketing/promotions/${couponId}/toggle`, { isActive });
     } catch (error) {
       console.error('Error toggling coupon:', error);
       throw error;
@@ -969,27 +1306,27 @@ class ApiService {
 
   async deleteCoupon(couponId: string): Promise<void> {
     try {
-      await this.api.delete(`/serviceprovider/coupons/${couponId}`);
+      await this.api.delete(`/marketing/promotions/${couponId}`);
     } catch (error) {
       console.error('Error deleting coupon:', error);
       throw error;
     }
   }
 
-  // Loyalty Programs
+  // Loyalty Programs Management
   async getLoyaltyPrograms(): Promise<any[]> {
     try {
-      const response = await this.api.get('/serviceprovider/loyalty');
+      const response = await this.api.get('/marketing/loyalty-programs');
       return response.data;
     } catch (error) {
       console.error('Error fetching loyalty programs:', error);
-      throw error;
+      return [];
     }
   }
 
   async createLoyaltyProgram(programData: any): Promise<any> {
     try {
-      const response = await this.api.post('/serviceprovider/loyalty', programData);
+      const response = await this.api.post('/marketing/loyalty-programs', programData);
       return response.data;
     } catch (error) {
       console.error('Error creating loyalty program:', error);
@@ -999,7 +1336,7 @@ class ApiService {
 
   async updateLoyaltyProgram(programId: string, programData: any): Promise<any> {
     try {
-      const response = await this.api.put(`/serviceprovider/loyalty/${programId}`, programData);
+      const response = await this.api.put(`/marketing/loyalty-programs/${programId}`, programData);
       return response.data;
     } catch (error) {
       console.error('Error updating loyalty program:', error);
@@ -1009,10 +1346,70 @@ class ApiService {
 
   async toggleLoyaltyProgram(programId: string, isActive: boolean): Promise<void> {
     try {
-      await this.api.patch(`/serviceprovider/loyalty/${programId}/toggle`, { isActive });
+      await this.api.patch(`/marketing/loyalty-programs/${programId}/toggle`, { isActive });
     } catch (error) {
       console.error('Error toggling loyalty program:', error);
       throw error;
+    }
+  }
+
+  async getLoyaltyProgramMembers(programId: string): Promise<any[]> {
+    try {
+      const response = await this.api.get(`/marketing/loyalty-programs/${programId}/members`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching loyalty program members:', error);
+      return [];
+    }
+  }
+
+  // Promotions Management
+  async getPromotions(): Promise<any[]> {
+    try {
+      const response = await this.api.get('/marketing/promotions');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching promotions:', error);
+      return [];
+    }
+  }
+
+  async createPromotion(promotionData: any): Promise<any> {
+    try {
+      const response = await this.api.post('/marketing/promotions', promotionData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating promotion:', error);
+      throw error;
+    }
+  }
+
+  async updatePromotion(promotionId: string, promotionData: any): Promise<any> {
+    try {
+      const response = await this.api.put(`/marketing/promotions/${promotionId}`, promotionData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating promotion:', error);
+      throw error;
+    }
+  }
+
+  async togglePromotion(promotionId: string, isActive: boolean): Promise<void> {
+    try {
+      await this.api.patch(`/marketing/promotions/${promotionId}/toggle`, { isActive });
+    } catch (error) {
+      console.error('Error toggling promotion:', error);
+      throw error;
+    }
+  }
+
+  async getPublicPromotions(serviceProviderId: string): Promise<any[]> {
+    try {
+      const response = await this.api.get(`/marketing/promotions/public?serviceProviderId=${serviceProviderId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching public promotions:', error);
+      return [];
     }
   }
 
@@ -1076,6 +1473,15 @@ class ApiService {
     }
   }
 
+  async setProviderSchedule(scheduleData: any[]): Promise<void> {
+    try {
+      await this.api.post('/providerschedule/weekly', { schedule: scheduleData });
+    } catch (error) {
+      console.error('Error setting provider schedule:', error);
+      throw error;
+    }
+  }
+
   async checkScheduleConflicts(appointmentData: any): Promise<any> {
     try {
       const response = await this.api.post('/providerschedule/check-conflicts', appointmentData);
@@ -1086,8 +1492,8 @@ class ApiService {
     }
   }
 
-  // Business Location
-  async updateBusinessLocation(locationData: any): Promise<void> {
+  // Provider Business Location (legacy)
+  async updateProviderBusinessLocation(locationData: any): Promise<void> {
     try {
       await this.api.put('/serviceprovider/business-location', locationData);
     } catch (error) {
@@ -1096,7 +1502,7 @@ class ApiService {
     }
   }
 
-  async getBusinessLocation(): Promise<any> {
+  async getProviderBusinessLocation(): Promise<any> {
     try {
       const response = await this.api.get('/serviceprovider/business-location');
       return response.data;
@@ -1764,6 +2170,17 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('Error getting provider availability:', error);
+      throw error;
+    }
+  }
+
+  // Get client loyalty status with a specific provider
+  async getClientLoyaltyStatusWithProvider(providerId: string): Promise<ClientLoyaltyStatus> {
+    try {
+      const response = await this.api.get(`/booking/loyalty-status/${providerId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching client loyalty status with provider:', error);
       throw error;
     }
   }

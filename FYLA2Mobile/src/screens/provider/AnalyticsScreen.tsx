@@ -14,16 +14,21 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
+import FeatureGatingService from '../../services/featureGatingService';
 import { RevenueAnalytics, ClientAnalytics } from '../../types';
+import { SPACING } from '../../constants/modernDesign';
+import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
 const AnalyticsScreen = () => {
+  const navigation = useNavigation();
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('month');
   const [revenueData, setRevenueData] = useState<RevenueAnalytics | null>(null);
   const [clientData, setClientData] = useState<ClientAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [hasAdvancedAccess, setHasAdvancedAccess] = useState(false);
 
   const periods = [
     { key: 'week', label: 'Week' },
@@ -38,9 +43,20 @@ const AnalyticsScreen = () => {
   const loadAnalyticsData = async () => {
     try {
       setLoading(true);
+      
+      // Check if user has access to advanced analytics
+      const canAccess = await FeatureGatingService.canAccessAdvancedAnalytics();
+      setHasAdvancedAccess(canAccess.allowed);
+      
+      if (!canAccess.allowed) {
+        // Show limited analytics view or upgrade prompt
+        setLoading(false);
+        return;
+      }
+      
       const [revenue, clients] = await Promise.all([
         api.getRevenueAnalytics(selectedPeriod),
-        api.getClientAnalytics(selectedPeriod)
+        api.getClientAnalytics()
       ]);
       setRevenueData(revenue);
       setClientData(clients);
@@ -268,10 +284,32 @@ const AnalyticsScreen = () => {
     );
   }
 
+  // Show upgrade prompt if user doesn't have access to advanced analytics
+  if (!hasAdvancedAccess) {
+    return (
+      <LinearGradient colors={['#667eea', '#764ba2']} style={[styles.container, styles.centered]}>
+        <BlurView intensity={20} style={styles.upgradeCard}>
+          <Ionicons name="analytics-outline" size={64} color="white" style={{ opacity: 0.7 }} />
+          <Text style={styles.upgradeTitle}>Advanced Analytics</Text>
+          <Text style={styles.upgradeDescription}>
+            Get detailed insights into your business performance, revenue trends, and client analytics.
+          </Text>
+          <TouchableOpacity 
+            style={styles.upgradeButton}
+            onPress={() => navigation.navigate('SubscriptionPlans')}
+          >
+            <Text style={styles.upgradeButtonText}>Upgrade Plan</Text>
+          </TouchableOpacity>
+        </BlurView>
+      </LinearGradient>
+    );
+  }
+
   return (
     <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
       <ScrollView 
         style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="white" />
@@ -354,6 +392,9 @@ const AnalyticsScreen = () => {
   scrollContainer: {
     flex: 1,
     paddingBottom: 100,
+  },
+  scrollContent: {
+    paddingBottom: SPACING.tabBarHeight,
   },
   centered: {
     justifyContent: 'center',
@@ -752,6 +793,45 @@ const AnalyticsScreen = () => {
     color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '600',
     letterSpacing: -0.2,
+  },
+  
+  // Upgrade prompt styles
+  upgradeCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    marginHorizontal: 24,
+    borderRadius: 24,
+    padding: 40,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  upgradeTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: 'white',
+    marginTop: 16,
+    marginBottom: 12,
+    letterSpacing: -0.3,
+  },
+  upgradeDescription: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  upgradeButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginTop: 8,
+  },
+  upgradeButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#667eea',
+    textAlign: 'center',
   },
 });
 
